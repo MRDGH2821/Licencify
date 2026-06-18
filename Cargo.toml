@@ -3,6 +3,7 @@ name = "licencify"
 version = "0.1.0"
 edition = "2024"
 description = "A CLI tool to add open-source licenses to projects"
+license = "MIT"
 
 [[bin]]
 name = "licencify"
