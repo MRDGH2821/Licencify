@@ -5,33 +5,38 @@ const SPDX_INDEX: &str = include_str!("../data/licenses.json");
 
 #[derive(Debug, Deserialize)]
 pub struct SpdxIndex {
+    #[serde(rename = "licenseListVersion")]
     pub license_list_version: String,
     pub licenses: Vec<SpdxLicense>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct SpdxLicense {
+    #[serde(rename = "licenseId")]
     pub license_id: String,
     pub name: String,
-    #[serde(default)]
+    #[serde(default, rename = "isDeprecatedLicenseId")]
     pub is_deprecated_license_id: bool,
-    #[serde(default)]
+    #[serde(default, rename = "isOsiApproved")]
     pub is_osi_approved: bool,
-    #[serde(default)]
+    #[serde(default, rename = "isFsfLibre")]
     pub is_fsf_libre: bool,
+    #[serde(rename = "detailsUrl")]
     pub details_url: Option<String>,
-    #[serde(default)]
+    #[serde(default, rename = "seeAlso")]
     pub see_also: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct SpdxLicenseDetail {
+    #[serde(rename = "licenseId")]
     pub license_id: String,
     pub name: String,
+    #[serde(rename = "licenseText")]
     pub license_text: String,
-    #[serde(default)]
+    #[serde(default, rename = "isOsiApproved")]
     pub is_osi_approved: bool,
-    #[serde(default)]
+    #[serde(default, rename = "isFsfLibre")]
     pub is_fsf_libre: bool,
 }
 
