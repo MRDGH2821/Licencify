@@ -18,12 +18,15 @@ pub fn render(template: &str, year: &str, author: &str) -> Result<String> {
 }
 
 /// Replace SPDX-style angle-bracket placeholders in licence text.
+/// Handles both raw (`<year>`) and HTML-encoded (`&lt;year&gt;`) forms.
 fn replace_spdx_placeholders(text: &str, year: &str, author: &str) -> String {
-    let text = Regex::new(r"<year>").unwrap().replace_all(text, year);
-    let text = Regex::new(r"<author>").unwrap().replace_all(&text, author);
-    let text = Regex::new(r"<copyright holders?>")
-        .unwrap()
-        .replace_all(&text, author);
+    let re_year = Regex::new(r"(?i)<year>|&lt;year&gt;").unwrap();
+    let re_author = Regex::new(r"(?i)<author>|&lt;author&gt;").unwrap();
+    let re_holders = Regex::new(r"(?i)<copyright holders?>|&lt;copyright holders?&gt;").unwrap();
+
+    let text = re_year.replace_all(text, year);
+    let text = re_author.replace_all(&text, author);
+    let text = re_holders.replace_all(&text, author);
     text.into_owned()
 }
 
