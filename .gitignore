@@ -19,5 +19,6 @@ target/
 /target
 
 # licencify generated files
+.licencify.toml
 config-schema.json
 licencify.toml

@@ -127,14 +127,19 @@ impl Config {
         Ok(config_dir.join("licencify").join("config.toml"))
     }
 
-    /// Walk up from CWD to find the directory containing `licencify.toml`.
+    const PROJECT_FILENAMES: [&'static str; 2] = ["licencify.toml", ".licencify.toml"];
+
+    /// Walk up from CWD to find the directory containing a project config.
+    /// Checks both `licencify.toml` and `.licencify.toml`.
     /// Returns (project_root, project_config_path) if found.
     fn find_project_root() -> Option<(PathBuf, PathBuf)> {
         let mut dir = std::env::current_dir().ok()?;
         loop {
-            let candidate = dir.join("licencify.toml");
-            if candidate.exists() {
-                return Some((dir, candidate));
+            for name in Self::PROJECT_FILENAMES {
+                let candidate = dir.join(name);
+                if candidate.exists() {
+                    return Some((dir, candidate));
+                }
             }
             if !dir.pop() {
                 break;
@@ -144,19 +149,21 @@ impl Config {
     }
 
     /// Return the project-level config file path.
-    /// First checks CWD, then walks up the directory tree.
+    /// Checks CWD for both `licencify.toml` and `.licencify.toml`, then walks up.
     pub fn project_path() -> Result<PathBuf> {
-        // Check CWD first
         let cwd = std::env::current_dir().context("Could not determine current directory")?;
-        let candidate = cwd.join("licencify.toml");
-        if candidate.exists() {
-            return Ok(candidate);
+        // Check CWD for both filenames
+        for name in Self::PROJECT_FILENAMES {
+            let candidate = cwd.join(name);
+            if candidate.exists() {
+                return Ok(candidate);
+            }
         }
         // Walk up to find it
         if let Some((_, path)) = Self::find_project_root() {
             return Ok(path);
         }
-        // Return CWD path even if it doesn't exist (for init, etc.)
+        // Return default name even if it doesn't exist (for init, etc.)
         Ok(cwd.join("licencify.toml"))
     }
 
