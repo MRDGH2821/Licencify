@@ -1,11 +1,16 @@
+#![allow(dead_code)]
+mod builtin;
+mod cache;
 mod cli;
+mod config;
 mod license;
+mod project;
 mod registry;
 mod spdx;
+mod template;
 
 use clap::Parser;
 use cli::{CacheAction, Cli, Commands};
-use spdx::SpdxIndex;
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -28,12 +33,85 @@ fn main() -> anyhow::Result<()> {
             fsf_only,
         } => cmd_search(&query, osi_only, fsf_only),
         Commands::Detect => cmd_detect(),
-        Commands::Update {
-            spdx,
-            author,
-            year,
-        } => cmd_update(&spdx, author, year),
+        Commands::Update { spdx, author, year } => cmd_update(&spdx, author, year),
         Commands::Cache { action } => cmd_cache(action),
+    }
+}
+
+/// Resolve author from CLI arg → config → git config → error.
+fn resolve_author(cli_author: Option<String>) -> anyhow::Result<String> {
+    // 1. CLI argument
+    if let Some(author) = cli_author {
+        return Ok(author);
+    }
+
+    // 2. Config file
+    if let Ok(cfg) = config::Config::load() {
+        if let Ok(author) = cfg.effective_author() {
+            return Ok(author);
+        }
+    }
+
+    // 3. Git config
+    template::default_author()
+}
+
+/// Resolve year from CLI arg → config → current year.
+fn resolve_year(cli_year: Option<String>) -> String {
+    // 1. CLI argument
+    if let Some(year) = cli_year {
+        return year;
+    }
+
+    // 2. Config file
+    if let Ok(cfg) = config::Config::load() {
+        if let Some(year) = cfg.year_override {
+            return year;
+        }
+    }
+
+    // 3. Current year
+    template::default_year()
+}
+
+/// Resolve license template text using 3-tier chain:
+/// 1. Built-in templates (instant, embedded in binary)
+/// 2. Disk cache (fast, local)
+/// 3. SPDX API (slowest, network)
+fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
+    let lower = spdx_id.to_lowercase();
+
+    // Tier 1: Built-in templates
+    if let Some(text) = builtin::get(&lower) {
+        return Ok((text.to_string(), "built-in".to_string()));
+    }
+
+    // Tier 2: Disk cache
+    let cache = cache::LicenseCache::new()?;
+    if let Some(text) = cache.get(&lower) {
+        return Ok((text, "cached".to_string()));
+    }
+
+    // Tier 3: SPDX API
+    let cache_dir = cache.dir().to_path_buf();
+    let registry = registry::Registry::new(&cache_dir)?;
+    match registry.fetch_detail(spdx_id) {
+        Ok(detail) => {
+            // Cache for next time
+            let _ = cache.put(&lower, &detail.license_text);
+            Ok((detail.license_text, "SPDX API".to_string()))
+        }
+        Err(e) => {
+            let supported = builtin::supported_ids().join(", ");
+            anyhow::bail!(
+                "License '{}' not available as built-in template and \
+                 could not be fetched from SPDX API: {}\n\
+                 Built-in licenses: {}",
+                spdx_id,
+                e,
+                supported
+            );
+        }
     }
 }
 
@@ -44,18 +122,8 @@ fn cmd_add(
     yes: bool,
 ) -> anyhow::Result<()> {
     let info = license::get_license_info(spdx)?;
-    let author = author.unwrap_or_else(|| {
-        std::process::Command::new("git")
-            .args(["config", "user.name"])
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|| "YOUR_NAME".to_string())
-    });
-    let year = year.unwrap_or_else(|| {
-        chrono::Local::now().format("%Y").to_string()
-    });
+    let author = resolve_author(author)?;
+    let year = resolve_year(year);
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
@@ -73,26 +141,20 @@ fn cmd_add(
         }
     }
 
-    let cache_dir = dirs::cache_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("licencify")
-        .join("templates");
-    let registry = registry::Registry::new(&cache_dir)?;
-    let detail = registry.fetch_detail(&info.id)?;
+    // Resolve template text
+    let (raw_text, source) = resolve_template(&info.id)?;
+    let content = template::render(&raw_text, &year, &author);
 
-    let content = detail
-        .license_text
-        .replace("<year>", &year)
-        .replace("<copyright holders>", &author);
-
+    // Determine output filename
     let filename = if info.id.to_uppercase() == info.id {
         format!("LICENSE-{}", info.id)
     } else {
         "LICENSE".to_string()
     };
 
+    // Check for existing file
     if std::path::Path::new(&filename).exists() && !yes {
-        println!("{} already exists. Overwrite? [y/N] ", filename);
+        println!("{} exists. Overwrite? [y/N] ", filename);
         use std::io::Write;
         std::io::stdout().flush()?;
         let mut input = String::new();
@@ -104,12 +166,24 @@ fn cmd_add(
     }
 
     std::fs::write(&filename, &content)?;
-    println!("✅ Added {} ({}) as {}", info.name, info.id, filename);
+    println!("✅ Added {} ({}) [from {}]", info.name, info.id, source);
+
+    // Update project manifests
+    match project::update_manifest(&info.id, &author, &year) {
+        Ok(files) if !files.is_empty() => {
+            println!("   Updated: {}", files.join(", "));
+        }
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("   Warning: could not update project manifests: {}", e);
+        }
+    }
+
     Ok(())
 }
 
 fn cmd_list(osi_only: bool, fsf_only: bool, limit: Option<usize>) -> anyhow::Result<()> {
-    let index = SpdxIndex::load()?;
+    let index = spdx::SpdxIndex::load()?;
     let mut count = 0usize;
 
     for license in &index.licenses {
@@ -142,11 +216,7 @@ fn cmd_list(osi_only: bool, fsf_only: bool, limit: Option<usize>) -> anyhow::Res
 
         if let Some(max) = limit {
             if count >= max {
-                println!(
-                    "\n... and more (showing {} of {} total)",
-                    count,
-                    index.licenses.len()
-                );
+                println!("\n... showing {} of {} total", count, index.licenses.len());
                 break;
             }
         }
@@ -157,7 +227,7 @@ fn cmd_list(osi_only: bool, fsf_only: bool, limit: Option<usize>) -> anyhow::Res
 }
 
 fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result<()> {
-    let index = SpdxIndex::load()?;
+    let index = spdx::SpdxIndex::load()?;
     let results = index.search(query);
 
     let results: Vec<_> = results
@@ -204,7 +274,13 @@ fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result<()>
 }
 
 fn cmd_detect() -> anyhow::Result<()> {
-    let candidates = ["LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING", "COPYING.txt"];
+    let candidates = [
+        "LICENSE",
+        "LICENSE.txt",
+        "LICENSE.md",
+        "COPYING",
+        "COPYING.txt",
+    ];
 
     for name in &candidates {
         if std::path::Path::new(name).exists() {
@@ -217,7 +293,7 @@ fn cmd_detect() -> anyhow::Result<()> {
                 println!("Detected: MIT ({})", name);
                 return Ok(());
             }
-            if lower.contains("apache license") && lower.contains("version 2.0") {
+            if lower.contains("apache license") || lower.contains("version 2.0") {
                 println!("Detected: Apache-2.0 ({})", name);
                 return Ok(());
             }
@@ -246,9 +322,8 @@ fn cmd_detect() -> anyhow::Result<()> {
                 return Ok(());
             }
             if lower.contains("isc license")
-                || lower.contains(
-                    "permission to use, copy, modify, and/or distribute this software",
-                )
+                || lower
+                    .contains("permission to use, copy, modify, and/or distribute this software")
             {
                 println!("Detected: ISC ({})", name);
                 return Ok(());
@@ -273,37 +348,16 @@ fn cmd_detect() -> anyhow::Result<()> {
     std::process::exit(1);
 }
 
-fn cmd_update(
-    spdx: &str,
-    author: Option<String>,
-    year: Option<String>,
-) -> anyhow::Result<()> {
+fn cmd_update(spdx: &str, author: Option<String>, year: Option<String>) -> anyhow::Result<()> {
     let info = license::get_license_info(spdx)?;
-    let author = author.unwrap_or_else(|| {
-        std::process::Command::new("git")
-            .args(["config", "user.name"])
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|| "YOUR_NAME".to_string())
-    });
-    let year = year.unwrap_or_else(|| {
-        chrono::Local::now().format("%Y").to_string()
-    });
+    let author = resolve_author(author)?;
+    let year = resolve_year(year);
 
-    let cache_dir = dirs::cache_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("licencify")
-        .join("templates");
-    let registry = registry::Registry::new(&cache_dir)?;
-    let detail = registry.fetch_detail(&info.id)?;
+    // Resolve template text
+    let (raw_text, source) = resolve_template(&info.id)?;
+    let content = template::render(&raw_text, &year, &author);
 
-    let content = detail
-        .license_text
-        .replace("<year>", &year)
-        .replace("<copyright holders>", &author);
-
+    // Determine output filename
     let filename = if info.id.to_uppercase() == info.id {
         format!("LICENSE-{}", info.id)
     } else {
@@ -311,50 +365,38 @@ fn cmd_update(
     };
 
     std::fs::write(&filename, &content)?;
-    println!(
-        "✅ Updated to {} ({}) in {}",
-        info.name, info.id, filename
-    );
+    println!("✅ Updated {} ({}) [from {}]", info.name, info.id, source);
+
+    // Update project manifests
+    match project::update_manifest(&info.id, &author, &year) {
+        Ok(files) if !files.is_empty() => {
+            println!("   Updated: {}", files.join(", "));
+        }
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("   Warning: could not update project manifests: {}", e);
+        }
+    }
+
     Ok(())
 }
 
 fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
-    let cache_dir = dirs::cache_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("licencify")
-        .join("templates");
+    let cache = cache::LicenseCache::new()?;
 
     match action {
         CacheAction::Clear => {
-            if cache_dir.exists() {
-                let count = std::fs::read_dir(&cache_dir)?
-                    .filter_map(|e| e.ok())
-                    .count();
-                std::fs::remove_dir_all(&cache_dir)?;
-                println!(
-                    "Cleared {} cached templates from {}",
-                    count,
-                    cache_dir.display()
-                );
-            } else {
-                println!(
-                    "Cache directory doesn't exist: {}",
-                    cache_dir.display()
-                );
-            }
-            Ok(())
+            let count = cache.clear()?;
+            println!(
+                "Cleared {} cached templates from {}",
+                count,
+                cache.dir().display()
+            );
         }
         CacheAction::Info => {
-            println!("Cache directory: {}", cache_dir.display());
-            if cache_dir.exists() {
-                let count = std::fs::read_dir(&cache_dir)?
-                    .filter_map(|e| e.ok())
-                    .count();
-                println!("Cached templates: {}", count);
-            } else {
-                println!("Cache directory doesn't exist yet");
-            }
-            Ok(())
+            println!("Cache directory: {}", cache.dir().display());
+            println!("Cached templates: {}", cache.count());
         }
     }
+    Ok(())
 }
