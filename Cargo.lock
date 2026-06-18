@@ -566,6 +566,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "regex",
  "schemars",
  "serde",
  "serde_json",
