@@ -25,7 +25,7 @@ impl LicenseProvider {
     pub fn load() -> Result<Self> {
         let index = SpdxIndex::load().context("Failed to load SPDX license index")?;
         let api_cache_dir = dirs::cache_dir()
-            .context("unable to determine XDG cache directory")?
+            .context("unable to determine cache directory")?
             .join("licencify")
             .join("api");
         Ok(Self {
