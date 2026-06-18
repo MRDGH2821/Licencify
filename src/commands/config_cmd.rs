@@ -1,4 +1,7 @@
-use crate::{cli::ConfigAction, config::Config};
+use crate::{
+    cli::ConfigAction,
+    config::{self, Config},
+};
 use anyhow::Result;
 
 pub fn cmd_config(action: ConfigAction) -> Result<()> {
@@ -54,16 +57,21 @@ fn cmd_config_init() -> Result<()> {
     // Generate schema alongside config
     write_schema_file()?;
 
+    let detected = config::detect_licence_name();
     println!();
     println!("Available settings:");
     println!("  [default]");
-    println!("    author    Copyright holder name");
-    println!("    license   Default SPDX license ID");
-    println!("    format    Output format (txt or html)");
-    println!("    year      Override copyright year");
+    println!("    author        Copyright holder name");
+    println!("    license       Default SPDX license ID");
+    println!("    format        Output format (txt or html)");
+    println!("    year          Override copyright year");
+    println!(
+        "    licence_name  File base name: LICENCE or LICENSE (detected: {})",
+        detected
+    );
     println!();
     println!("  [template]  (optional)");
-    println!("    paths     Custom template search paths (array)");
+    println!("    paths         Custom template search paths (array)");
     println!();
     println!("Use `licencify config set <key> <value>` to configure.");
     Ok(())
@@ -81,22 +89,32 @@ fn cmd_config_show() -> Result<()> {
         return Ok(());
     }
 
+    let detected = config::detect_licence_name();
     println!("[default]");
     println!(
-        "  author  = {}",
+        "  author        = {}",
         config.default.author.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  license = {}",
+        "  license       = {}",
         config.default.license.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  format  = {}",
+        "  format        = {}",
         config.default.format.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  year    = {}",
+        "  year          = {}",
         config.default.year.as_deref().unwrap_or("(not set)")
+    );
+    println!(
+        "  licence_name  = {} (detected: {})",
+        config
+            .default
+            .licence_name
+            .as_deref()
+            .unwrap_or("(not set)"),
+        detected
     );
     println!();
     println!("[template]");
@@ -127,11 +145,12 @@ fn cmd_config_get(key: &str) -> Result<()> {
         "license" => config.default.license,
         "format" => config.default.format,
         "year" => config.default.year,
+        "licence_name" => Some(config.licence_name()),
         "template.paths" => config.template.and_then(|t| t.paths).map(|v| v.join(",")),
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: author, license, format, year, template.paths",
+                 Valid keys: author, license, format, year, licence_name, template.paths",
                 key
             );
         }
@@ -157,6 +176,16 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
             config.default.format = Some(value.to_string());
         }
         "year" => config.default.year = Some(value.to_string()),
+        "licence_name" => {
+            let upper = value.to_uppercase();
+            if upper != "LICENCE" && upper != "LICENSE" {
+                anyhow::bail!(
+                    "Invalid licence_name: '{}'. Must be 'LICENCE' or 'LICENSE'.",
+                    value
+                );
+            }
+            config.default.licence_name = Some(upper);
+        }
         "template.paths" => {
             let new_paths: Vec<String> = value
                 .split(',')
@@ -180,7 +209,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: author, license, format, year, template.paths",
+                 Valid keys: author, license, format, year, licence_name, template.paths",
                 key
             );
         }

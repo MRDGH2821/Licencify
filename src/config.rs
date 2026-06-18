@@ -33,6 +33,10 @@ pub struct DefaultConfig {
     /// Override copyright year instead of using current year
     #[schemars(description = "Override copyright year (YYYY)")]
     pub year: Option<String>,
+
+    /// Licence file base name: "LICENCE" (en-GB) or "LICENSE" (en-US)
+    #[schemars(description = "Licence file base name (LICENCE or LICENSE)")]
+    pub licence_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
@@ -49,6 +53,31 @@ impl Default for Config {
             template: None,
         }
     }
+}
+
+/// Detect whether the system locale uses en-GB or en-US spelling.
+/// Returns "LICENCE" for en-GB and "LICENSE" for en-US/other.
+pub fn detect_licence_name() -> String {
+    // Check common locale environment variables
+    for var in &["LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"] {
+        if let Ok(val) = std::env::var(var) {
+            let lower = val.to_lowercase();
+            if lower.contains("en_gb")
+                || lower.contains("en-gb")
+                || lower.contains("en.au")
+                || lower.contains("en_nz")
+                || lower.contains("en-in")
+            {
+                return "LICENCE".to_string();
+            }
+            // en_US and other English variants default to LICENSE
+            if lower.starts_with("en") {
+                return "LICENSE".to_string();
+            }
+        }
+    }
+    // Default to en-GB (user preference)
+    "LICENCE".to_string()
 }
 
 impl Config {
@@ -77,13 +106,12 @@ impl Config {
             })?;
         }
 
-        // Build TOML with schema comment header using toml_edit
+        // Build TOML with schema comment header
         let doc: toml_edit::DocumentMut = toml::to_string_pretty(self)
             .context("Failed to serialize config")?
             .parse()
             .context("Failed to parse serialized config")?;
 
-        // Prepend schema comment
         let schema_path = Self::schema_path()?;
         let header = format!("#:schema {}\n\n", schema_path.display());
         let mut prefixed = header;
@@ -92,6 +120,41 @@ impl Config {
         std::fs::write(&path, prefixed)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
         Ok(())
+    }
+
+    /// Get the licence file base name (LICENCE or LICENSE).
+    /// Resolves: config → locale detection → default LICENCE.
+    pub fn licence_name(&self) -> String {
+        self.default
+            .licence_name
+            .clone()
+            .unwrap_or_else(detect_licence_name)
+    }
+
+    /// Search configured template paths for a template file matching the SPDX ID.
+    pub fn find_custom_template(&self, spdx_id: &str) -> Option<(String, Option<String>, String)> {
+        let paths = self.template.as_ref()?.paths.as_ref()?;
+        let filename = format!("{}.txt", spdx_id);
+        let html_filename = format!("{}.html", spdx_id);
+
+        for dir in paths {
+            let dir = std::path::Path::new(dir);
+            if !dir.is_dir() {
+                continue;
+            }
+
+            let text_path = dir.join(&filename);
+            let html_path = dir.join(&html_filename);
+
+            if text_path.is_file() {
+                let text = std::fs::read_to_string(&text_path).ok()?;
+                let html = std::fs::read_to_string(&html_path).ok();
+                let source = format!("custom ({})", dir.display());
+                return Some((text, html, source));
+            }
+        }
+
+        None
     }
 
     /// Return the path to the config file

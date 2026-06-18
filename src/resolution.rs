@@ -1,4 +1,4 @@
-use crate::{author, licences, provider, template};
+use crate::{author, config::Config, licences, provider, template};
 
 pub struct ResolvedTemplate {
     pub text: String,
@@ -6,12 +6,14 @@ pub struct ResolvedTemplate {
     pub source: String,
 }
 
-/// Resolve license template text using 3-tier chain:
+/// Resolve license template text using 4-tier chain:
 /// 1. API cache (fast, local JSON with licenseText)
-/// 2. SPDX API (slowest, network)
-/// 3. Built-in templates (instant, embedded in binary)
+/// 2. Custom template paths (from config [template].paths)
+/// 3. SPDX API (network)
+/// 4. Built-in templates (embedded in binary)
 pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
     let prov = provider::LicenseProvider::load()?;
+    let config = Config::load().ok();
 
     // Tier 1: API cache
     if let Some(detail) = prov.get_cached(spdx_id) {
@@ -22,7 +24,15 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
         });
     }
 
-    // Tier 2: SPDX API
+    // Tier 2: Custom template paths from config [template].paths
+    if let Some((text, html, source)) = config
+        .as_ref()
+        .and_then(|cfg| cfg.find_custom_template(spdx_id))
+    {
+        return Ok(ResolvedTemplate { text, html, source });
+    }
+
+    // Tier 3: SPDX API
     if let Ok(detail) = prov.fetch_detail(spdx_id) {
         return Ok(ResolvedTemplate {
             text: detail.license_text,
@@ -31,7 +41,7 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
         });
     }
 
-    // Tier 3: Built-in templates (plain text only, no HTML)
+    // Tier 4: Built-in templates (plain text only, no HTML)
     let lower = spdx_id.to_lowercase();
     if let Some(text) = licences::get(&lower) {
         return Ok(ResolvedTemplate {
@@ -43,7 +53,7 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
 
     anyhow::bail!(
         "License '{}' not available. Not cached, not fetchable from SPDX API, \
-         and no built-in template exists.",
+         no custom template found, and no built-in template exists.",
         spdx_id
     );
 }

@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, project, provider, resolution, template};
+use crate::{cli::LicenseFormat, config::Config, project, provider, resolution, template};
 use std::io::Write;
 
 pub fn cmd_add(
@@ -9,9 +9,14 @@ pub fn cmd_add(
     yes: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
+    let config = Config::load().ok();
     let info = prov.info(spdx)?;
     let author = resolution::resolve_author(author)?;
     let year = resolution::resolve_year(year);
+    let base_name = config
+        .as_ref()
+        .map(|c| c.licence_name())
+        .unwrap_or_else(|| "LICENCE".to_string());
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
@@ -43,7 +48,7 @@ pub fn cmd_add(
         }
     };
 
-    let filename = format!("LICENCE.{}", ext);
+    let filename = format!("{}.{}", base_name, ext);
 
     if std::path::Path::new(&filename).exists() && !yes {
         println!("{} exists. Overwrite? [y/N] ", filename);

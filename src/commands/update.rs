@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, project, provider, resolution, template};
+use crate::{cli::LicenseFormat, config::Config, project, provider, resolution, template};
 
 pub fn cmd_update(
     spdx: &str,
@@ -7,9 +7,14 @@ pub fn cmd_update(
     format: LicenseFormat,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
+    let config = Config::load().ok();
     let info = prov.info(spdx)?;
     let author = resolution::resolve_author(author)?;
     let year = resolution::resolve_year(year);
+    let base_name = config
+        .as_ref()
+        .map(|c| c.licence_name())
+        .unwrap_or_else(|| "LICENCE".to_string());
 
     let resolved = resolution::resolve_template(&info.id)?;
 
@@ -25,7 +30,15 @@ pub fn cmd_update(
         }
     };
 
-    let filename = format!("LICENCE.{}", ext);
+    let filename = format!("{}.{}", base_name, ext);
+
+    if !std::path::Path::new(&filename).exists() {
+        anyhow::bail!(
+            "{} not found. Use `licencify add {}` to create it first.",
+            filename,
+            spdx
+        );
+    }
 
     std::fs::write(&filename, &content)?;
     println!(
