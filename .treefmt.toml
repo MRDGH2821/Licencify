@@ -92,6 +92,13 @@ includes = ["*.py"]
 options = ["ruff", "check", "--fix"]
 priority = 8
 
+[formatter.rustfmt]
+command = "rustfmt"
+excludes = []
+includes = ["*.rs"]
+no-positional-arg-support = true
+priority = 9
+
 [formatter.sort-markdown-tables]
 command = "smt"
 includes = ["*.md"]
