@@ -25,7 +25,7 @@ pub fn cmd_update(
         }
     };
 
-    let filename = format!("licence.{}", ext);
+    let filename = format!("LICENCE.{}", ext);
 
     std::fs::write(&filename, &content)?;
     println!(

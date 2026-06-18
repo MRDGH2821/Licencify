@@ -43,7 +43,7 @@ pub fn cmd_add(
         }
     };
 
-    let filename = format!("licence.{}", ext);
+    let filename = format!("LICENCE.{}", ext);
 
     if std::path::Path::new(&filename).exists() && !yes {
         println!("{} exists. Overwrite? [y/N] ", filename);
