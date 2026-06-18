@@ -54,7 +54,7 @@ pub fn resolve_year(cli_year: Option<String>) -> String {
         return year;
     }
     if let Ok(cfg) = crate::config::Config::load() {
-        if let Some(year) = cfg.year_override {
+        if let Some(year) = cfg.default.year {
             return year;
         }
     }

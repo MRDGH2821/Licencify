@@ -3,27 +3,41 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[schemars(
     title = "Licencify Config",
     description = "Configuration file for licencify"
 )]
 pub struct Config {
+    #[schemars(description = "Default values for licence creation")]
+    pub default: DefaultConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+pub struct DefaultConfig {
     /// Copyright holder name (used as default author for licence files)
     #[schemars(description = "Copyright holder name for licence files")]
-    pub default_author: Option<String>,
+    pub author: Option<String>,
 
     /// Default SPDX license ID (e.g. MIT, Apache-2.0)
     #[schemars(description = "Default SPDX license identifier")]
-    pub default_license: Option<String>,
+    pub license: Option<String>,
 
     /// Output format: txt or html
     #[schemars(description = "Output format for licence files")]
-    pub default_format: Option<String>,
+    pub format: Option<String>,
 
     /// Override copyright year instead of using current year
     #[schemars(description = "Override copyright year (YYYY)")]
-    pub year_override: Option<String>,
+    pub year: Option<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            default: DefaultConfig::default(),
+        }
+    }
 }
 
 impl Config {

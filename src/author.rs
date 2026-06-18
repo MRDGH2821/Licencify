@@ -27,13 +27,13 @@ impl AuthorResolver for GitAuthorResolver {
     }
 }
 
-/// Resolve author from the licencify config file (`default_author` field).
+/// Resolve author from the licencify config file (`[default].author` field).
 pub struct ConfigAuthorResolver;
 
 impl AuthorResolver for ConfigAuthorResolver {
     fn resolve(&self) -> Option<Result<String>> {
         let cfg = crate::config::Config::load().ok()?;
-        let author = cfg.default_author?;
+        let author = cfg.default.author?;
         if author.trim().is_empty() {
             None
         } else {

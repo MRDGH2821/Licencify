@@ -55,11 +55,11 @@ fn cmd_config_init() -> Result<()> {
     write_schema_file()?;
 
     println!();
-    println!("Available settings:");
-    println!("  default_author   Copyright holder name");
-    println!("  default_license  Default SPDX license ID");
-    println!("  default_format   Output format (txt or html)");
-    println!("  year_override    Override copyright year");
+    println!("Available settings under [default]:");
+    println!("  author    Copyright holder name");
+    println!("  license   Default SPDX license ID");
+    println!("  format    Output format (txt or html)");
+    println!("  year      Override copyright year");
     println!();
     println!("Use `licencify config set <key> <value>` to configure.");
     Ok(())
@@ -78,20 +78,20 @@ fn cmd_config_show() -> Result<()> {
     }
 
     println!(
-        "default_author  = {}",
-        config.default_author.as_deref().unwrap_or("(not set)")
+        "[default].author  = {}",
+        config.default.author.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "default_license = {}",
-        config.default_license.as_deref().unwrap_or("(not set)")
+        "[default].license = {}",
+        config.default.license.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "default_format  = {}",
-        config.default_format.as_deref().unwrap_or("(not set)")
+        "[default].format  = {}",
+        config.default.format.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "year_override   = {}",
-        config.year_override.as_deref().unwrap_or("(not set)")
+        "[default].year    = {}",
+        config.default.year.as_deref().unwrap_or("(not set)")
     );
     Ok(())
 }
@@ -100,14 +100,14 @@ fn cmd_config_get(key: &str) -> Result<()> {
     let config = Config::load()?;
 
     let value = match key {
-        "default_author" => config.default_author,
-        "default_license" => config.default_license,
-        "default_format" => config.default_format,
-        "year_override" => config.year_override,
+        "author" => &config.default.author,
+        "license" => &config.default.license,
+        "format" => &config.default.format,
+        "year" => &config.default.year,
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: default_author, default_license, default_format, year_override",
+                 Valid keys: author, license, format, year",
                 key
             );
         }
@@ -124,19 +124,19 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     let mut config = Config::load()?;
 
     match key {
-        "default_author" => config.default_author = Some(value.to_string()),
-        "default_license" => config.default_license = Some(value.to_string()),
-        "default_format" => {
+        "author" => config.default.author = Some(value.to_string()),
+        "license" => config.default.license = Some(value.to_string()),
+        "format" => {
             if value != "txt" && value != "html" {
                 anyhow::bail!("Invalid format: '{}'. Must be 'txt' or 'html'.", value);
             }
-            config.default_format = Some(value.to_string());
+            config.default.format = Some(value.to_string());
         }
-        "year_override" => config.year_override = Some(value.to_string()),
+        "year" => config.default.year = Some(value.to_string()),
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: default_author, default_license, default_format, year_override",
+                 Valid keys: author, license, format, year",
                 key
             );
         }
@@ -145,7 +145,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     config.save()?;
 
     let path = Config::path()?;
-    println!("✅ Set {} = {}", key, value);
+    println!("✅ Set [default].{} = {}", key, value);
     println!("   Saved to {}", path.display());
     Ok(())
 }
