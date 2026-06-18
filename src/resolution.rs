@@ -7,23 +7,13 @@ pub struct ResolvedTemplate {
 }
 
 /// Resolve license template text using 3-tier chain:
-/// 1. Built-in templates (instant, embedded in binary)
-/// 2. API cache (fast, local JSON with licenseText)
-/// 3. SPDX API (slowest, network)
+/// 1. API cache (fast, local JSON with licenseText)
+/// 2. SPDX API (slowest, network)
+/// 3. Built-in templates (instant, embedded in binary)
 pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
-    let lower = spdx_id.to_lowercase();
-
-    // Tier 1: Built-in templates (plain text only, no HTML)
-    if let Some(text) = licences::get(&lower) {
-        return Ok(ResolvedTemplate {
-            text: text.to_string(),
-            html: None,
-            source: "built-in".to_string(),
-        });
-    }
-
-    // Tier 2: API cache
     let prov = provider::LicenseProvider::load()?;
+
+    // Tier 1: API cache
     if let Some(detail) = prov.get_cached(spdx_id) {
         return Ok(ResolvedTemplate {
             text: detail.license_text,
@@ -32,25 +22,30 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
         });
     }
 
-    // Tier 3: SPDX API
-    match prov.fetch_detail(spdx_id) {
-        Ok(detail) => Ok(ResolvedTemplate {
+    // Tier 2: SPDX API
+    if let Ok(detail) = prov.fetch_detail(spdx_id) {
+        return Ok(ResolvedTemplate {
             text: detail.license_text,
             html: detail.license_text_html,
             source: "SPDX API".to_string(),
-        }),
-        Err(e) => {
-            let supported = licences::supported_ids().join(", ");
-            anyhow::bail!(
-                "License '{}' not available as built-in template and \
-                 could not be fetched from SPDX API: {}\n\
-                 Built-in licenses: {}",
-                spdx_id,
-                e,
-                supported
-            );
-        }
+        });
     }
+
+    // Tier 3: Built-in templates (plain text only, no HTML)
+    let lower = spdx_id.to_lowercase();
+    if let Some(text) = licences::get(&lower) {
+        return Ok(ResolvedTemplate {
+            text: text.to_string(),
+            html: None,
+            source: "built-in".to_string(),
+        });
+    }
+
+    anyhow::bail!(
+        "License '{}' not available. Not cached, not fetchable from SPDX API, \
+         and no built-in template exists.",
+        spdx_id
+    );
 }
 
 /// Resolve year from CLI arg → config → current year.
