@@ -91,4 +91,7 @@ pub enum CacheAction {
 
     /// Show cache directory location and size
     Info,
+
+    /// Pre-fetch and cache all license templates from SPDX
+    FetchAll,
 }
