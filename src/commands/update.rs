@@ -25,16 +25,12 @@ pub fn cmd_update(
         }
     };
 
-    let filename = if info.id.to_uppercase() == info.id {
-        format!("LICENSE-{}.{}", info.id, ext)
-    } else {
-        format!("LICENSE.{}", ext)
-    };
+    let filename = format!("licence.{}", ext);
 
     std::fs::write(&filename, &content)?;
     println!(
         "✅ Updated {} ({}) [from {}] as {}",
-        info.name, info.id, resolved.source, format
+        info.name, info.id, resolved.source, filename
     );
 
     match project::update_manifest(&info.id, &author, &year) {
