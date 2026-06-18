@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use std::fmt;
 
 #[derive(Parser)]
 #[command(
@@ -9,6 +10,23 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum LicenseFormat {
+    /// Plain text (licenseText)
+    Txt,
+    /// HTML (licenseTextHtml)
+    Html,
+}
+
+impl fmt::Display for LicenseFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LicenseFormat::Txt => write!(f, "txt"),
+            LicenseFormat::Html => write!(f, "html"),
+        }
+    }
 }
 
 #[derive(Subcommand)]
@@ -25,6 +43,10 @@ pub enum Commands {
         /// Copyright year (default: current year)
         #[arg(short, long)]
         year: Option<String>,
+
+        /// Output format: txt (default) or html
+        #[arg(short, long, default_value = "txt")]
+        format: LicenseFormat,
 
         /// Skip all prompts and use defaults
         #[arg(short = 'Y', long)]
@@ -75,6 +97,10 @@ pub enum Commands {
         /// Copyright year
         #[arg(short, long)]
         year: Option<String>,
+
+        /// Output format: txt (default) or html
+        #[arg(short, long, default_value = "txt")]
+        format: LicenseFormat,
     },
 
     /// Manage local template cache

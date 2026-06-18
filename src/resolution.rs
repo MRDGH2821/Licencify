@@ -1,26 +1,44 @@
 use crate::{author, licences, provider, template};
 
+pub struct ResolvedTemplate {
+    pub text: String,
+    pub html: Option<String>,
+    pub source: String,
+}
+
 /// Resolve license template text using 3-tier chain:
 /// 1. Built-in templates (instant, embedded in binary)
 /// 2. API cache (fast, local JSON with licenseText)
 /// 3. SPDX API (slowest, network)
-pub fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
+pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
     let lower = spdx_id.to_lowercase();
 
-    // Tier 1: Built-in templates
+    // Tier 1: Built-in templates (plain text only, no HTML)
     if let Some(text) = licences::get(&lower) {
-        return Ok((text.to_string(), "built-in".to_string()));
+        return Ok(ResolvedTemplate {
+            text: text.to_string(),
+            html: None,
+            source: "built-in".to_string(),
+        });
     }
 
     // Tier 2: API cache
     let prov = provider::LicenseProvider::load()?;
     if let Some(detail) = prov.get_cached(spdx_id) {
-        return Ok((detail.license_text, "cached".to_string()));
+        return Ok(ResolvedTemplate {
+            text: detail.license_text,
+            html: detail.license_text_html,
+            source: "cached".to_string(),
+        });
     }
 
     // Tier 3: SPDX API
     match prov.fetch_detail(spdx_id) {
-        Ok(detail) => Ok((detail.license_text, "SPDX API".to_string())),
+        Ok(detail) => Ok(ResolvedTemplate {
+            text: detail.license_text,
+            html: detail.license_text_html,
+            source: "SPDX API".to_string(),
+        }),
         Err(e) => {
             let supported = licences::supported_ids().join(", ");
             anyhow::bail!(

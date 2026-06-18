@@ -34,6 +34,8 @@ pub struct SpdxLicenseDetail {
     pub name: String,
     #[serde(rename = "licenseText")]
     pub license_text: String,
+    #[serde(default, rename = "licenseTextHtml")]
+    pub license_text_html: Option<String>,
     #[serde(default, rename = "isOsiApproved")]
     pub is_osi_approved: bool,
     #[serde(default, rename = "isFsfLibre")]

@@ -1,9 +1,11 @@
-use crate::{project, provider, resolution, template};
+use crate::{cli::LicenseFormat, project, provider, resolution, template};
+use std::io::Write;
 
 pub fn cmd_add(
     spdx: &str,
     author: Option<String>,
     year: Option<String>,
+    format: LicenseFormat,
     yes: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
@@ -15,9 +17,9 @@ pub fn cmd_add(
         println!("About to add license: {} ({})", info.name, info.id);
         println!("  Author: {}", author);
         println!("  Year:   {}", year);
+        println!("  Format: {}", format);
         println!();
         print!("Continue? [Y/n] ");
-        use std::io::Write;
         std::io::stdout().flush()?;
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -27,18 +29,28 @@ pub fn cmd_add(
         }
     }
 
-    let (raw_text, source) = resolution::resolve_template(&info.id)?;
-    let content = template::render(&raw_text, &year, &author)?;
+    let resolved = resolution::resolve_template(&info.id)?;
+
+    let (content, ext) = match &format {
+        LicenseFormat::Html => {
+            let html = resolved.html.as_deref().unwrap_or(&resolved.text);
+            let rendered = template::render(html, &year, &author)?;
+            (rendered, "html")
+        }
+        LicenseFormat::Txt => {
+            let rendered = template::render(&resolved.text, &year, &author)?;
+            (rendered, "txt")
+        }
+    };
 
     let filename = if info.id.to_uppercase() == info.id {
-        format!("LICENSE-{}", info.id)
+        format!("LICENSE-{}.{}", info.id, ext)
     } else {
-        "LICENSE".to_string()
+        format!("LICENSE.{}", ext)
     };
 
     if std::path::Path::new(&filename).exists() && !yes {
         println!("{} exists. Overwrite? [y/N] ", filename);
-        use std::io::Write;
         std::io::stdout().flush()?;
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -49,7 +61,10 @@ pub fn cmd_add(
     }
 
     std::fs::write(&filename, &content)?;
-    println!("✅ Added {} ({}) [from {}]", info.name, info.id, source);
+    println!(
+        "✅ Added {} ({}) [from {}] as {}",
+        info.name, info.id, resolved.source, format
+    );
 
     match project::update_manifest(&info.id, &author, &year) {
         Ok(files) if !files.is_empty() => {

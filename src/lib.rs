@@ -22,8 +22,9 @@ pub fn main() -> anyhow::Result<()> {
             spdx,
             author,
             year,
+            format,
             yes,
-        } => commands::cmd_add(&spdx, author, year, yes),
+        } => commands::cmd_add(&spdx, author, year, format, yes),
         Commands::List {
             osi_only,
             fsf_only,
@@ -35,7 +36,12 @@ pub fn main() -> anyhow::Result<()> {
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
         Commands::Detect => commands::cmd_detect(),
-        Commands::Update { spdx, author, year } => commands::cmd_update(&spdx, author, year),
+        Commands::Update {
+            spdx,
+            author,
+            year,
+            format,
+        } => commands::cmd_update(&spdx, author, year, format),
         Commands::Cache { action } => commands::cmd_cache(action),
     }
 }

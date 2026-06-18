@@ -1,22 +1,41 @@
-use crate::{project, provider, resolution, template};
+use crate::{cli::LicenseFormat, project, provider, resolution, template};
 
-pub fn cmd_update(spdx: &str, author: Option<String>, year: Option<String>) -> anyhow::Result<()> {
+pub fn cmd_update(
+    spdx: &str,
+    author: Option<String>,
+    year: Option<String>,
+    format: LicenseFormat,
+) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let info = prov.info(spdx)?;
     let author = resolution::resolve_author(author)?;
     let year = resolution::resolve_year(year);
 
-    let (raw_text, source) = resolution::resolve_template(&info.id)?;
-    let content = template::render(&raw_text, &year, &author)?;
+    let resolved = resolution::resolve_template(&info.id)?;
+
+    let (content, ext) = match &format {
+        LicenseFormat::Html => {
+            let html = resolved.html.as_deref().unwrap_or(&resolved.text);
+            let rendered = template::render(html, &year, &author)?;
+            (rendered, "html")
+        }
+        LicenseFormat::Txt => {
+            let rendered = template::render(&resolved.text, &year, &author)?;
+            (rendered, "txt")
+        }
+    };
 
     let filename = if info.id.to_uppercase() == info.id {
-        format!("LICENSE-{}", info.id)
+        format!("LICENSE-{}.{}", info.id, ext)
     } else {
-        "LICENSE".to_string()
+        format!("LICENSE.{}", ext)
     };
 
     std::fs::write(&filename, &content)?;
-    println!("✅ Updated {} ({}) [from {}]", info.name, info.id, source);
+    println!(
+        "✅ Updated {} ({}) [from {}] as {}",
+        info.name, info.id, resolved.source, format
+    );
 
     match project::update_manifest(&info.id, &author, &year) {
         Ok(files) if !files.is_empty() => {
