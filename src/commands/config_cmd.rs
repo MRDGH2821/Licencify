@@ -62,7 +62,7 @@ fn cmd_config_init() -> Result<()> {
     println!("    format    Output format (txt or html)");
     println!("    year      Override copyright year");
     println!();
-    println!("  [template]");
+    println!("  [template]  (optional)");
     println!("    paths     Custom template search paths (array)");
     println!();
     println!("Use `licencify config set <key> <value>` to configure.");
@@ -100,15 +100,20 @@ fn cmd_config_show() -> Result<()> {
     );
     println!();
     println!("[template]");
-    match &config.template.paths {
-        Some(paths) if !paths.is_empty() => {
-            println!("  paths =");
-            for (i, p) in paths.iter().enumerate() {
-                println!("    [{}] {}", i, p);
+    match &config.template {
+        Some(template) => match &template.paths {
+            Some(paths) if !paths.is_empty() => {
+                println!("  paths =");
+                for (i, p) in paths.iter().enumerate() {
+                    println!("    [{}] {}", i, p);
+                }
             }
-        }
-        _ => {
-            println!("  paths = (not set)");
+            _ => {
+                println!("  paths = (not set)");
+            }
+        },
+        None => {
+            println!("  (section not configured)");
         }
     }
     Ok(())
@@ -122,7 +127,7 @@ fn cmd_config_get(key: &str) -> Result<()> {
         "license" => config.default.license,
         "format" => config.default.format,
         "year" => config.default.year,
-        "template.paths" => config.template.paths.map(|v| v.join(",")),
+        "template.paths" => config.template.and_then(|t| t.paths).map(|v| v.join(",")),
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
@@ -153,13 +158,13 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
         }
         "year" => config.default.year = Some(value.to_string()),
         "template.paths" => {
-            // Append to existing paths (comma-separated or add one by one)
             let new_paths: Vec<String> = value
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
-            match &mut config.template.paths {
+            let template = config.template.get_or_insert_with(Default::default);
+            match &mut template.paths {
                 Some(paths) => {
                     for p in new_paths {
                         if !paths.contains(&p) {
@@ -168,7 +173,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
                     }
                 }
                 None => {
-                    config.template.paths = Some(new_paths);
+                    template.paths = Some(new_paths);
                 }
             }
         }

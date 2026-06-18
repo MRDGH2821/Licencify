@@ -13,7 +13,7 @@ pub struct Config {
     pub default: DefaultConfig,
 
     #[schemars(description = "Template configuration")]
-    pub template: TemplateConfig,
+    pub template: Option<TemplateConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
@@ -46,7 +46,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             default: DefaultConfig::default(),
-            template: TemplateConfig::default(),
+            template: None,
         }
     }
 }
