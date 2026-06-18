@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 mod author;
-pub mod cache;
 pub mod cli;
 mod commands;
 mod config;

@@ -1,15 +1,20 @@
-use crate::{cache, cli::CacheAction, provider, spdx};
+use crate::{cli::CacheAction, provider, spdx};
 use std::io::Write;
 
+fn api_dir() -> anyhow::Result<std::path::PathBuf> {
+    Ok(dirs::cache_dir()
+        .ok_or_else(|| anyhow::anyhow!("unable to determine XDG cache directory"))?
+        .join("licencify")
+        .join("api"))
+}
+
 pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
-    let cache = cache::LicenseCache::new()?;
-    let api_dir = cache.dir().parent().unwrap().join("api");
+    let dir = api_dir()?;
 
     match action {
         CacheAction::Clear => {
-            let count = cache.clear()?;
-            let api_count = if api_dir.exists() {
-                let n = std::fs::read_dir(&api_dir)
+            let count = if dir.exists() {
+                let n = std::fs::read_dir(&dir)
                     .map(|entries| {
                         entries
                             .filter_map(|e| e.ok())
@@ -17,30 +22,21 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
                             .count()
                     })
                     .unwrap_or(0);
-                std::fs::remove_dir_all(&api_dir).ok();
+                std::fs::remove_dir_all(&dir).ok();
                 n
             } else {
                 0
             };
             println!(
-                "Cleared {} cached templates from {}",
+                "Cleared {} cached API responses from {}",
                 count,
-                cache.dir().display()
+                dir.display()
             );
-            if api_count > 0 {
-                println!(
-                    "Cleared {} cached API responses from {}",
-                    api_count,
-                    api_dir.display()
-                );
-            }
             Ok(())
         }
         CacheAction::Info => {
-            println!("Cache directory: {}", cache.dir().display());
-            println!("Cached templates: {}", cache.count());
-            let api_count = if api_dir.exists() {
-                std::fs::read_dir(&api_dir)
+            let count = if dir.exists() {
+                std::fs::read_dir(&dir)
                     .map(|entries| {
                         entries
                             .filter_map(|e| e.ok())
@@ -51,28 +47,28 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
             } else {
                 0
             };
-            println!("API responses:    {}", api_count);
+            println!("Cache directory: {}", dir.display());
+            println!("Cached responses: {}", count);
             Ok(())
         }
-        CacheAction::FetchAll => cmd_cache_fetch_all(&cache),
+        CacheAction::FetchAll => cmd_cache_fetch_all(),
     }
 }
 
-fn cmd_cache_fetch_all(cache: &cache::LicenseCache) -> anyhow::Result<()> {
+fn cmd_cache_fetch_all() -> anyhow::Result<()> {
     let index = spdx::SpdxIndex::load()?;
-    let registry_dir = cache.dir().parent().unwrap().join("api");
-    let prov = provider::LicenseProvider::with_api_cache(&registry_dir)?;
+    let dir = api_dir()?;
+    let prov = provider::LicenseProvider::with_api_cache(&dir)?;
 
     let total = index.licenses.len();
-    let mut cached = 0usize;
+    let mut fetched = 0usize;
     let mut skipped = 0usize;
     let mut failed = 0usize;
 
     for (i, license) in index.licenses.iter().enumerate() {
         let id = &license.license_id;
-        let lower = id.to_lowercase();
 
-        if cache.get(&lower).is_some() {
+        if prov.get_cached(id).is_some() {
             skipped += 1;
             continue;
         }
@@ -81,9 +77,8 @@ fn cmd_cache_fetch_all(cache: &cache::LicenseCache) -> anyhow::Result<()> {
         std::io::stdout().flush().ok();
 
         match prov.fetch_detail(id) {
-            Ok(detail) => {
-                let _ = cache.put(&lower, &detail.license_text);
-                cached += 1;
+            Ok(_) => {
+                fetched += 1;
             }
             Err(e) => {
                 eprintln!("\n  ⚠ Failed to cache {}: {}", id, e);
@@ -96,8 +91,8 @@ fn cmd_cache_fetch_all(cache: &cache::LicenseCache) -> anyhow::Result<()> {
     std::io::stdout().flush().ok();
 
     println!(
-        "Done. {} cached, {} skipped (already cached), {} failed out of {} total",
-        cached, skipped, failed, total
+        "Done. {} fetched, {} skipped (already cached), {} failed out of {} total",
+        fetched, skipped, failed, total
     );
     Ok(())
 }

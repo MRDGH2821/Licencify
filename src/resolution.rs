@@ -1,8 +1,8 @@
-use crate::{author, cache, licences, provider, template};
+use crate::{author, licences, provider, template};
 
 /// Resolve license template text using 3-tier chain:
 /// 1. Built-in templates (instant, embedded in binary)
-/// 2. Disk cache (fast, local)
+/// 2. API cache (fast, local JSON with licenseText)
 /// 3. SPDX API (slowest, network)
 pub fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
     let lower = spdx_id.to_lowercase();
@@ -12,20 +12,15 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
         return Ok((text.to_string(), "built-in".to_string()));
     }
 
-    // Tier 2: Disk cache
-    let cache = cache::LicenseCache::new()?;
-    if let Some(text) = cache.get(&lower) {
-        return Ok((text, "cached".to_string()));
+    // Tier 2: API cache
+    let prov = provider::LicenseProvider::load()?;
+    if let Some(detail) = prov.get_cached(spdx_id) {
+        return Ok((detail.license_text, "cached".to_string()));
     }
 
     // Tier 3: SPDX API
-    let registry_dir = cache.dir().parent().unwrap().join("api");
-    let prov = provider::LicenseProvider::with_api_cache(&registry_dir)?;
     match prov.fetch_detail(spdx_id) {
-        Ok(detail) => {
-            let _ = cache.put(&lower, &detail.license_text);
-            Ok((detail.license_text, "SPDX API".to_string()))
-        }
+        Ok(detail) => Ok((detail.license_text, "SPDX API".to_string())),
         Err(e) => {
             let supported = licences::supported_ids().join(", ");
             anyhow::bail!(

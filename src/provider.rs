@@ -77,6 +77,13 @@ impl LicenseProvider {
         })
     }
 
+    /// Check if a license detail is already cached locally.
+    pub fn get_cached(&self, license_id: &str) -> Option<SpdxLicenseDetail> {
+        let cache_path = self.api_cache_dir.join(format!("{license_id}.json"));
+        let text = fs::read_to_string(&cache_path).ok()?;
+        serde_json::from_str(&text).ok()
+    }
+
     /// Fetch full license detail from SPDX (with disk caching).
     pub fn fetch_detail(&self, license_id: &str) -> Result<SpdxLicenseDetail> {
         let cache_path = self.api_cache_dir.join(format!("{license_id}.json"));
