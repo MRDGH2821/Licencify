@@ -12,15 +12,15 @@
 
 ## Verdict: Highly Useful ✅
 
-| Dimension | GitHub `/licenses` | SPDX `licenses.json` |
-|-----------|-------------------|---------------------|
-| Coverage | 13 licenses | **727 licenses** (56×) |
-| Auth required | Yes (token for raw text) | **No** |
-| Template text | Raw text via separate endpoint | **`licenseText` + `standardLicenseTemplate`** in detail JSON |
-| Metadata | `spdx_id`, `name`, `html_url` | `isOsiApproved`, `isFsfLibre`, `isDeprecatedLicenseId`, `seeAlso` |
-| Versioning | None | **Versioned** (currently 3.28.0, updated 2026-02-20) |
-| Reliability | GitHub API rate limits | **S3/CloudFront**, no rate limits |
-| Popular licenses | 13/14 found | **14/14 found** + 713 more |
+| Dimension        | GitHub `/licenses`             | SPDX `licenses.json`                                              |
+| ---------------- | ------------------------------ | ----------------------------------------------------------------- |
+| Coverage         | 13 licenses                    | **727 licenses** (56×)                                            |
+| Auth required    | Yes (token for raw text)       | **No**                                                            |
+| Template text    | Raw text via separate endpoint | **`licenseText` + `standardLicenseTemplate`** in detail JSON      |
+| Metadata         | `spdx_id`, `name`, `html_url`  | `isOsiApproved`, `isFsfLibre`, `isDeprecatedLicenseId`, `seeAlso` |
+| Versioning       | None                           | **Versioned** (currently 3.28.0, updated 2026-02-20)              |
+| Reliability      | GitHub API rate limits         | **S3/CloudFront**, no rate limits                                 |
+| Popular licenses | 13/14 found                    | **14/14 found** + 713 more                                        |
 
 **Key finding:** SPDX has every popular license GitHub offers, plus 713 more, with richer metadata and no auth. The only GitHub advantage is its `standardLicenseTemplate` uses `<<var;name=...>>` syntax which needs parsing — but `licenseText` with simple `<year>` / `<copyright holders>` placeholders is sufficient for licencify's needs.
 
@@ -36,6 +36,7 @@ GET https://spdx.org/licenses/licenses.json
 ```
 
 Fields per entry:
+
 ```json
 {
   "licenseId": "MIT",
@@ -58,6 +59,7 @@ GET https://spdx.org/licenses/MIT.json
 ```
 
 Fields:
+
 ```json
 {
   "licenseId": "MIT",
@@ -104,16 +106,16 @@ Instead of the `spdx` crate for validation, use the SPDX index directly:
 
 ## Files Changed vs Original Plan
 
-| Original Plan | Change | Reason |
-|--------------|--------|--------|
-| `src/registry.rs` | **Rewrite** — SPDX registry impl | SPDX is primary source, not GitHub |
-| `src/license.rs` | **Modify** — use SPDX index for validation | Replace `spdx` crate with embedded index |
-| `src/cache.rs` | **Modify** — cache SPDX detail JSONs | Cache `licenseText` from detail files |
-| `src/builtin/mod.rs` | **Keep** — still Tier 3 fallback | Unchanged |
-| `Cargo.toml` | **Remove** `spdx` crate | No longer needed — SPDX index replaces it |
-| `src/cli.rs` | **Add** — `licencify search` subcommand | Free: search 727 licenses by name/keyword |
-| `data/licenses.json` | **Create** — bundled SPDX index | Embedded at compile time |
-| NEW: `src/spdx.rs` | **Create** — SPDX types + parser | Serde types for registry + detail JSON |
+| Original Plan        | Change                                     | Reason                                    |
+| -------------------- | ------------------------------------------ | ----------------------------------------- |
+| `src/registry.rs`    | **Rewrite** — SPDX registry impl           | SPDX is primary source, not GitHub        |
+| `src/license.rs`     | **Modify** — use SPDX index for validation | Replace `spdx` crate with embedded index  |
+| `src/cache.rs`       | **Modify** — cache SPDX detail JSONs       | Cache `licenseText` from detail files     |
+| `src/builtin/mod.rs` | **Keep** — still Tier 3 fallback           | Unchanged                                 |
+| `Cargo.toml`         | **Remove** `spdx` crate                    | No longer needed — SPDX index replaces it |
+| `src/cli.rs`         | **Add** — `licencify search` subcommand    | Free: search 727 licenses by name/keyword |
+| `data/licenses.json` | **Create** — bundled SPDX index            | Embedded at compile time                  |
+| NEW: `src/spdx.rs`   | **Create** — SPDX types + parser           | Serde types for registry + detail JSON    |
 
 ---
 
@@ -124,6 +126,7 @@ Instead of the `spdx` crate for validation, use the SPDX index directly:
 **Objective:** Fetch `licenses.json` and embed it in the binary.
 
 **Files:**
+
 - Create: `data/licenses.json` (downloaded)
 - Create: `src/spdx.rs` (types + parser)
 - Modify: `src/main.rs` (add `mod spdx`)
@@ -224,6 +227,7 @@ git commit -m "feat: embed SPDX license index (727 licenses)"
 **Objective:** Use the embedded SPDX index for license ID validation instead of the `spdx` crate.
 
 **Files:**
+
 - Modify: `src/license.rs` (validation logic)
 - Modify: `Cargo.toml` (remove `spdx` if present)
 
@@ -259,6 +263,7 @@ git commit -m "feat: SPDX index-based validation (replaces spdx crate)"
 **Objective:** Fetch license templates from SPDX detail URLs instead of GitHub API.
 
 **Files:**
+
 - Modify: `src/registry.rs` (rewrite as SPDX fetcher)
 - Modify: `src/spdx.rs` (add `fetch_detail`)
 
@@ -358,6 +363,7 @@ git commit -m "feat: SPDX-based license fetching (replaces GitHub API)"
 **Objective:** Expose the 727-license search as a CLI command — free value from SPDX data.
 
 **Files:**
+
 - Modify: `src/cli.rs` (add `Search` subcommand)
 - Modify: `src/main.rs` (handle search)
 
@@ -425,6 +431,7 @@ git commit -m "feat: add 'licencify search' with OSI/FSF filters"
 **Objective:** Update the existing implementation plan to reflect SPDX as primary source.
 
 **Files:**
+
 - Modify: `.hermes/plans/2026-06-18_180000-licencify-cli-design.md`
 
 **Step 1:** Update the architecture section and tier chain in the existing plan to reference SPDX instead of GitHub as Tier 2.
@@ -440,13 +447,13 @@ git commit -m "docs: update plan for SPDX-first architecture"
 
 ## Risks & Tradeoffs
 
-| Risk | Mitigation |
-|------|-----------|
-| SPDX endpoint goes down | Built-in templates (Tier 3) always work; index embedded in binary |
-| Per-license detail fetch is slow | Cache aggressively; popular licenses embedded as builtins |
-| `licenseText` placeholder syntax varies | Use `licenseText` (not `standardLicenseTemplate`); simple `<year>`/`<copyright holders>` replace covers most cases |
-| Binary size grows ~332KB from embedded index | Acceptable for a CLI tool; gzip compresses well |
-| SPDX detail files may have inconsistent placeholder syntax | Handle gracefully: replace known placeholders, leave unknown ones as-is |
+| Risk                                                       | Mitigation                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| SPDX endpoint goes down                                    | Built-in templates (Tier 3) always work; index embedded in binary                                                  |
+| Per-license detail fetch is slow                           | Cache aggressively; popular licenses embedded as builtins                                                          |
+| `licenseText` placeholder syntax varies                    | Use `licenseText` (not `standardLicenseTemplate`); simple `<year>`/`<copyright holders>` replace covers most cases |
+| Binary size grows ~332KB from embedded index               | Acceptable for a CLI tool; gzip compresses well                                                                    |
+| SPDX detail files may have inconsistent placeholder syntax | Handle gracefully: replace known placeholders, leave unknown ones as-is                                            |
 
 ## Open Questions
 
