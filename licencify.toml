@@ -1,0 +1,9 @@
+[default]
+author = "Project Author"
+license = "Apache-2.0"
+
+[subdirs."packages/backend"]
+license = "MIT"
+
+[subdirs."packages/docs"]
+license = "CC-BY-4.0"

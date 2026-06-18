@@ -32,7 +32,7 @@ pub struct ConfigAuthorResolver;
 
 impl AuthorResolver for ConfigAuthorResolver {
     fn resolve(&self) -> Option<Result<String>> {
-        let cfg = crate::config::Config::load().ok()?;
+        let cfg = crate::config::Config::load_effective().ok()?;
         let author = cfg.default.author?;
         if author.trim().is_empty() {
             None

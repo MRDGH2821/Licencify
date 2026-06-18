@@ -13,7 +13,7 @@ pub struct ResolvedTemplate {
 /// 4. Built-in templates (embedded in binary)
 pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
     let prov = provider::LicenseProvider::load()?;
-    let config = Config::load().ok();
+    let config = Config::load_effective().ok();
 
     // Tier 1: API cache
     if let Some(detail) = prov.get_cached(spdx_id) {
@@ -63,7 +63,7 @@ pub fn resolve_year(cli_year: Option<String>) -> String {
     if let Some(year) = cli_year {
         return year;
     }
-    if let Ok(cfg) = crate::config::Config::load() {
+    if let Ok(cfg) = crate::config::Config::load_effective() {
         if let Some(year) = cfg.default.year {
             return year;
         }

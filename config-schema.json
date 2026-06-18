@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "DefaultConfig": {
+      "properties": {
+        "author": {
+          "description": "Copyright holder name for licence files",
+          "type": ["string", "null"]
+        },
+        "format": {
+          "description": "Output format for licence files",
+          "type": ["string", "null"]
+        },
+        "licence_name": {
+          "description": "Licence file base name (LICENCE or LICENSE)",
+          "type": ["string", "null"]
+        },
+        "license": {
+          "description": "Default SPDX license identifier",
+          "type": ["string", "null"]
+        },
+        "year": {
+          "description": "Override copyright year (YYYY)",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "SubdirConfig": {
+      "description": "Sub-directory license override. Only `default` overrides are supported.",
+      "properties": {
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DefaultConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "TemplateConfig": {
+      "properties": {
+        "paths": {
+          "description": "Custom template search paths",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Configuration file for licencify",
+  "properties": {
+    "default": {
+      "$ref": "#/$defs/DefaultConfig",
+      "description": "Default values for licence creation"
+    },
+    "subdirs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SubdirConfig"
+      },
+      "description": "Sub-directory license overrides (key = relative path)",
+      "type": ["object", "null"]
+    },
+    "template": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TemplateConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Template configuration"
+    }
+  },
+  "required": ["default"],
+  "title": "Licencify Config",
+  "type": "object"
+}

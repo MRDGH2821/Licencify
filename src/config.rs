@@ -1,9 +1,10 @@
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[schemars(
     title = "Licencify Config",
     description = "Configuration file for licencify"
@@ -14,9 +15,12 @@ pub struct Config {
 
     #[schemars(description = "Template configuration")]
     pub template: Option<TemplateConfig>,
+
+    #[schemars(description = "Sub-directory license overrides (key = relative path)")]
+    pub subdirs: Option<HashMap<String, SubdirConfig>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub struct DefaultConfig {
     /// Copyright holder name (used as default author for licence files)
     #[schemars(description = "Copyright holder name for licence files")]
@@ -39,26 +43,26 @@ pub struct DefaultConfig {
     pub licence_name: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub struct TemplateConfig {
     /// Custom template search paths (checked before built-in templates)
     #[schemars(description = "Custom template search paths")]
     pub paths: Option<Vec<String>>,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            default: DefaultConfig::default(),
-            template: None,
-        }
-    }
+/// Sub-directory license override.
+#[derive(Debug, Serialize, Deserialize, Clone, Default, JsonSchema)]
+pub struct SubdirConfig {
+    pub author: Option<String>,
+    pub license: Option<String>,
+    pub format: Option<String>,
+    pub year: Option<String>,
+    pub licence_name: Option<String>,
 }
 
 /// Detect whether the system locale uses en-GB or en-US spelling.
 /// Returns "LICENCE" for en-GB and "LICENSE" for en-US/other.
 pub fn detect_licence_name() -> String {
-    // Check common locale environment variables
     for var in &["LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"] {
         if let Ok(val) = std::env::var(var) {
             let lower = val.to_lowercase();
@@ -70,36 +74,184 @@ pub fn detect_licence_name() -> String {
             {
                 return "LICENCE".to_string();
             }
-            // en_US and other English variants default to LICENSE
             if lower.starts_with("en") {
                 return "LICENSE".to_string();
             }
         }
     }
-    // Default to en-GB (user preference)
     "LICENCE".to_string()
 }
 
-impl Config {
-    /// Load configuration from config dir / licencify / config.toml
-    pub fn load() -> Result<Self> {
-        let path = Self::config_path()?;
+/// Merge two configs: `overriding` values take priority over `base`.
+/// Only `Some` values in `overriding` replace `base`.
+fn merge(base: Config, overriding: Config) -> Config {
+    Config {
+        default: DefaultConfig {
+            author: overriding.default.author.or(base.default.author),
+            license: overriding.default.license.or(base.default.license),
+            format: overriding.default.format.or(base.default.format),
+            year: overriding.default.year.or(base.default.year),
+            licence_name: overriding
+                .default
+                .licence_name
+                .or(base.default.licence_name),
+        },
+        template: match (base.template, overriding.template) {
+            (Some(base_t), Some(over_t)) => {
+                let paths = over_t.paths.or(base_t.paths);
+                Some(TemplateConfig { paths })
+            }
+            (None, Some(t)) => Some(t),
+            (Some(t), None) => Some(t),
+            (None, None) => None,
+        },
+        // Subdirs: overriding replaces entirely if present
+        subdirs: overriding.subdirs.or(base.subdirs),
+    }
+}
 
-        if !path.exists() {
-            return Ok(Self::default());
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            default: DefaultConfig::default(),
+            template: None,
+            subdirs: None,
         }
+    }
+}
 
-        let contents = std::fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-        let config: Config = toml::from_str(&contents)
-            .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
-
-        Ok(config)
+impl Config {
+    /// Return the global config file path.
+    pub fn global_path() -> Result<PathBuf> {
+        let config_dir = dirs::config_dir().context("Could not determine config directory")?;
+        Ok(config_dir.join("licencify").join("config.toml"))
     }
 
-    /// Save configuration to the same config path
+    /// Walk up from CWD to find the directory containing `licencify.toml`.
+    /// Returns (project_root, project_config_path) if found.
+    fn find_project_root() -> Option<(PathBuf, PathBuf)> {
+        let mut dir = std::env::current_dir().ok()?;
+        loop {
+            let candidate = dir.join("licencify.toml");
+            if candidate.exists() {
+                return Some((dir, candidate));
+            }
+            if !dir.pop() {
+                break;
+            }
+        }
+        None
+    }
+
+    /// Return the project-level config file path.
+    /// First checks CWD, then walks up the directory tree.
+    pub fn project_path() -> Result<PathBuf> {
+        // Check CWD first
+        let cwd = std::env::current_dir().context("Could not determine current directory")?;
+        let candidate = cwd.join("licencify.toml");
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+        // Walk up to find it
+        if let Some((_, path)) = Self::find_project_root() {
+            return Ok(path);
+        }
+        // Return CWD path even if it doesn't exist (for init, etc.)
+        Ok(cwd.join("licencify.toml"))
+    }
+
+    /// Legacy path() — returns global path for backwards compat.
+    pub fn path() -> Result<PathBuf> {
+        Self::global_path()
+    }
+
+    /// Load the global config from config dir.
+    fn load_global() -> Option<Self> {
+        let path = Self::global_path().ok()?;
+        if !path.exists() {
+            return None;
+        }
+        let contents = std::fs::read_to_string(&path).ok()?;
+        toml::from_str(&contents).ok()
+    }
+
+    /// Load the project-level config by walking up from CWD.
+    fn load_project() -> Option<Self> {
+        let (_, path) = Self::find_project_root()?;
+        let contents = std::fs::read_to_string(&path).ok()?;
+        toml::from_str(&contents).ok()
+    }
+
+    /// Load merged config: global + project-level (project overrides global).
+    pub fn load() -> Result<Self> {
+        let global = Self::load_global().unwrap_or_default();
+        let project = Self::load_project().unwrap_or_default();
+        Ok(merge(global, project))
+    }
+
+    /// Load the effective config, including subdir resolution.
+    /// 1. Merge global + project
+    /// 2. Find project root (dir containing licencify.toml)
+    /// 3. Compute relative CWD from project root
+    /// 4. Find longest-prefix match in [subdirs]
+    /// 5. Merge matched subdir config on top
+    pub fn load_effective() -> Result<Self> {
+        let merged = Self::load()?;
+
+        // Find project root and check for subdirs
+        let (project_root, _project_path) = match Self::find_project_root() {
+            Some((root, path)) => (root, path),
+            None => return Ok(merged),
+        };
+
+        let subdirs = match &merged.subdirs {
+            Some(s) if !s.is_empty() => s.clone(),
+            _ => return Ok(merged),
+        };
+
+        let cwd = std::env::current_dir().context("Could not determine current directory")?;
+
+        let rel = cwd.strip_prefix(&project_root).unwrap_or(&cwd);
+        let rel_str = rel.to_string_lossy();
+
+        // Find longest prefix match
+        let best = subdirs
+            .iter()
+            .filter(|(key, _)| rel_str == key.as_str() || rel_str.starts_with(&format!("{}/", key)))
+            .max_by_key(|(key, _)| key.len());
+
+        if let Some((matched_path, subdir_cfg)) = best {
+            // Only apply if at least one field is set
+            if subdir_cfg.author.is_some()
+                || subdir_cfg.license.is_some()
+                || subdir_cfg.format.is_some()
+                || subdir_cfg.year.is_some()
+                || subdir_cfg.licence_name.is_some()
+            {
+                let default_override = DefaultConfig {
+                    author: subdir_cfg.author.clone(),
+                    license: subdir_cfg.license.clone(),
+                    format: subdir_cfg.format.clone(),
+                    year: subdir_cfg.year.clone(),
+                    licence_name: subdir_cfg.licence_name.clone(),
+                };
+                let override_config = Config {
+                    default: default_override,
+                    template: None,
+                    subdirs: None,
+                };
+                let effective = merge(merged, override_config);
+                eprintln!("[licencify] sub-dir override active: \"{}\"", matched_path);
+                return Ok(effective);
+            }
+        }
+
+        Ok(merged)
+    }
+
+    /// Save always writes to global config.
     pub fn save(&self) -> Result<()> {
-        let path = Self::config_path()?;
+        let path = Self::global_path()?;
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).with_context(|| {
                 format!("Failed to create config directory: {}", parent.display())
@@ -157,24 +309,13 @@ impl Config {
         None
     }
 
-    /// Return the path to the config file
-    fn config_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir().context("Could not determine config directory")?;
-        Ok(config_dir.join("licencify").join("config.toml"))
-    }
-
-    /// Return config file path for display purposes
-    pub fn path() -> Result<PathBuf> {
-        Self::config_path()
-    }
-
     /// Generate JSON Schema for the config struct
     pub fn schema_json() -> Result<String> {
         let schema = schemars::schema_for!(Config);
         serde_json::to_string_pretty(&schema).context("Failed to serialize JSON schema")
     }
 
-    /// Path for the schema file (next to config file)
+    /// Path for the schema file (next to global config file)
     pub fn schema_path() -> Result<PathBuf> {
         let config_dir = dirs::config_dir().context("Could not determine config directory")?;
         Ok(config_dir.join("licencify").join("config-schema.json"))

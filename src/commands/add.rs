@@ -9,7 +9,7 @@ pub fn cmd_add(
     yes: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
-    let config = Config::load().ok();
+    let config = Config::load_effective().ok();
     let info = prov.info(spdx)?;
     let author = resolution::resolve_author(author)?;
     let year = resolution::resolve_year(year);

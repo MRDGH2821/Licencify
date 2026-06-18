@@ -28,31 +28,56 @@ pub fn cmd_schema(output: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Write schema JSON to the global config dir and (if it exists) alongside
+/// the project config.
 fn write_schema_file() -> Result<()> {
-    let schema_path = Config::schema_path()?;
     let json = Config::schema_json()?;
 
-    if let Some(parent) = schema_path.parent() {
+    // --- global schema ---
+    let global_schema = Config::schema_path()?;
+    if let Some(parent) = global_schema.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(&schema_path, &json)?;
-    println!("✅ Schema written: {}", schema_path.display());
+    std::fs::write(&global_schema, &json)?;
+    println!("✅ Schema written: {}", global_schema.display());
+
+    // --- project schema (next to licencify.toml) ---
+    let project_cfg = Config::project_path()?;
+    if project_cfg.exists() {
+        if let Some(parent) = project_cfg.parent() {
+            let proj_schema = parent.join("config-schema.json");
+            std::fs::write(&proj_schema, &json)?;
+            println!("✅ Schema written: {}", proj_schema.display());
+        }
+    }
+
     Ok(())
 }
 
-fn cmd_config_init() -> Result<()> {
-    let path = Config::path()?;
+// ─── init ────────────────────────────────────────────────────────────────────
 
-    if path.exists() {
-        println!("Config file already exists: {}", path.display());
+fn cmd_config_init() -> Result<()> {
+    let project_path = Config::project_path()?;
+    let global_path = Config::global_path()?;
+
+    // Create global config if it doesn't exist yet
+    if !global_path.exists() {
+        let global = Config::default();
+        global.save()?;
+        println!("✅ Created global config: {}", global_path.display());
+    }
+
+    // Create project config if it doesn't exist yet
+    if project_path.exists() {
+        println!("Project config already exists: {}", project_path.display());
         println!("Use `licencify config show` to view current configuration.");
         return Ok(());
     }
 
     let config = Config::default();
-    config.save()?;
+    save_project_config(&config, &project_path)?;
 
-    println!("✅ Created config file: {}", path.display());
+    println!("✅ Created project config: {}", project_path.display());
 
     // Generate schema alongside config
     write_schema_file()?;
@@ -73,23 +98,45 @@ fn cmd_config_init() -> Result<()> {
     println!("  [template]  (optional)");
     println!("    paths         Custom template search paths (array)");
     println!();
-    println!("Use `licencify config set <key> <value>` to configure.");
+    println!("  [subdirs]  (optional)");
+    println!("    \"<path>\"       Per-subdirectory overrides (author, license, …)");
+    println!();
+    println!("Use `licencify config set <key> <value>` to write to global config.");
+    println!("Use `licencify config show` to see the effective (merged) configuration.");
     Ok(())
 }
 
-fn cmd_config_show() -> Result<()> {
-    let config = Config::load()?;
-    let path = Config::path()?;
+// ─── show ────────────────────────────────────────────────────────────────────
 
-    println!("Config file: {}", path.display());
+fn cmd_config_show() -> Result<()> {
+    let global_path = Config::global_path()?;
+    let project_path = Config::project_path()?;
+
+    let global_exists = global_path.exists();
+    let project_exists = project_path.exists();
+
+    // File locations
+    println!(
+        "Global config:  {} {}",
+        if global_exists { "✓" } else { "✗" },
+        global_path.display()
+    );
+    println!(
+        "Project config: {} {}",
+        if project_exists { "✓" } else { "✗" },
+        project_path.display()
+    );
     println!();
 
-    if !path.exists() {
-        println!("No config file found. Run `licencify config init` to create one.");
+    if !global_exists && !project_exists {
+        println!("No config files found. Run `licencify config init` to create one.");
         return Ok(());
     }
 
+    // Effective (merged + subdir) values
+    let config = Config::load_effective()?;
     let detected = config::detect_licence_name();
+
     println!("[default]");
     println!(
         "  author        = {}",
@@ -117,6 +164,8 @@ fn cmd_config_show() -> Result<()> {
         detected
     );
     println!();
+
+    // [template]
     println!("[template]");
     match &config.template {
         Some(template) => match &template.paths {
@@ -134,8 +183,42 @@ fn cmd_config_show() -> Result<()> {
             println!("  (section not configured)");
         }
     }
+    println!();
+
+    // [subdirs] — only relevant when a project config is present
+    if project_exists {
+        println!("[subdirs]");
+        match &config.subdirs {
+            Some(subdirs) if !subdirs.is_empty() => {
+                for (dir, subdir_cfg) in subdirs {
+                    println!("  [\"{}\"]", dir);
+                    if let Some(author) = &subdir_cfg.author {
+                        println!("    author      = {}", author);
+                    }
+                    if let Some(license) = &subdir_cfg.license {
+                        println!("    license     = {}", license);
+                    }
+                    if let Some(format) = &subdir_cfg.format {
+                        println!("    format      = {}", format);
+                    }
+                    if let Some(year) = &subdir_cfg.year {
+                        println!("    year        = {}", year);
+                    }
+                    if let Some(licence_name) = &subdir_cfg.licence_name {
+                        println!("    licence_name = {}", licence_name);
+                    }
+                }
+            }
+            _ => {
+                println!("  (no sub-directory overrides)");
+            }
+        }
+    }
+
     Ok(())
 }
+
+// ─── get ─────────────────────────────────────────────────────────────────────
 
 fn cmd_config_get(key: &str) -> Result<()> {
     let config = Config::load()?;
@@ -162,6 +245,8 @@ fn cmd_config_get(key: &str) -> Result<()> {
     }
     Ok(())
 }
+
+// ─── set ─────────────────────────────────────────────────────────────────────
 
 fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     let mut config = Config::load()?;
@@ -220,5 +305,33 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     let path = Config::path()?;
     println!("✅ Set {} = {}", key, value);
     println!("   Saved to {}", path.display());
+    Ok(())
+}
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+/// Write a Config to a project-level file path (licencify.toml).
+/// This is used only for the project config; global config uses `Config::save()`.
+fn save_project_config(config: &Config, path: &std::path::Path) -> Result<()> {
+    use anyhow::Context;
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+    }
+
+    // Build TOML with schema comment header
+    let doc: toml_edit::DocumentMut = toml::to_string_pretty(config)
+        .context("Failed to serialize config")?
+        .parse()
+        .context("Failed to parse serialized config")?;
+
+    let schema_path = Config::schema_path()?;
+    let header = format!("#:schema {}\n\n", schema_path.display());
+    let mut prefixed = header;
+    prefixed.push_str(&doc.to_string());
+
+    std::fs::write(path, prefixed)
+        .with_context(|| format!("Failed to write config file: {}", path.display()))?;
     Ok(())
 }
