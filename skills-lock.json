@@ -11,6 +11,12 @@
       "skillPath": "skills/git-commit/SKILL.md",
       "source": "github/awesome-copilot",
       "sourceType": "github"
+    },
+    "improve": {
+      "computedHash": "39a9358732dcff385e9e4d3e60b4547856f834e54a58b35e455aa9bd49928c13",
+      "skillPath": "skills/improve/SKILL.md",
+      "source": "shadcn/improve",
+      "sourceType": "github"
     }
   },
   "version": 1
