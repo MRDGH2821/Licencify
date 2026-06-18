@@ -11,6 +11,9 @@ use std::path::PathBuf;
 pub struct Config {
     #[schemars(description = "Default values for licence creation")]
     pub default: DefaultConfig,
+
+    #[schemars(description = "Template configuration")]
+    pub template: TemplateConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
@@ -30,10 +33,6 @@ pub struct DefaultConfig {
     /// Override copyright year instead of using current year
     #[schemars(description = "Override copyright year (YYYY)")]
     pub year: Option<String>,
-
-    /// Template configuration
-    #[schemars(description = "Template configuration")]
-    pub template: TemplateConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
@@ -47,6 +46,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             default: DefaultConfig::default(),
+            template: TemplateConfig::default(),
         }
     }
 }

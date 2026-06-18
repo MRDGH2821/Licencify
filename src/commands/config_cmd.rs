@@ -55,14 +55,15 @@ fn cmd_config_init() -> Result<()> {
     write_schema_file()?;
 
     println!();
-    println!("Available settings under [default]:");
-    println!("  author              Copyright holder name");
-    println!("  license             Default SPDX license ID");
-    println!("  format              Output format (txt or html)");
-    println!("  year                Override copyright year");
+    println!("Available settings:");
+    println!("  [default]");
+    println!("    author    Copyright holder name");
+    println!("    license   Default SPDX license ID");
+    println!("    format    Output format (txt or html)");
+    println!("    year      Override copyright year");
     println!();
-    println!("Template settings under [default.template]:");
-    println!("  paths               Custom template search paths (array)");
+    println!("  [template]");
+    println!("    paths     Custom template search paths (array)");
     println!();
     println!("Use `licencify config set <key> <value>` to configure.");
     Ok(())
@@ -80,32 +81,34 @@ fn cmd_config_show() -> Result<()> {
         return Ok(());
     }
 
+    println!("[default]");
     println!(
-        "[default].author  = {}",
+        "  author  = {}",
         config.default.author.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "[default].license = {}",
+        "  license = {}",
         config.default.license.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "[default].format  = {}",
+        "  format  = {}",
         config.default.format.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "[default].year    = {}",
+        "  year    = {}",
         config.default.year.as_deref().unwrap_or("(not set)")
     );
     println!();
-    match &config.default.template.paths {
+    println!("[template]");
+    match &config.template.paths {
         Some(paths) if !paths.is_empty() => {
-            println!("[default].template.paths =");
+            println!("  paths =");
             for (i, p) in paths.iter().enumerate() {
-                println!("  [{}] {}", i, p);
+                println!("    [{}] {}", i, p);
             }
         }
         _ => {
-            println!("[default].template.paths = (not set)");
+            println!("  paths = (not set)");
         }
     }
     Ok(())
@@ -115,14 +118,11 @@ fn cmd_config_get(key: &str) -> Result<()> {
     let config = Config::load()?;
 
     let value = match key {
-        "author" => config.default.author.map(|v| v),
-        "license" => config.default.license.map(|v| v),
-        "format" => config.default.format.map(|v| v),
-        "year" => config.default.year.map(|v| v),
-        "template.paths" => match config.default.template.paths {
-            Some(paths) => Some(paths.join(",")),
-            None => None,
-        },
+        "author" => config.default.author,
+        "license" => config.default.license,
+        "format" => config.default.format,
+        "year" => config.default.year,
+        "template.paths" => config.template.paths.map(|v| v.join(",")),
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
@@ -159,7 +159,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
-            match &mut config.default.template.paths {
+            match &mut config.template.paths {
                 Some(paths) => {
                     for p in new_paths {
                         if !paths.contains(&p) {
@@ -168,7 +168,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
                     }
                 }
                 None => {
-                    config.default.template.paths = Some(new_paths);
+                    config.template.paths = Some(new_paths);
                 }
             }
         }
@@ -184,7 +184,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     config.save()?;
 
     let path = Config::path()?;
-    println!("✅ Set [default].{} = {}", key, value);
+    println!("✅ Set {} = {}", key, value);
     println!("   Saved to {}", path.display());
     Ok(())
 }
