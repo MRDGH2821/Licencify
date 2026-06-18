@@ -143,7 +143,7 @@ fn cmd_add(
 
     // Resolve template text
     let (raw_text, source) = resolve_template(&info.id)?;
-    let content = template::render(&raw_text, &year, &author);
+    let content = template::render(&raw_text, &year, &author)?;
 
     // Determine output filename
     let filename = if info.id.to_uppercase() == info.id {
@@ -355,7 +355,7 @@ fn cmd_update(spdx: &str, author: Option<String>, year: Option<String>) -> anyho
 
     // Resolve template text
     let (raw_text, source) = resolve_template(&info.id)?;
-    let content = template::render(&raw_text, &year, &author);
+    let content = template::render(&raw_text, &year, &author)?;
 
     // Determine output filename
     let filename = if info.id.to_uppercase() == info.id {

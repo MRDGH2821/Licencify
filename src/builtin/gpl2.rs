@@ -59,7 +59,7 @@ modification follow.
   For the complete license text, see:
   https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
-  Copyright [year] [fullname]
+  Copyright {{ year }} {{ author }}
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

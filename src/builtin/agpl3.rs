@@ -14,7 +14,7 @@ cooperation with the community in the case of network server software.
   For the complete license text, see:
   https://www.gnu.org/licenses/agpl-3.0.txt
 
-  Copyright [year] [fullname]
+  Copyright {{ year }} {{ author }}
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published
