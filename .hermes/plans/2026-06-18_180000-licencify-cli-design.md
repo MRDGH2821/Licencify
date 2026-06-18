@@ -609,12 +609,14 @@ pub fn resolve(spdx_id: &str, cache: &LicenseCache) -> Result<(String, LicenseSo
 
 /// Fetch license text from GitHub's Licenses API.
 /// Uses the GitHub API key (lowercase, hyphenated), not the SPDX ID.
+/// API docs: https://docs.github.com/en/rest/licenses/licenses?apiVersion=2026-03-10
 fn fetch_from_github(github_key: &str) -> Result<String> {
     let url = format!("https://api.github.com/licenses/{github_key}");
     let response: GithubLicenseResponse = ureq::get(&url)
         .set("User-Agent", "licencify/0.1.0")
-        .set("Accept", "application/vnd.github.v3+json")
-        .call()
+        .set("Accept", "application/vnd.github+json")
+        .set("X-GitHub-Api-Version", "2026-03-10")
+         .call()
         .context("Failed to contact GitHub API")?
         .into_body()
         .read_json()
@@ -623,16 +625,24 @@ fn fetch_from_github(github_key: &str) -> Result<String> {
     Ok(response.body)
 }
 
-/// List available licenses from GitHub
-pub fn list_remote() -> Result<Vec<String>> {
+/// List available licenses from GitHub.
+/// Supports `featured` filter to show only commonly-used licenses.
+pub fn list_remote(featured: bool) -> Result<Vec<String>> {
     #[derive(Deserialize)]
     struct LicenseSummary {
         spdx_id: String,
     }
 
-    let licenses: Vec<LicenseSummary> = ureq::get("https://api.github.com/licenses")
+    // Per_page=100 covers all commonly-used licenses in one call
+    let mut url = format!("https://api.github.com/licenses?per_page=100");
+    if featured {
+        url.push_str("&featured=true");
+    }
+
+    let licenses: Vec<LicenseSummary> = ureq::get(&url)
         .set("User-Agent", "licencify/0.1.0")
-        .set("Accept", "application/vnd.github.v3+json")
+        .set("Accept", "application/vnd.github+json")
+        .set("X-GitHub-Api-Version", "2026-03-10")
         .call()
         .context("Failed to fetch license list from GitHub")?
         .into_body()
