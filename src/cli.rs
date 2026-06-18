@@ -114,6 +114,13 @@ pub enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
+
+    /// Generate JSON schema for config file
+    Schema {
+        /// Write schema to file instead of stdout
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]

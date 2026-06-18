@@ -10,6 +10,33 @@ pub fn cmd_config(action: ConfigAction) -> Result<()> {
     }
 }
 
+pub fn cmd_schema(output: Option<&str>) -> Result<()> {
+    let json = Config::schema_json()?;
+
+    match output {
+        Some(path) => {
+            std::fs::write(path, &json)?;
+            println!("✅ Schema written to {}", path);
+        }
+        None => {
+            println!("{}", json);
+        }
+    }
+    Ok(())
+}
+
+fn write_schema_file() -> Result<()> {
+    let schema_path = Config::schema_path()?;
+    let json = Config::schema_json()?;
+
+    if let Some(parent) = schema_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&schema_path, &json)?;
+    println!("✅ Schema written: {}", schema_path.display());
+    Ok(())
+}
+
 fn cmd_config_init() -> Result<()> {
     let path = Config::path()?;
 
@@ -23,6 +50,10 @@ fn cmd_config_init() -> Result<()> {
     config.save()?;
 
     println!("✅ Created config file: {}", path.display());
+
+    // Generate schema alongside config
+    write_schema_file()?;
+
     println!();
     println!("Available settings:");
     println!("  default_author   Copyright holder name");

@@ -1,17 +1,33 @@
 use anyhow::{Context, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+#[schemars(
+    title = "Licencify Config",
+    description = "Configuration file for licencify"
+)]
 pub struct Config {
+    /// Copyright holder name (used as default author for licence files)
+    #[schemars(description = "Copyright holder name for licence files")]
     pub default_author: Option<String>,
+
+    /// Default SPDX license ID (e.g. MIT, Apache-2.0)
+    #[schemars(description = "Default SPDX license identifier")]
     pub default_license: Option<String>,
+
+    /// Output format: txt or html
+    #[schemars(description = "Output format for licence files")]
     pub default_format: Option<String>,
+
+    /// Override copyright year instead of using current year
+    #[schemars(description = "Override copyright year (YYYY)")]
     pub year_override: Option<String>,
 }
 
 impl Config {
-    /// Load configuration from XDG config dir / licencify / config.toml
+    /// Load configuration from config dir / licencify / config.toml
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
 
@@ -27,7 +43,7 @@ impl Config {
         Ok(config)
     }
 
-    /// Save configuration to the same XDG config path
+    /// Save configuration to the same config path
     pub fn save(&self) -> Result<()> {
         let path = Self::config_path()?;
         if let Some(parent) = path.parent() {
@@ -50,5 +66,17 @@ impl Config {
     /// Return config file path for display purposes
     pub fn path() -> Result<PathBuf> {
         Self::config_path()
+    }
+
+    /// Generate JSON Schema for the config struct
+    pub fn schema_json() -> Result<String> {
+        let schema = schemars::schema_for!(Config);
+        serde_json::to_string_pretty(&schema).context("Failed to serialize JSON schema")
+    }
+
+    /// Path for the schema file (next to config file)
+    pub fn schema_path() -> Result<PathBuf> {
+        let config_dir = dirs::config_dir().context("Could not determine config directory")?;
+        Ok(config_dir.join("licencify").join("config-schema.json"))
     }
 }
