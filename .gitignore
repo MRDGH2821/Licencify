@@ -14,3 +14,6 @@ dist/
 megalinter-reports/
 node_modules/
 target/
+
+# Added by cargo
+/target
