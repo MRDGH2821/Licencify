@@ -184,9 +184,11 @@ fn cmd_add(
 
 fn cmd_list(osi_only: bool, fsf_only: bool, limit: Option<usize>) -> anyhow::Result<()> {
     let index = spdx::SpdxIndex::load()?;
+    let mut licenses: Vec<_> = index.licenses.iter().collect();
+    licenses.sort_by(|a, b| a.license_id.cmp(&b.license_id));
     let mut count = 0usize;
 
-    for license in &index.licenses {
+    for license in &licenses {
         if osi_only && !license.is_osi_approved {
             continue;
         }
@@ -230,7 +232,7 @@ fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result<()>
     let index = spdx::SpdxIndex::load()?;
     let results = index.search(query);
 
-    let results: Vec<_> = results
+    let mut results: Vec<_> = results
         .into_iter()
         .filter(|l| {
             if osi_only && !l.is_osi_approved {
@@ -242,6 +244,7 @@ fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result<()>
             true
         })
         .collect();
+    results.sort_by(|a, b| a.license_id.cmp(&b.license_id));
 
     if results.is_empty() {
         eprintln!("No licenses found matching '{}'", query);
