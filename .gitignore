@@ -17,3 +17,7 @@ target/
 
 # Added by cargo
 /target
+
+# licencify generated files
+config-schema.json
+licencify.toml
