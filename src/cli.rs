@@ -108,6 +108,12 @@ pub enum Commands {
         #[command(subcommand)]
         action: CacheAction,
     },
+
+    /// Manage configuration
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -120,4 +126,28 @@ pub enum CacheAction {
 
     /// Pre-fetch and cache all license templates from SPDX
     FetchAll,
+}
+
+#[derive(Subcommand)]
+pub enum ConfigAction {
+    /// Create default config file
+    Init,
+
+    /// Show current configuration
+    Show,
+
+    /// Get a config value
+    Get {
+        /// Config key (default_author, default_license, default_format, year_override)
+        key: String,
+    },
+
+    /// Set a config value
+    Set {
+        /// Config key
+        key: String,
+
+        /// Config value
+        value: String,
+    },
 }

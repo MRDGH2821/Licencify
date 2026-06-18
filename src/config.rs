@@ -6,6 +6,7 @@ use std::path::PathBuf;
 pub struct Config {
     pub default_author: Option<String>,
     pub default_license: Option<String>,
+    pub default_format: Option<String>,
     pub year_override: Option<String>,
 }
 
@@ -20,7 +21,6 @@ impl Config {
 
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-
         let config: Config = toml::from_str(&contents)
             .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
 
@@ -41,9 +41,14 @@ impl Config {
         Ok(())
     }
 
-    /// Return the path to the config file: $XDG_CONFIG_HOME/licencify/config.toml
+    /// Return the path to the config file
     fn config_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir().context("Could not determine XDG config directory")?;
+        let config_dir = dirs::config_dir().context("Could not determine config directory")?;
         Ok(config_dir.join("licencify").join("config.toml"))
+    }
+
+    /// Return config file path for display purposes
+    pub fn path() -> Result<PathBuf> {
+        Self::config_path()
     }
 }

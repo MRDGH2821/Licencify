@@ -43,5 +43,6 @@ pub fn main() -> anyhow::Result<()> {
             format,
         } => commands::cmd_update(&spdx, author, year, format),
         Commands::Cache { action } => commands::cmd_cache(action),
+        Commands::Config { action } => commands::cmd_config(action),
     }
 }
