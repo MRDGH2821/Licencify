@@ -12,18 +12,18 @@
 
 ## What's Built vs What's Missing
 
-| Module | Status | Notes |
-|--------|--------|-------|
-| `src/cli.rs` | ✅ Done | 6 subcommands: add, list, search, detect, update, cache |
-| `src/spdx.rs` | ✅ Done | Embedded index (727 licenses), search, find |
-| `src/license.rs` | ✅ Done | Validation, info lookup |
-| `src/registry.rs` | ✅ Done | SPDX detail fetcher with disk cache |
-| `src/main.rs` | ✅ Done | Command dispatch + inline implementations |
-| `src/template.rs` | ❌ Missing | Template rendering with placeholder interpolation |
-| `src/builtin/` | ❌ Missing | Built-in embedded templates (MIT, Apache, GPL, BSD, etc.) |
-| `src/config.rs` | ❌ Missing | User preferences (default author, default license) |
-| `src/project/` | ❌ Missing | Cargo.toml, package.json, pyproject.toml integration |
-| `src/cache.rs` | ❌ Missing | Cache module (currently inline in main.rs) |
+| Module            | Status     | Notes                                                     |
+| ----------------- | ---------- | --------------------------------------------------------- |
+| `src/cli.rs`      | ✅ Done    | 6 subcommands: add, list, search, detect, update, cache   |
+| `src/spdx.rs`     | ✅ Done    | Embedded index (727 licenses), search, find               |
+| `src/license.rs`  | ✅ Done    | Validation, info lookup                                   |
+| `src/registry.rs` | ✅ Done    | SPDX detail fetcher with disk cache                       |
+| `src/main.rs`     | ✅ Done    | Command dispatch + inline implementations                 |
+| `src/template.rs` | ❌ Missing | Template rendering with placeholder interpolation         |
+| `src/builtin/`    | ❌ Missing | Built-in embedded templates (MIT, Apache, GPL, BSD, etc.) |
+| `src/config.rs`   | ❌ Missing | User preferences (default author, default license)        |
+| `src/project/`    | ❌ Missing | Cargo.toml, package.json, pyproject.toml integration      |
+| `src/cache.rs`    | ❌ Missing | Cache module (currently inline in main.rs)                |
 
 ---
 
@@ -32,6 +32,7 @@
 **Objective:** Create `src/builtin/` module with embedded license text for the 14 most popular licenses, so `licencify add` works fully offline without network access.
 
 **Files:**
+
 - Create: `src/builtin/mod.rs`
 - Create: `src/builtin/mit.rs`
 - Create: `src/builtin/apache.rs`
@@ -142,6 +143,7 @@ Run: `cargo check`
 Expected: success, warnings about unused modules.
 
 **Step 6:** Commit
+
 ```bash
 git add src/builtin/ Cargo.toml
 git commit "feat: add built-in embedded templates for 14 popular licenses"
@@ -154,6 +156,7 @@ git commit "feat: add built-in embedded templates for 14 popular licenses"
 **Objective:** Create `src/template.rs` that handles placeholder interpolation and renders final license text.
 
 **Files:**
+
 - Create: `src/template.rs`
 - Modify: `src/main.rs` (use template module)
 
@@ -210,6 +213,7 @@ Run: `cargo check`
 Expected: success.
 
 **Step 4:** Commit
+
 ```bash
 git add src/template.rs src/main.rs
 git commit "feat: add template rendering module with placeholder interpolation"
@@ -222,6 +226,7 @@ git commit "feat: add template rendering module with placeholder interpolation"
 **Objective:** Extract cache logic from `main.rs` into a proper `src/cache.rs` module.
 
 **Files:**
+
 - Create: `src/cache.rs`
 - Modify: `src/main.rs` (use cache module)
 
@@ -308,6 +313,7 @@ Run: `cargo check`
 Expected: success.
 
 **Step 4:** Commit
+
 ```bash
 git add src/cache.rs src/main.rs
 git commit "refactor: extract cache logic into cache.rs module"
@@ -320,6 +326,7 @@ git commit "refactor: extract cache logic into cache.rs module"
 **Objective:** Detect and update project manifest files (Cargo.toml, package.json, pyproject.toml) with the license field.
 
 **Files:**
+
 - Create: `src/project/mod.rs`
 - Create: `src/project/cargo.rs`
 - Create: `src/project/npm.rs`
@@ -444,6 +451,7 @@ Run: `cargo check`
 Expected: success.
 
 **Step 8:** Commit
+
 ```bash
 git add src/project/ src/main.rs Cargo.toml
 git commit "feat: add project manifest integration (Cargo.toml, package.json, pyproject.toml)"
@@ -456,6 +464,7 @@ git commit "feat: add project manifest integration (Cargo.toml, package.json, py
 **Objective:** Create `src/config.rs` for user preferences (default author, default license, etc.).
 
 **Files:**
+
 - Create: `src/config.rs`
 - Modify: `src/main.rs` (use config module)
 
@@ -545,6 +554,7 @@ Run: `cargo check`
 Expected: success.
 
 **Step 5:** Commit
+
 ```bash
 git add src/config.rs src/main.rs Cargo.toml
 git commit "feat: add config module for user preferences"
@@ -557,9 +567,11 @@ git commit "feat: add config module for user preferences"
 **Objective:** Update `src/main.rs` to integrate all new modules, implement the full 3-tier resolution chain, and ensure all commands work end-to-end.
 
 **Files:**
+
 - Modify: `src/main.rs`
 
 **Step 1:** Update `cmd_add` to use:
+
 1. Built-in templates (Tier 3) as first attempt
 2. SPDX API fetch (Tier 2) as fallback
 3. Cache (Tier 1) for subsequent requests
@@ -569,6 +581,7 @@ git commit "feat: add config module for user preferences"
 **Step 3:** Update `cmd_detect` to use template module.
 
 **Step 4:** Verify all commands work:
+
 ```bash
 cargo run -- search mit
 cargo run -- list --limit 10
@@ -577,6 +590,7 @@ cargo run -- cache info
 ```
 
 **Step 5:** Commit
+
 ```bash
 git add src/main.rs
 git commit "feat: wire all modules together, implement 3-tier resolution chain"
@@ -589,6 +603,7 @@ git commit "feat: wire all modules together, implement 3-tier resolution chain"
 **Objective:** Add integration tests and polish the CLI output.
 
 **Files:**
+
 - Create: `tests/integration.rs`
 - Modify: `src/main.rs` (improve error messages)
 
@@ -614,11 +629,13 @@ fn test_detect_no_license() {
 **Step 2:** Add colored output for better UX (optional, using `colored` crate).
 
 **Step 3:** Run tests
+
 ```bash
 cargo test
 ```
 
 **Step 4:** Commit
+
 ```bash
 git add tests/ src/main.rs
 git commit "test: add integration tests, polish CLI output"
@@ -640,21 +657,21 @@ dirs = "6.0"
 chrono = "0.4"
 
 # New
-once_cell = "1"        # Task 1: lazy static for built-in templates
-toml_edit = "0.22"     # Task 4: Cargo.toml/pyproject.toml editing
-toml = "0.8"           # Task 5: config file parsing
+once_cell = "1"    # Task 1: lazy static for built-in templates
+toml_edit = "0.22" # Task 4: Cargo.toml/pyproject.toml editing
+toml = "0.8"       # Task 5: config file parsing
 ```
 
 ---
 
 ## Risks & Tradeoffs
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                            | Mitigation                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
 | Built-in templates may drift from SPDX versions | Templates are static snapshots; `update-index` command can refresh |
-| `toml_edit` may break complex TOML files | Only modify `license` field, preserve rest via `DocumentMut` |
-| Config file format may change | Use TOML (human-readable, standard) |
-| Network failures during SPDX fetch | Built-in templates provide offline fallback |
+| `toml_edit` may break complex TOML files        | Only modify `license` field, preserve rest via `DocumentMut`       |
+| Config file format may change                   | Use TOML (human-readable, standard)                                |
+| Network failures during SPDX fetch              | Built-in templates provide offline fallback                        |
 
 ---
 

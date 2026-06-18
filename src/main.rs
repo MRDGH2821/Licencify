@@ -1,8 +1,8 @@
 #![allow(dead_code)]
-mod builtin;
 mod cache;
 mod cli;
 mod config;
+mod licences;
 mod license;
 mod project;
 mod registry;
@@ -82,7 +82,7 @@ fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
     let lower = spdx_id.to_lowercase();
 
     // Tier 1: Built-in templates
-    if let Some(text) = builtin::get(&lower) {
+    if let Some(text) = licences::get(&lower) {
         return Ok((text.to_string(), "built-in".to_string()));
     }
 
@@ -102,7 +102,7 @@ fn resolve_template(spdx_id: &str) -> anyhow::Result<(String, String)> {
             Ok((detail.license_text, "SPDX API".to_string()))
         }
         Err(e) => {
-            let supported = builtin::supported_ids().join(", ");
+            let supported = licences::supported_ids().join(", ");
             anyhow::bail!(
                 "License '{}' not available as built-in template and \
                  could not be fetched from SPDX API: {}\n\

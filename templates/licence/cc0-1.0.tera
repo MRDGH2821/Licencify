@@ -1,4 +1,4 @@
-pub const TEXT: &str = r#"Creative Commons Legal Code
+Creative Commons Legal Code
 
 CC0 1.0 Universal
 
@@ -135,4 +135,3 @@ express Statement of Purpose.
 
 For more information, please see
 <https://creativecommons.org/publicdomain/zero/1.0/>
-"#;

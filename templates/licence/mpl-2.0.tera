@@ -1,4 +1,4 @@
-pub const TEXT: &str = r#"Mozilla Public License Version 2.0
+Mozilla Public License Version 2.0
 ==================================
 
 1. Definitions
@@ -374,4 +374,3 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 
   Copyright {{ year }} {{ author }}
-"#;
