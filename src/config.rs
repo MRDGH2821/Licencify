@@ -30,6 +30,17 @@ pub struct DefaultConfig {
     /// Override copyright year instead of using current year
     #[schemars(description = "Override copyright year (YYYY)")]
     pub year: Option<String>,
+
+    /// Template configuration
+    #[schemars(description = "Template configuration")]
+    pub template: TemplateConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
+pub struct TemplateConfig {
+    /// Custom template search paths (checked before built-in templates)
+    #[schemars(description = "Custom template search paths")]
+    pub paths: Option<Vec<String>>,
 }
 
 impl Default for Config {

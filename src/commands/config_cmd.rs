@@ -56,10 +56,13 @@ fn cmd_config_init() -> Result<()> {
 
     println!();
     println!("Available settings under [default]:");
-    println!("  author    Copyright holder name");
-    println!("  license   Default SPDX license ID");
-    println!("  format    Output format (txt or html)");
-    println!("  year      Override copyright year");
+    println!("  author              Copyright holder name");
+    println!("  license             Default SPDX license ID");
+    println!("  format              Output format (txt or html)");
+    println!("  year                Override copyright year");
+    println!();
+    println!("Template settings under [default.template]:");
+    println!("  paths               Custom template search paths (array)");
     println!();
     println!("Use `licencify config set <key> <value>` to configure.");
     Ok(())
@@ -93,6 +96,18 @@ fn cmd_config_show() -> Result<()> {
         "[default].year    = {}",
         config.default.year.as_deref().unwrap_or("(not set)")
     );
+    println!();
+    match &config.default.template.paths {
+        Some(paths) if !paths.is_empty() => {
+            println!("[default].template.paths =");
+            for (i, p) in paths.iter().enumerate() {
+                println!("  [{}] {}", i, p);
+            }
+        }
+        _ => {
+            println!("[default].template.paths = (not set)");
+        }
+    }
     Ok(())
 }
 
@@ -100,14 +115,18 @@ fn cmd_config_get(key: &str) -> Result<()> {
     let config = Config::load()?;
 
     let value = match key {
-        "author" => &config.default.author,
-        "license" => &config.default.license,
-        "format" => &config.default.format,
-        "year" => &config.default.year,
+        "author" => config.default.author.map(|v| v),
+        "license" => config.default.license.map(|v| v),
+        "format" => config.default.format.map(|v| v),
+        "year" => config.default.year.map(|v| v),
+        "template.paths" => match config.default.template.paths {
+            Some(paths) => Some(paths.join(",")),
+            None => None,
+        },
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: author, license, format, year",
+                 Valid keys: author, license, format, year, template.paths",
                 key
             );
         }
@@ -133,10 +152,30 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
             config.default.format = Some(value.to_string());
         }
         "year" => config.default.year = Some(value.to_string()),
+        "template.paths" => {
+            // Append to existing paths (comma-separated or add one by one)
+            let new_paths: Vec<String> = value
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            match &mut config.default.template.paths {
+                Some(paths) => {
+                    for p in new_paths {
+                        if !paths.contains(&p) {
+                            paths.push(p);
+                        }
+                    }
+                }
+                None => {
+                    config.default.template.paths = Some(new_paths);
+                }
+            }
+        }
         _ => {
             anyhow::bail!(
                 "Unknown config key: '{}'\n\
-                 Valid keys: author, license, format, year",
+                 Valid keys: author, license, format, year, template.paths",
                 key
             );
         }
