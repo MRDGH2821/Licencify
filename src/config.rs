@@ -30,48 +30,15 @@ impl Config {
     /// Save configuration to the same XDG config path
     pub fn save(&self) -> Result<()> {
         let path = Self::config_path()?;
-
-        // Ensure parent directory exists
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).with_context(|| {
                 format!("Failed to create config directory: {}", parent.display())
             })?;
         }
-
         let contents = toml::to_string_pretty(self).context("Failed to serialize config")?;
-
         std::fs::write(&path, contents)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
-
         Ok(())
-    }
-
-    /// Get the effective author: config default -> git config user.name -> error
-    pub fn effective_author(&self) -> Result<String> {
-        // 1. Check config
-        if let Some(ref author) = self.default_author {
-            if !author.trim().is_empty() {
-                return Ok(author.clone());
-            }
-        }
-
-        // 2. Check git config
-        let output = std::process::Command::new("git")
-            .args(["config", "user.name"])
-            .output()
-            .context("Failed to run `git config user.name`. Is git installed?")?;
-
-        if output.status.success() {
-            let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !name.is_empty() {
-                return Ok(name);
-            }
-        }
-
-        anyhow::bail!(
-            "No author specified. Set one via `licencify config --author <name>` \
-             or configure git with `git config user.name \"Your Name\"`"
-        )
     }
 
     /// Return the path to the config file: $XDG_CONFIG_HOME/licencify/config.toml
