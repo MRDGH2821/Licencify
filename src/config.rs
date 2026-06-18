@@ -51,8 +51,20 @@ impl Config {
                 format!("Failed to create config directory: {}", parent.display())
             })?;
         }
-        let contents = toml::to_string_pretty(self).context("Failed to serialize config")?;
-        std::fs::write(&path, contents)
+
+        // Build TOML with schema comment header using toml_edit
+        let doc: toml_edit::DocumentMut = toml::to_string_pretty(self)
+            .context("Failed to serialize config")?
+            .parse()
+            .context("Failed to parse serialized config")?;
+
+        // Prepend schema comment
+        let schema_path = Self::schema_path()?;
+        let header = format!("#:schema {}\n\n", schema_path.display());
+        let mut prefixed = header;
+        prefixed.push_str(&doc.to_string());
+
+        std::fs::write(&path, prefixed)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
         Ok(())
     }
