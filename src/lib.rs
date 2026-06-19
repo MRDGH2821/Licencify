@@ -23,10 +23,12 @@ pub fn main() -> anyhow::Result<()> {
         Commands::Add {
             spdx,
             author,
+            company,
+            email,
             year,
             format,
             yes,
-        } => commands::cmd_add(&spdx, author, year, format, yes),
+        } => commands::cmd_add(&spdx, author, company, email, year, format, yes),
         Commands::List {
             osi_only,
             fsf_only,
@@ -41,9 +43,11 @@ pub fn main() -> anyhow::Result<()> {
         Commands::Update {
             spdx,
             author,
+            company,
+            email,
             year,
             format,
-        } => commands::cmd_update(&spdx, author, year, format),
+        } => commands::cmd_update(&spdx, author, company, email, year, format),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
         Commands::Schema { output } => commands::cmd_schema(output.as_deref()),

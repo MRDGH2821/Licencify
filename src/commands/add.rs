@@ -4,6 +4,8 @@ use std::io::Write;
 pub fn cmd_add(
     spdx: &str,
     author: Option<String>,
+    company: Option<String>,
+    email: Option<String>,
     year: Option<String>,
     format: LicenseFormat,
     yes: bool,
@@ -11,13 +13,20 @@ pub fn cmd_add(
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None).ok();
     let info = prov.info(spdx)?;
-    let ctx = resolution::resolve_context(spdx, author, year, config.as_ref(), &prov)?;
+    let ctx =
+        resolution::resolve_context(spdx, author, year, company, email, config.as_ref(), &prov)?;
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
-        println!("  Author: {}", ctx.author);
-        println!("  Year:   {}", ctx.year);
-        println!("  Format: {}", format);
+        println!("  Author:  {}", ctx.author);
+        if let Some(ref c) = ctx.company {
+            println!("  Company: {}", c);
+        }
+        if let Some(ref e) = ctx.email {
+            println!("  Email:   {}", e);
+        }
+        println!("  Year:    {}", ctx.year);
+        println!("  Format:  {}", format);
         println!();
         print!("Continue? [Y/n] ");
         std::io::stdout().flush()?;
@@ -29,14 +38,21 @@ pub fn cmd_add(
         }
     }
 
+    let render_ctx = template::render_context(
+        &ctx.year,
+        &ctx.author,
+        ctx.company.as_deref(),
+        ctx.email.as_deref(),
+    );
+
     let (content, ext) = match &format {
         LicenseFormat::Html => {
             let html = ctx.resolved.html.as_deref().unwrap_or(&ctx.resolved.text);
-            let rendered = template::render(html, &ctx.year, &ctx.author)?;
+            let rendered = template::render_with_context(html, &render_ctx)?;
             (rendered, "html")
         }
         LicenseFormat::Txt => {
-            let rendered = template::render(&ctx.resolved.text, &ctx.year, &ctx.author)?;
+            let rendered = template::render_with_context(&ctx.resolved.text, &render_ctx)?;
             (rendered, "txt")
         }
     };
@@ -56,13 +72,17 @@ pub fn cmd_add(
     }
 
     fs.write(&filename, &content)?;
-    println!(
-        "✅ Added {} ({}) [from {}] as {}",
-        info.name,
-        info.id,
-        ctx.resolved.source,
-        filename.display()
-    );
+    if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
+        println!("✅ Added proprietary notice as {}", filename.display());
+    } else {
+        println!(
+            "✅ Added {} ({}) [from {}] as {}",
+            info.name,
+            info.id,
+            ctx.resolved.source,
+            filename.display()
+        );
+    }
 
     // Update project config defaults if a project config exists
     let fmt_str = format.to_string();

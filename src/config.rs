@@ -27,7 +27,15 @@ pub struct DefaultConfig {
     #[schemars(description = "Copyright holder name for licence files")]
     pub author: Option<String>,
 
-    /// Default SPDX license ID (e.g. MIT, Apache-2.0)
+    /// Company name (defaults to author if not set)
+    #[schemars(description = "Company name for proprietary notices")]
+    pub company: Option<String>,
+
+    /// Contact email address
+    #[schemars(description = "Contact email for proprietary notices")]
+    pub email: Option<String>,
+
+    /// Default SPDX license ID (e.g. MIT, Apache-2.0, proprietary)
     #[schemars(description = "Default SPDX license identifier")]
     pub license: Option<String>,
 
@@ -62,6 +70,14 @@ pub struct SubdirConfig {
     #[schemars(description = "Copyright holder override")]
     pub author: Option<String>,
 
+    /// Company name override for this sub-directory
+    #[schemars(description = "Company name override")]
+    pub company: Option<String>,
+
+    /// Email address override for this sub-directory
+    #[schemars(description = "Email address override")]
+    pub email: Option<String>,
+
     /// SPDX license ID override for this sub-directory
     #[schemars(description = "SPDX license identifier override")]
     pub license: Option<String>,
@@ -93,6 +109,8 @@ fn merge(base: Config, overriding: Config) -> Config {
     Config {
         default: DefaultConfig {
             author: overriding.default.author.or(base.default.author),
+            company: overriding.default.company.or(base.default.company),
+            email: overriding.default.email.or(base.default.email),
             license: overriding.default.license.or(base.default.license),
             format: overriding.default.format.or(base.default.format),
             year: overriding.default.year.or(base.default.year),
@@ -241,6 +259,8 @@ impl Config {
             if let Some(subdir_cfg) = best {
                 // Only apply if at least one field is set
                 if subdir_cfg.author.is_some()
+                    || subdir_cfg.company.is_some()
+                    || subdir_cfg.email.is_some()
                     || subdir_cfg.license.is_some()
                     || subdir_cfg.format.is_some()
                     || subdir_cfg.year.is_some()
@@ -249,6 +269,8 @@ impl Config {
                     let path = subdir_cfg.path.clone();
                     let default_override = DefaultConfig {
                         author: subdir_cfg.author.clone(),
+                        company: subdir_cfg.company.clone(),
+                        email: subdir_cfg.email.clone(),
                         license: subdir_cfg.license.clone(),
                         format: subdir_cfg.format.clone(),
                         year: subdir_cfg.year.clone(),

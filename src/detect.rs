@@ -2,7 +2,9 @@
 /// Returns the SPDX license ID if detected, or `None`.
 pub fn detect_license(text: &str) -> Option<&'static str> {
     let lower = text.to_lowercase();
-
+    if lower.contains("all rights reserved") && lower.contains("proprietary and confidential") {
+        return Some("UNLICENSED");
+    }
     if lower.contains("mit license")
         || lower.contains("permission is hereby granted, free of charge")
     {
@@ -114,5 +116,14 @@ mod tests {
             detect_license("Some random text with no license keywords"),
             None
         );
+    }
+
+    #[test]
+    fn detect_proprietary() {
+        let text = "Copyright (C) Acme Corp - All Rights Reserved\n\n\
+            Unauthorized copying of this file, via any medium is strictly prohibited\n\
+            Proprietary and confidential\n\
+            Written by Alice <alice@acme.com>, 2024-06-19";
+        assert_eq!(detect_license(text), Some("UNLICENSED"));
     }
 }

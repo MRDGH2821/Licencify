@@ -40,6 +40,10 @@ static TEMPLATES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
     m.insert("cc0-1.0", include_str!("../templates/licence/cc0-1.0.tera"));
     m.insert("isc", include_str!("../templates/licence/isc.tera"));
     m.insert("wtfpl", include_str!("../templates/licence/wtfpl.tera"));
+    m.insert(
+        "proprietary",
+        include_str!("../templates/licence/proprietary.tera"),
+    );
     m
 });
 
@@ -77,6 +81,13 @@ mod tests {
     }
 
     #[test]
+    fn get_returns_proprietary_template() {
+        let template = get("proprietary").unwrap();
+        assert!(template.contains("All Rights Reserved"));
+        assert!(template.contains("Proprietary and confidential"));
+    }
+
+    #[test]
     fn all_expected_templates_exist() {
         let expected = [
             "mit",
@@ -92,6 +103,7 @@ mod tests {
             "cc0-1.0",
             "isc",
             "wtfpl",
+            "proprietary",
         ];
         for id in &expected {
             assert!(get(id).is_some(), "Missing template for: {}", id);

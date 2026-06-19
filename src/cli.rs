@@ -33,12 +33,20 @@ impl fmt::Display for LicenseFormat {
 pub enum Commands {
     /// Add a license to the current project
     Add {
-        /// SPDX license identifier (e.g., MIT, Apache-2.0, GPL-3.0-only)
+        /// SPDX license identifier (e.g., MIT, Apache-2.0, proprietary)
         spdx: String,
 
         /// Copyright holder name (default: git config user.name)
         #[arg(short, long)]
         author: Option<String>,
+
+        /// Company name (defaults to author)
+        #[arg(long)]
+        company: Option<String>,
+
+        /// Contact email address
+        #[arg(long)]
+        email: Option<String>,
 
         /// Copyright year (default: current year)
         #[arg(short, long)]
@@ -93,6 +101,14 @@ pub enum Commands {
         /// Copyright holder name
         #[arg(short, long)]
         author: Option<String>,
+
+        /// Company name (defaults to author)
+        #[arg(long)]
+        company: Option<String>,
+
+        /// Contact email address
+        #[arg(long)]
+        email: Option<String>,
 
         /// Copyright year
         #[arg(short, long)]

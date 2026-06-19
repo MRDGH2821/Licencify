@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::config::Config;
-use crate::process::Runner;
+use crate::process::{RealRunner, Runner};
 
 /// Strategy for resolving a copyright author name.
 pub trait AuthorResolver {
@@ -63,6 +63,30 @@ pub fn resolve_author(
         "No author specified. Set one via `licencify config --author <name>` \
          or configure git with `git config user.name \"Your Name\"`"
     )
+}
+
+/// Resolve email using CLI arg → config → `git config user.email` chain.
+/// Returns `None` if no email can be found (email is optional).
+pub fn resolve_email(cli_email: Option<String>, config: Option<&Config>) -> Option<String> {
+    if let Some(email) = cli_email {
+        return Some(email);
+    }
+    if let Some(cfg) = config {
+        if let Some(email) = &cfg.default.email {
+            if !email.trim().is_empty() {
+                return Some(email.clone());
+            }
+        }
+    }
+    let runner = RealRunner;
+    let output = runner.run_command("git", &["config", "user.email"])?;
+    if output.status.success() {
+        let email = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !email.is_empty() {
+            return Some(email);
+        }
+    }
+    None
 }
 
 #[cfg(test)]

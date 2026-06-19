@@ -13,6 +13,8 @@ pub struct ResolvedTemplate {
 pub struct ResolvedContext {
     pub author: String,
     pub year: String,
+    pub company: Option<String>,
+    pub email: Option<String>,
     pub licence_name: LicenceName,
     pub resolved: ResolvedTemplate,
 }
@@ -22,24 +24,30 @@ pub fn resolve_licence_name(config: Option<&Config>) -> LicenceName {
     LicenceName::resolve(config.and_then(|c| c.licence_name_setting()))
 }
 
-/// Resolve all context needed for add/update: author, year, licence name, template.
+/// Resolve all context needed for add/update: author, year, company, email, licence name, template.
 /// Avoids redundant `LicenseProvider::load()` by reusing the provider for both
 /// `info()` and `resolve_template()`.
 pub fn resolve_context(
     spdx_id: &str,
     cli_author: Option<String>,
     cli_year: Option<String>,
+    cli_company: Option<String>,
+    cli_email: Option<String>,
     config: Option<&Config>,
     provider: &LicenseProvider,
 ) -> anyhow::Result<ResolvedContext> {
     let author = resolve_author(cli_author, config)?;
     let year = resolve_year(cli_year, config);
+    let company = cli_company.or_else(|| config.and_then(|c| c.default.company.clone()));
+    let email = author::resolve_email(cli_email, config);
     let licence_name = resolve_licence_name(config);
     let resolved = resolve_template(spdx_id, config, Some(provider))?;
 
     Ok(ResolvedContext {
         author,
         year,
+        company,
+        email,
         licence_name,
         resolved,
     })

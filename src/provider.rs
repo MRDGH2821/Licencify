@@ -42,6 +42,13 @@ impl LicenseProvider {
 
     /// Get structured license info by ID.
     pub fn info(&self, license_id: &str) -> Result<LicenseInfo> {
+        // "proprietary" is not a real SPDX ID — short-circuit
+        if license_id.eq_ignore_ascii_case("proprietary") {
+            return Ok(LicenseInfo {
+                id: "UNLICENSED".to_string(),
+                name: "Proprietary (No Licence)".to_string(),
+            });
+        }
         let license = self
             .index
             .find(license_id)
