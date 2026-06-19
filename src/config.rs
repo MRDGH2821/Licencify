@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::fs::global_fs;
@@ -18,8 +17,8 @@ pub struct Config {
     #[schemars(description = "Template configuration")]
     pub template: Option<TemplateConfig>,
 
-    #[schemars(description = "Sub-directory license overrides (key = relative path)")]
-    pub subdirs: Option<HashMap<String, SubdirConfig>>,
+    #[schemars(description = "Sub-directory licence overrides")]
+    pub subdirs: Option<Vec<SubdirConfig>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -52,13 +51,31 @@ pub struct TemplateConfig {
     pub paths: Option<Vec<String>>,
 }
 
-/// Sub-directory license override.
+/// Sub-directory licence override.
 #[derive(Debug, Serialize, Deserialize, Clone, Default, JsonSchema)]
 pub struct SubdirConfig {
+    /// Relative path to the sub-directory (relative to config file location)
+    #[schemars(description = "Relative path to the sub-directory")]
+    pub path: String,
+
+    /// Copyright holder override for this sub-directory
+    #[schemars(description = "Copyright holder override")]
     pub author: Option<String>,
+
+    /// SPDX license ID override for this sub-directory
+    #[schemars(description = "SPDX license identifier override")]
     pub license: Option<String>,
+
+    /// Output format override for this sub-directory
+    #[schemars(description = "Output format override")]
     pub format: Option<String>,
+
+    /// Copyright year override for this sub-directory
+    #[schemars(description = "Copyright year override")]
     pub year: Option<String>,
+
+    /// Licence file base name override for this sub-directory
+    #[schemars(description = "Licence file base name override")]
     pub licence_name: Option<String>,
 }
 
@@ -164,88 +181,114 @@ impl Config {
 
     /// Load the global config from config dir.
     fn load_global() -> Option<Self> {
-        let fs = global_fs();
         let path = Self::global_path().ok()?;
-        if !fs.exists(&path) {
-            return None;
-        }
-        let text = fs.read_to_string(&path)?;
-        toml::from_str(&text).ok()
-    }
-
-    /// Load the project config from the project root.
-    /// Returns (merged config, project_root path) so callers don't re-walk.
-    fn load_project_with_root() -> Option<(Self, PathBuf)> {
         let fs = global_fs();
-        let (project_root, path) = Self::find_project_root()?;
-        let text = fs.read_to_string(&path)?;
-        let config = toml::from_str(&text).ok()?;
-        Some((config, project_root))
+        let content = fs.read_to_string(&path)?;
+        toml::from_str(&content).ok()
     }
 
-    /// Load global config only (no merging).
+    /// Load the project-level config from CWD or parent directories.
+    fn load_project() -> Option<Self> {
+        let (_, path) = Self::find_project_root()?;
+        let fs = global_fs();
+        let content = fs.read_to_string(&path)?;
+        toml::from_str(&content).ok()
+    }
+
+    /// Load the effective config (global + project, merged).
     pub fn load() -> Result<Self> {
-        Self::load_global().context("No global config found. Run `licencify config init` first.")
+        let global = Self::load_global();
+        let project = Self::load_project();
+
+        match (global, project) {
+            (Some(g), Some(p)) => Ok(merge(g, p)),
+            (Some(g), None) => Ok(g),
+            (None, Some(p)) => Ok(p),
+            (None, None) => Ok(Self::default()),
+        }
     }
 
-    /// Load the effective config: global + project + subdir overrides merged.
-    pub fn load_effective() -> Result<Self> {
-        let global = Self::load_global().unwrap_or_default();
-        let (project, project_root) = Self::load_project_with_root()
-            .map(|(cfg, root)| (cfg, Some(root)))
-            .unwrap_or_default();
-        let merged = merge(global, project);
+    /// Load effective config with explicit project root.
+    /// Used by callers who already know the project root (avoids double walk).
+    pub fn load_project_with_root(root: &std::path::Path) -> Result<(Self, PathBuf)> {
+        let fs = global_fs();
 
-        // Apply subdir overrides based on CWD
-        let project_root = match project_root {
-            Some(root) => root,
-            None => return Ok(merged),
-        };
+        // Try both project config filenames
+        for name in Self::PROJECT_FILENAMES {
+            let candidate = root.join(name);
+            if fs.exists(&candidate) {
+                let content = fs
+                    .read_to_string(&candidate)
+                    .with_context(|| format!("Failed to read {}", candidate.display()))?;
+                let project: Self =
+                    toml::from_str(&content).with_context(|| "Failed to parse project config")?;
 
-        let subdirs = match &merged.subdirs {
-            Some(s) if !s.is_empty() => s.clone(),
-            _ => return Ok(merged),
-        };
-
-        let cwd = std::env::current_dir().context("Could not determine current directory")?;
-
-        let rel = cwd.strip_prefix(&project_root).unwrap_or(&cwd);
-        let rel_str = rel.to_string_lossy();
-
-        // Find longest prefix match (avoid allocation per iteration)
-        let best = subdirs
-            .iter()
-            .filter(|(key, _)| {
-                rel_str == key.as_str()
-                    || (rel_str.len() > key.len()
-                        && rel_str.as_bytes().get(key.len()) == Some(&b'/')
-                        && rel_str.starts_with(key.as_str()))
-            })
-            .max_by_key(|(key, _)| key.len());
-
-        if let Some((matched_path, subdir_cfg)) = best {
-            // Only apply if at least one field is set
-            if subdir_cfg.author.is_some()
-                || subdir_cfg.license.is_some()
-                || subdir_cfg.format.is_some()
-                || subdir_cfg.year.is_some()
-                || subdir_cfg.licence_name.is_some()
-            {
-                let default_override = DefaultConfig {
-                    author: subdir_cfg.author.clone(),
-                    license: subdir_cfg.license.clone(),
-                    format: subdir_cfg.format.clone(),
-                    year: subdir_cfg.year.clone(),
-                    licence_name: subdir_cfg.licence_name.clone(),
+                let global = Self::load_global();
+                let merged = match global {
+                    Some(g) => merge(g, project),
+                    None => project,
                 };
-                let override_config = Config {
-                    default: default_override,
-                    template: None,
-                    subdirs: None,
-                };
-                let effective = merge(merged, override_config);
-                eprintln!("[licencify] sub-dir override active: \"{}\"", matched_path);
-                return Ok(effective);
+                return Ok((merged, root.to_path_buf()));
+            }
+        }
+
+        anyhow::bail!("No project config found in {}", root.display())
+    }
+
+    /// Load effective config with subdirectory overrides applied.
+    /// Resolves the project root, then applies the best-matching subdir override.
+    pub fn load_effective(subdir: Option<&str>) -> Result<Self> {
+        let (merged, _root) = Self::load_project_with_root(
+            &Self::find_project_root()
+                .map(|(r, _)| r)
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default()),
+        )?;
+
+        // Apply sub-directory overrides if a subdir is specified
+        if let Some(subdir_path) = subdir {
+            let subdirs = match &merged.subdirs {
+                Some(s) if !s.is_empty() => s,
+                _ => return Ok(merged),
+            };
+
+            // Find the best matching subdir override (longest prefix match)
+            let best = subdirs
+                .iter()
+                .filter(|s| {
+                    let key = s.path.trim_end_matches('/');
+                    let rel_str = subdir_path.trim_end_matches('/');
+                    rel_str == key
+                        || (rel_str.len() > key.len()
+                            && rel_str.as_bytes().get(key.len()) == Some(&b'/')
+                            && rel_str.starts_with(key))
+                })
+                .max_by_key(|s| s.path.len());
+
+            if let Some(subdir_cfg) = best {
+                // Only apply if at least one field is set
+                if subdir_cfg.author.is_some()
+                    || subdir_cfg.license.is_some()
+                    || subdir_cfg.format.is_some()
+                    || subdir_cfg.year.is_some()
+                    || subdir_cfg.licence_name.is_some()
+                {
+                    let path = subdir_cfg.path.clone();
+                    let default_override = DefaultConfig {
+                        author: subdir_cfg.author.clone(),
+                        license: subdir_cfg.license.clone(),
+                        format: subdir_cfg.format.clone(),
+                        year: subdir_cfg.year.clone(),
+                        licence_name: subdir_cfg.licence_name.clone(),
+                    };
+                    let override_config = Config {
+                        default: default_override,
+                        template: None,
+                        subdirs: None,
+                    };
+                    let effective = merge(merged, override_config);
+                    eprintln!("[licencify] sub-dir override active: \"{}\"", path);
+                    return Ok(effective);
+                }
             }
         }
 
@@ -400,6 +443,32 @@ mod tests {
     }
 
     #[test]
+    fn merge_subdirs_replaces_entirely() {
+        let base = Config {
+            default: DefaultConfig::default(),
+            template: None,
+            subdirs: Some(vec![SubdirConfig {
+                path: "old".into(),
+                author: Some("Old".into()),
+                ..Default::default()
+            }]),
+        };
+        let overriding = Config {
+            default: DefaultConfig::default(),
+            template: None,
+            subdirs: Some(vec![SubdirConfig {
+                path: "new".into(),
+                author: Some("New".into()),
+                ..Default::default()
+            }]),
+        };
+        let merged = merge(base, overriding);
+        let subdirs = merged.subdirs.unwrap();
+        assert_eq!(subdirs.len(), 1);
+        assert_eq!(subdirs[0].path, "new");
+    }
+
+    #[test]
     fn schema_json_is_valid_json() {
         let schema = Config::schema_json().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&schema).unwrap();
@@ -433,5 +502,52 @@ mod tests {
     fn licence_name_setting_returns_none_when_not_configured() {
         let config = Config::default();
         assert!(config.licence_name_setting().is_none());
+    }
+
+    #[test]
+    fn subdir_config_has_path_field() {
+        let subdir = SubdirConfig {
+            path: "src/lib".into(),
+            author: Some("Alice".into()),
+            license: Some("BSD-2-Clause".into()),
+            ..Default::default()
+        };
+        assert_eq!(subdir.path, "src/lib");
+        assert_eq!(subdir.author.as_deref(), Some("Alice"));
+        assert_eq!(subdir.license.as_deref(), Some("BSD-2-Clause"));
+    }
+
+    #[test]
+    fn subdirs_serde_roundtrip() {
+        let config = Config {
+            default: DefaultConfig {
+                author: Some("Test".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: Some(vec![
+                SubdirConfig {
+                    path: "src/lib".into(),
+                    author: Some("Alice".into()),
+                    license: Some("BSD-2-Clause".into()),
+                    ..Default::default()
+                },
+                SubdirConfig {
+                    path: "tests".into(),
+                    license: Some("Apache-2.0".into()),
+                    ..Default::default()
+                },
+            ]),
+        };
+
+        let toml_str = toml::to_string_pretty(&config).unwrap();
+        let parsed: Config = toml::from_str(&toml_str).unwrap();
+
+        let subdirs = parsed.subdirs.unwrap();
+        assert_eq!(subdirs.len(), 2);
+        assert_eq!(subdirs[0].path, "src/lib");
+        assert_eq!(subdirs[0].author.as_deref(), Some("Alice"));
+        assert_eq!(subdirs[1].path, "tests");
+        assert_eq!(subdirs[1].license.as_deref(), Some("Apache-2.0"));
     }
 }

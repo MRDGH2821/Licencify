@@ -102,8 +102,10 @@ fn cmd_config_init() -> Result<()> {
     println!("  [template]  (optional)");
     println!("    paths         Custom template search paths (array)");
     println!();
-    println!("  [subdirs]  (optional)");
-    println!("    \"<path>\"       Per-subdirectory overrides (author, license, …)");
+    println!("  [[subdirs]]  (optional)");
+    println!("    path           Relative directory path (required)");
+    println!("    author         Per-subdirectory author override");
+    println!("    license        Per-subdirectory license override");
     println!();
     println!("Use `licencify config set <key> <value>` to write to global config.");
     println!("Use `licencify config show` to see the effective (merged) configuration.");
@@ -139,7 +141,7 @@ fn cmd_config_show() -> Result<()> {
     }
 
     // Effective (merged + subdir) values
-    let config = Config::load_effective()?;
+    let config = Config::load_effective(None)?;
     let detected = config::detect_licence_name();
 
     println!("[default]");
@@ -190,27 +192,30 @@ fn cmd_config_show() -> Result<()> {
     }
     println!();
 
-    // [subdirs] — only relevant when a project config is present
+    // [[subdirs]] — only relevant when a project config is present
     if project_exists {
-        println!("[subdirs]");
+        println!("[[subdirs]]");
         match &config.subdirs {
             Some(subdirs) if !subdirs.is_empty() => {
-                for (dir, subdir_cfg) in subdirs {
-                    println!("  [\"{}\"]", dir);
+                for (i, subdir_cfg) in subdirs.iter().enumerate() {
+                    if i > 0 {
+                        println!("[[subdirs]]");
+                    }
+                    println!("path        = \"{}\"", subdir_cfg.path);
                     if let Some(author) = &subdir_cfg.author {
-                        println!("    author      = {}", author);
+                        println!("author      = \"{}\"", author);
                     }
                     if let Some(license) = &subdir_cfg.license {
-                        println!("    license     = {}", license);
+                        println!("license     = \"{}\"", license);
                     }
                     if let Some(format) = &subdir_cfg.format {
-                        println!("    format      = {}", format);
+                        println!("format      = \"{}\"", format);
                     }
                     if let Some(year) = &subdir_cfg.year {
-                        println!("    year        = {}", year);
+                        println!("year        = \"{}\"", year);
                     }
                     if let Some(licence_name) = &subdir_cfg.licence_name {
-                        println!("    licence_name = {}", licence_name);
+                        println!("licence_name = \"{}\"", licence_name);
                     }
                 }
             }

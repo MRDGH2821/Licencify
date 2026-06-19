@@ -9,7 +9,7 @@ pub fn cmd_add(
     yes: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
-    let config = crate::config::Config::load_effective().ok();
+    let config = crate::config::Config::load_effective(None).ok();
     let info = prov.info(spdx)?;
     let ctx = resolution::resolve_context(spdx, author, year, config.as_ref(), &prov)?;
 
