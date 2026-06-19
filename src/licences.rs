@@ -1,55 +1,118 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-static TEMPLATES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-    let mut m: HashMap<&'static str, &'static str> = HashMap::new();
-    m.insert("mit", include_str!("../templates/licence/mit.tera"));
+/// A licence template with both plain text and HTML variants.
+pub struct TemplateSet {
+    pub txt: &'static str,
+    pub html: &'static str,
+}
+
+static TEMPLATES: LazyLock<HashMap<&'static str, TemplateSet>> = LazyLock::new(|| {
+    let mut m: HashMap<&'static str, TemplateSet> = HashMap::new();
+    m.insert(
+        "mit",
+        TemplateSet {
+            txt: include_str!("../templates/licence/mit.tera"),
+            html: include_str!("../templates/licence/mit.html.tera"),
+        },
+    );
     m.insert(
         "apache-2.0",
-        include_str!("../templates/licence/apache-2.0.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/apache-2.0.tera"),
+            html: include_str!("../templates/licence/apache-2.0.html.tera"),
+        },
     );
     m.insert(
         "gpl-3.0-only",
-        include_str!("../templates/licence/gpl-3.0-only.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/gpl-3.0-only.tera"),
+            html: include_str!("../templates/licence/gpl-3.0-only.html.tera"),
+        },
     );
     m.insert(
         "gpl-2.0-only",
-        include_str!("../templates/licence/gpl-2.0-only.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/gpl-2.0-only.tera"),
+            html: include_str!("../templates/licence/gpl-2.0-only.html.tera"),
+        },
     );
     m.insert(
         "agpl-3.0-only",
-        include_str!("../templates/licence/agpl-3.0-only.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/agpl-3.0-only.tera"),
+            html: include_str!("../templates/licence/agpl-3.0-only.html.tera"),
+        },
     );
     m.insert(
         "lgpl-3.0-only",
-        include_str!("../templates/licence/lgpl-3.0-only.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/lgpl-3.0-only.tera"),
+            html: include_str!("../templates/licence/lgpl-3.0-only.html.tera"),
+        },
     );
     m.insert(
         "bsd-2-clause",
-        include_str!("../templates/licence/bsd-2-clause.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/bsd-2-clause.tera"),
+            html: include_str!("../templates/licence/bsd-2-clause.html.tera"),
+        },
     );
     m.insert(
         "bsd-3-clause",
-        include_str!("../templates/licence/bsd-3-clause.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/bsd-3-clause.tera"),
+            html: include_str!("../templates/licence/bsd-3-clause.html.tera"),
+        },
     );
-    m.insert("mpl-2.0", include_str!("../templates/licence/mpl-2.0.tera"));
+    m.insert(
+        "mpl-2.0",
+        TemplateSet {
+            txt: include_str!("../templates/licence/mpl-2.0.tera"),
+            html: include_str!("../templates/licence/mpl-2.0.html.tera"),
+        },
+    );
     m.insert(
         "unlicense",
-        include_str!("../templates/licence/unlicense.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/unlicense.tera"),
+            html: include_str!("../templates/licence/unlicense.html.tera"),
+        },
     );
-    m.insert("cc0-1.0", include_str!("../templates/licence/cc0-1.0.tera"));
-    m.insert("isc", include_str!("../templates/licence/isc.tera"));
-    m.insert("wtfpl", include_str!("../templates/licence/wtfpl.tera"));
+    m.insert(
+        "cc0-1.0",
+        TemplateSet {
+            txt: include_str!("../templates/licence/cc0-1.0.tera"),
+            html: include_str!("../templates/licence/cc0-1.0.html.tera"),
+        },
+    );
+    m.insert(
+        "isc",
+        TemplateSet {
+            txt: include_str!("../templates/licence/isc.tera"),
+            html: include_str!("../templates/licence/isc.html.tera"),
+        },
+    );
+    m.insert(
+        "wtfpl",
+        TemplateSet {
+            txt: include_str!("../templates/licence/wtfpl.tera"),
+            html: include_str!("../templates/licence/wtfpl.html.tera"),
+        },
+    );
     m.insert(
         "proprietary",
-        include_str!("../templates/licence/proprietary.tera"),
+        TemplateSet {
+            txt: include_str!("../templates/licence/proprietary.tera"),
+            html: include_str!("../templates/licence/proprietary.html.tera"),
+        },
     );
     m
 });
 
-/// Retrieve the built-in template text for a given SPDX identifier (case-insensitive).
-pub fn get(spdx_lower: &str) -> Option<&'static str> {
-    TEMPLATES.get(spdx_lower).copied()
+/// Retrieve the built-in template set for a given SPDX identifier (case-insensitive).
+pub fn get(spdx_lower: &str) -> Option<&'static TemplateSet> {
+    TEMPLATES.get(spdx_lower)
 }
 
 #[cfg(test)]
@@ -57,15 +120,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_returns_mit_template() {
-        let template = get("mit").unwrap();
-        assert!(template.contains("MIT"));
+    fn get_returns_mit_templates() {
+        let tmpl = get("mit").unwrap();
+        assert!(tmpl.txt.contains("MIT"));
+        assert!(tmpl.html.contains("MIT"));
+        assert!(tmpl.html.contains("<!DOCTYPE html>"));
+        assert!(tmpl.html.contains("<p>MIT License</p>"));
     }
 
     #[test]
-    fn get_returns_apache_template() {
-        let template = get("apache-2.0").unwrap();
-        assert!(template.contains("Apache"));
+    fn get_returns_apache_templates() {
+        let tmpl = get("apache-2.0").unwrap();
+        assert!(tmpl.txt.contains("Apache"));
+        assert!(tmpl.html.contains("Apache"));
     }
 
     #[test]
@@ -75,16 +142,18 @@ mod tests {
 
     #[test]
     fn get_is_case_sensitive() {
-        // Built-in templates are stored lowercase
-        assert!(get("MIT").is_none()); // uppercase not in map
-        assert!(get("mit").is_some()); // lowercase works
+        assert!(get("MIT").is_none());
+        assert!(get("mit").is_some());
     }
 
     #[test]
-    fn get_returns_proprietary_template() {
-        let template = get("proprietary").unwrap();
-        assert!(template.contains("All Rights Reserved"));
-        assert!(template.contains("Proprietary and confidential"));
+    fn get_returns_proprietary_templates() {
+        let tmpl = get("proprietary").unwrap();
+        assert!(tmpl.txt.contains("All Rights Reserved"));
+        assert!(tmpl.txt.contains("Proprietary and confidential"));
+        assert!(tmpl.html.contains("<!DOCTYPE html>"));
+        assert!(tmpl.html.contains("<pre>"));
+        assert!(tmpl.html.contains("All Rights Reserved"));
     }
 
     #[test]
@@ -106,7 +175,14 @@ mod tests {
             "proprietary",
         ];
         for id in &expected {
-            assert!(get(id).is_some(), "Missing template for: {}", id);
+            let tmpl = get(id).unwrap_or_else(|| panic!("Missing template for: {}", id));
+            assert!(!tmpl.txt.is_empty(), "Empty txt template for: {}", id);
+            assert!(
+                tmpl.html.contains("<!DOCTYPE html>"),
+                "HTML template for {} doesn't contain <!DOCTYPE html>",
+                id
+            );
+            // SPDX templates use semantic HTML (<p>, <div>), proprietary uses <pre>
         }
     }
 }

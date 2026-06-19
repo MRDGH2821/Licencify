@@ -348,22 +348,18 @@ impl Config {
     }
 
     /// Search configured template paths for a template file matching the SPDX ID.
-    pub fn find_custom_template(&self, spdx_id: &str) -> Option<(String, Option<String>, String)> {
+    pub fn find_custom_template(&self, spdx_id: &str, format: &str) -> Option<(String, String)> {
         let fs = global_fs();
         let paths = self.template.as_ref()?.paths.as_ref()?;
-        let filename = format!("{}.txt", spdx_id);
-        let html_filename = format!("{}.html", spdx_id);
+        let filename = format!("{}.{}", spdx_id, format);
 
         for dir in paths {
             let dir = std::path::Path::new(dir);
-
             let text_path = dir.join(&filename);
-            let html_path = dir.join(&html_filename);
 
             if let Some(text) = fs.read_to_string(&text_path) {
-                let html = fs.read_to_string(&html_path);
                 let source = format!("custom ({})", dir.display());
-                return Some((text, html, source));
+                return Some((text, source));
             }
         }
 

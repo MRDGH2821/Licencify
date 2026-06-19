@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Proprietary Licence</title>
+</head>
+<body>
+<pre>
+Copyright (C) {{ company }} - All Rights Reserved
+
+Unauthorized copying of this file, via any medium is strictly prohibited
+Proprietary and confidential
+Written by {{ author }} &lt;{{ email }}&gt;, {{ date }}
+</pre>
+</body>
+</html>

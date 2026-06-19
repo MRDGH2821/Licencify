@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn render_proprietary_template_full() {
+    fn render_proprietary_template_txt() {
         let tmpl = include_str!("../templates/licence/proprietary.tera");
         let ctx = render_context("2024", "Alice", Some("Acme Corp"), Some("alice@acme.com"));
         let result = render_with_context(tmpl, &ctx).unwrap();
@@ -172,5 +172,38 @@ mod tests {
         assert!(result.contains("alice@acme.com"));
         assert!(result.contains("All Rights Reserved"));
         assert!(result.contains("Proprietary and confidential"));
+    }
+
+    #[test]
+    fn render_proprietary_template_html() {
+        let tmpl = include_str!("../templates/licence/proprietary.html.tera");
+        let ctx = render_context("2024", "Alice", Some("Acme Corp"), Some("alice@acme.com"));
+        let result = render_with_context(tmpl, &ctx).unwrap();
+        assert!(result.contains("<pre>"));
+        assert!(result.contains("</pre>"));
+        assert!(result.contains("Acme Corp"));
+        assert!(result.contains("All Rights Reserved"));
+    }
+
+    #[test]
+    fn render_mit_template_html() {
+        let tmpl = include_str!("../templates/licence/mit.html.tera");
+        let ctx = render_context("2024", "Alice", None, None);
+        let result = render_with_context(tmpl, &ctx).unwrap();
+        assert!(result.contains("<!DOCTYPE html>"));
+        assert!(result.contains("MIT License"));
+        assert!(result.contains("Permission is hereby granted"));
+        // SPDX HTML uses semantic HTML (<p>, <div>), not <pre>
+        assert!(result.contains("<p>MIT License</p>"));
+    }
+
+    #[test]
+    fn render_mit_template_txt() {
+        let tmpl = include_str!("../templates/licence/mit.tera");
+        let ctx = render_context("2024", "Alice", None, None);
+        let result = render_with_context(tmpl, &ctx).unwrap();
+        assert!(!result.contains("<pre>"));
+        assert!(result.starts_with("MIT License"));
+        assert!(result.contains("Permission is hereby granted"));
     }
 }

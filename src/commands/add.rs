@@ -13,8 +13,16 @@ pub fn cmd_add(
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None).ok();
     let info = prov.info(spdx)?;
-    let ctx =
-        resolution::resolve_context(spdx, author, year, company, email, config.as_ref(), &prov)?;
+    let ctx = resolution::resolve_context(
+        spdx,
+        author,
+        year,
+        company,
+        email,
+        config.as_ref(),
+        &prov,
+        &format,
+    )?;
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
@@ -45,19 +53,10 @@ pub fn cmd_add(
         ctx.email.as_deref(),
     );
 
-    let (content, ext) = match &format {
-        LicenseFormat::Html => {
-            let html = ctx.resolved.html.as_deref().unwrap_or(&ctx.resolved.text);
-            let rendered = template::render_with_context(html, &render_ctx)?;
-            (rendered, "html")
-        }
-        LicenseFormat::Txt => {
-            let rendered = template::render_with_context(&ctx.resolved.text, &render_ctx)?;
-            (rendered, "txt")
-        }
-    };
+    let ext = format.to_string();
+    let content = template::render_with_context(&ctx.resolved.text, &render_ctx)?;
 
-    let filename = ctx.licence_name.file_path(ext);
+    let filename = ctx.licence_name.file_path(&ext);
     let fs = global_fs();
 
     if fs.exists(&filename) && !yes {

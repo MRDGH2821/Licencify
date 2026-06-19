@@ -1,11 +1,10 @@
 use crate::{
-    author, config::Config, licence_name::LicenceName, licences, process::RealRunner,
-    provider::LicenseProvider, template,
+    author, cli::LicenseFormat, config::Config, licence_name::LicenceName, licences,
+    process::RealRunner, provider::LicenseProvider, template,
 };
 
 pub struct ResolvedTemplate {
     pub text: String,
-    pub html: Option<String>,
     pub source: String,
 }
 
@@ -35,13 +34,14 @@ pub fn resolve_context(
     cli_email: Option<String>,
     config: Option<&Config>,
     provider: &LicenseProvider,
+    format: &LicenseFormat,
 ) -> anyhow::Result<ResolvedContext> {
     let author = resolve_author(cli_author, config)?;
     let year = resolve_year(cli_year, config);
     let company = cli_company.or_else(|| config.and_then(|c| c.default.company.clone()));
     let email = author::resolve_email(cli_email, config);
     let licence_name = resolve_licence_name(config);
-    let resolved = resolve_template(spdx_id, config, Some(provider))?;
+    let resolved = resolve_template(spdx_id, config, Some(provider), format)?;
 
     Ok(ResolvedContext {
         author,
@@ -57,11 +57,12 @@ pub fn resolve_context(
 /// 1. API cache (fast, local JSON with licenseText)
 /// 2. Custom template paths (from config [template].paths)
 /// 3. SPDX API (network)
-/// 4. Built-in templates (embedded in binary)
+/// 4. Built-in templates (embedded in binary, format-aware)
 pub fn resolve_template(
     spdx_id: &str,
     config: Option<&Config>,
     provider: Option<&LicenseProvider>,
+    format: &LicenseFormat,
 ) -> anyhow::Result<ResolvedTemplate> {
     let prov = match provider {
         Some(p) => p,
@@ -72,31 +73,37 @@ pub fn resolve_template(
     if let Some(detail) = prov.get_cached(spdx_id) {
         return Ok(ResolvedTemplate {
             text: detail.license_text,
-            html: detail.license_text_html,
             source: "cached".to_string(),
         });
     }
 
     // Tier 2: Custom template paths from config [template].paths
-    if let Some((text, html, source)) = config.and_then(|cfg| cfg.find_custom_template(spdx_id)) {
-        return Ok(ResolvedTemplate { text, html, source });
+    let fmt_str = match format {
+        LicenseFormat::Html => "html",
+        LicenseFormat::Txt => "txt",
+    };
+    if let Some((text, source)) = config.and_then(|cfg| cfg.find_custom_template(spdx_id, fmt_str))
+    {
+        return Ok(ResolvedTemplate { text, source });
     }
 
     // Tier 3: SPDX API
     if let Ok(detail) = prov.fetch_detail(spdx_id) {
         return Ok(ResolvedTemplate {
             text: detail.license_text,
-            html: detail.license_text_html,
             source: "SPDX API".to_string(),
         });
     }
 
-    // Tier 4: Built-in templates (plain text only, no HTML)
+    // Tier 4: Built-in templates (format-aware: .tera for txt, .html.tera for html)
     let lower = spdx_id.to_lowercase();
-    if let Some(text) = licences::get(&lower) {
+    if let Some(tmpl_set) = licences::get(&lower) {
+        let text = match format {
+            LicenseFormat::Html => tmpl_set.html.to_string(),
+            LicenseFormat::Txt => tmpl_set.txt.to_string(),
+        };
         return Ok(ResolvedTemplate {
-            text: text.to_string(),
-            html: None,
+            text,
             source: "built-in".to_string(),
         });
     }
@@ -105,7 +112,7 @@ pub fn resolve_template(
         "License '{}' not available. Not cached, not fetchable from SPDX API, \
          no custom template found, and no built-in template exists.",
         spdx_id
-    );
+    )
 }
 
 /// Resolve year from CLI arg → config → current year.
