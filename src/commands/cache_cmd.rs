@@ -14,6 +14,7 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
 
     match action {
         CacheAction::Clear => {
+            // Cache dir is flat (only .json files), so len() counts entries correctly
             let count = if fs.exists(&dir) {
                 let n = fs.read_dir(&dir).len();
                 fs.remove_dir_all(&dir).ok();

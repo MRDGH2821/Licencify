@@ -51,6 +51,17 @@ pub struct MemFs {
     dirs: RwLock<HashMap<PathBuf, bool>>,
 }
 
+/// Check if `child` is a direct child of `parent`.
+/// Returns the child's name if it is, None otherwise.
+/// Assumes `full_path` starts with `prefix` (caller must check).
+fn direct_child_name<'a>(full_path: &'a str, prefix: &str) -> Option<&'a str> {
+    let rest = &full_path[prefix.len()..];
+    if rest.is_empty() || rest.contains('/') {
+        return None;
+    }
+    Some(rest)
+}
+
 impl MemFs {
     pub fn new() -> Self {
         let mut dirs = HashMap::new();
@@ -98,24 +109,53 @@ impl Fs for MemFs {
     }
 
     fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
-        self.dirs.write().unwrap().insert(path.to_path_buf(), true);
+        // Create all ancestor directories, then the target
+        let mut ancestors: Vec<PathBuf> = path.ancestors().map(Path::to_path_buf).collect();
+        ancestors.reverse(); // shallowest first
+        let mut dirs = self.dirs.write().unwrap();
+        for ancestor in ancestors {
+            dirs.insert(ancestor, true);
+        }
         Ok(())
     }
 
     fn read_dir(&self, path: &Path) -> Vec<PathBuf> {
         let prefix = format!("{}/", path.display());
-        let files = self.files.read().unwrap();
-        let mut entries: Vec<PathBuf> = files
-            .keys()
-            .filter(|k| k.to_string_lossy().starts_with(&prefix))
-            .map(|k| k.to_path_buf())
-            .collect();
-        let dirs = self.dirs.read().unwrap();
-        for k in dirs.keys() {
-            if k != path && k.to_string_lossy().starts_with(&prefix) {
-                entries.push(k.to_path_buf());
+        let mut entries = Vec::new();
+
+        // Collect direct children from files
+        {
+            let files = self.files.read().unwrap();
+            for k in files.keys() {
+                let key_str = k.to_string_lossy();
+                if key_str.starts_with(&prefix) {
+                    if let Some(name) = direct_child_name(&key_str, &prefix) {
+                        let mut child = path.to_path_buf();
+                        child.push(name);
+                        entries.push(child);
+                    }
+                }
             }
         }
+
+        // Collect direct children from dirs (excluding self)
+        {
+            let dirs = self.dirs.read().unwrap();
+            for k in dirs.keys() {
+                if k == path {
+                    continue;
+                }
+                let key_str = k.to_string_lossy();
+                if key_str.starts_with(&prefix) {
+                    if let Some(name) = direct_child_name(&key_str, &prefix) {
+                        let mut child = path.to_path_buf();
+                        child.push(name);
+                        entries.push(child);
+                    }
+                }
+            }
+        }
+
         entries
     }
 
@@ -125,6 +165,11 @@ impl Fs for MemFs {
             .write()
             .unwrap()
             .retain(|k, _| !k.to_string_lossy().starts_with(&prefix));
+        self.dirs
+            .write()
+            .unwrap()
+            .retain(|k, _| k == path || !k.to_string_lossy().starts_with(&prefix));
+        // Now remove the target dir itself
         self.dirs.write().unwrap().remove(path);
         Ok(())
     }
@@ -174,10 +219,11 @@ mod tests {
         assert!(!fs.exists(dir));
         fs.create_dir_all(dir).unwrap();
         assert!(fs.exists(dir));
+        assert!(fs.exists(Path::new("/some"))); // parent also created
     }
 
     #[test]
-    fn memfs_read_dir() {
+    fn memfs_read_dir_direct_children_only() {
         let fs = MemFs::new();
         fs.create_dir_all(Path::new("/project")).unwrap();
         fs.write_file("/project/a.txt", "a");
@@ -189,15 +235,38 @@ mod tests {
     }
 
     #[test]
-    fn memfs_remove_dir_all() {
+    fn memfs_read_dir_no_grandchildren() {
         let fs = MemFs::new();
-        fs.create_dir_all(Path::new("/project")).unwrap();
+        fs.create_dir_all(Path::new("/project/sub")).unwrap();
         fs.write_file("/project/a.txt", "a");
-        fs.write_file("/project/b.txt", "b");
+        fs.write_file("/project/sub/deep.txt", "d");
+
+        let entries = fs.read_dir(Path::new("/project"));
+        // Should return: a.txt and sub/ — NOT sub/deep.txt
+        assert_eq!(entries.len(), 2);
+        let names: Vec<_> = entries
+            .iter()
+            .map(|p| p.file_name().unwrap().to_str().unwrap())
+            .collect();
+        assert!(names.contains(&"a.txt"));
+        assert!(names.contains(&"sub"));
+    }
+
+    #[test]
+    fn memfs_remove_dir_all_cleans_subdirs() {
+        let fs = MemFs::new();
+        fs.create_dir_all(Path::new("/project/sub")).unwrap();
+        fs.write_file("/project/a.txt", "a");
+        fs.write_file("/project/sub/b.txt", "b");
 
         assert!(fs.exists(Path::new("/project/a.txt")));
+        assert!(fs.exists(Path::new("/project/sub/b.txt")));
+
         fs.remove_dir_all(Path::new("/project")).unwrap();
+
         assert!(!fs.exists(Path::new("/project/a.txt")));
+        assert!(!fs.exists(Path::new("/project/sub/b.txt")));
+        assert!(!fs.exists(Path::new("/project/sub")));
         assert!(!fs.exists(Path::new("/project")));
     }
 }
