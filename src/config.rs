@@ -294,6 +294,25 @@ impl Config {
         Ok(())
     }
 
+    /// Update the project config's `[default]` section with the given values.
+    /// Only writes if a project config file exists; preserves `template` and `subdirs`.
+    pub fn update_project_defaults(license: &str, author: &str, format: &str) -> Result<bool> {
+        let (_, path) = match Self::find_project_root() {
+            Some(p) => p,
+            None => return Ok(false),
+        };
+        let fs = global_fs();
+        let content = fs
+            .read_to_string(&path)
+            .ok_or_else(|| anyhow::anyhow!("Failed to read project config: {}", path.display()))?;
+        let mut project: Config = toml::from_str(&content)?;
+        project.default.license = Some(license.to_string());
+        project.default.author = Some(author.to_string());
+        project.default.format = Some(format.to_string());
+        project.save_to_path(&path)?;
+        Ok(true)
+    }
+
     /// Save always writes to global config.
     pub fn save(&self) -> Result<()> {
         let path = Self::global_path()?;

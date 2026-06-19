@@ -64,6 +64,16 @@ pub fn cmd_add(
         filename.display()
     );
 
+    // Update project config defaults if a project config exists
+    let fmt_str = format.to_string();
+    match crate::config::Config::update_project_defaults(&info.id, &ctx.author, &fmt_str) {
+        Ok(true) => println!("   Updated project config defaults"),
+        Ok(false) => {}
+        Err(e) => {
+            eprintln!("   Warning: could not update project config: {}", e);
+        }
+    }
+
     match project::update_manifest(&info.id, &ctx.author, &ctx.year) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
