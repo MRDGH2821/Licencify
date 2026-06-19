@@ -127,10 +127,10 @@ impl Config {
         Ok(config_dir.join("licencify").join("config.toml"))
     }
 
-    const PROJECT_FILENAMES: [&'static str; 2] = ["licencify.toml", ".licencify.toml"];
+    const PROJECT_FILENAMES: [&'static str; 2] = [".licencify.toml", "licencify.toml"];
 
     /// Walk up from CWD to find the directory containing a project config.
-    /// Checks both `licencify.toml` and `.licencify.toml`.
+    /// Checks `.licencify.toml` first, then `licencify.toml`.
     /// Returns (project_root, project_config_path) if found.
     fn find_project_root() -> Option<(PathBuf, PathBuf)> {
         let mut dir = std::env::current_dir().ok()?;
@@ -149,7 +149,7 @@ impl Config {
     }
 
     /// Return the project-level config file path.
-    /// Checks CWD for both `licencify.toml` and `.licencify.toml`, then walks up.
+    /// Checks CWD for `.licencify.toml` first, then `licencify.toml`, then walks up.
     pub fn project_path() -> Result<PathBuf> {
         let cwd = std::env::current_dir().context("Could not determine current directory")?;
         // Check CWD for both filenames
@@ -164,7 +164,7 @@ impl Config {
             return Ok(path);
         }
         // Return default name even if it doesn't exist (for init, etc.)
-        Ok(cwd.join("licencify.toml"))
+        Ok(cwd.join(".licencify.toml"))
     }
 
     /// Legacy path() — returns global path for backwards compat.

@@ -310,7 +310,7 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-/// Write a Config to a project-level file path (licencify.toml).
+/// Write a Config to a project-level file path (.licencify.toml).
 /// This is used only for the project config; global config uses `Config::save()`.
 fn save_project_config(config: &Config, path: &std::path::Path) -> Result<()> {
     use anyhow::Context;
