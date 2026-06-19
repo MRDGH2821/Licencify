@@ -1,6 +1,7 @@
 use super::handler::ManifestHandler;
+use crate::fs::Fs;
 use anyhow::{Context, Result};
-use std::fs;
+use std::path::Path;
 use toml_edit::DocumentMut;
 
 const PYPROJECT_TOML: &str = "pyproject.toml";
@@ -12,12 +13,13 @@ impl ManifestHandler for PythonHandler {
         PYPROJECT_TOML
     }
 
-    fn exists(&self) -> bool {
-        fs::metadata(PYPROJECT_TOML).is_ok()
+    fn exists(&self, fs: &dyn Fs) -> bool {
+        fs.exists(Path::new(PYPROJECT_TOML))
     }
 
-    fn update(&self, license_id: &str) -> Result<()> {
-        let content = fs::read_to_string(PYPROJECT_TOML)
+    fn update(&self, fs: &dyn Fs, license_id: &str) -> Result<()> {
+        let content = fs
+            .read_to_string(Path::new(PYPROJECT_TOML))
             .with_context(|| format!("failed to read {PYPROJECT_TOML}"))?;
         let mut doc: DocumentMut = content
             .parse()
@@ -30,7 +32,7 @@ impl ManifestHandler for PythonHandler {
         let mut table = toml_edit::InlineTable::new();
         table.insert("text", toml_edit::Value::from(license_id));
         project.insert("license", toml_edit::value(table));
-        fs::write(PYPROJECT_TOML, doc.to_string())
+        fs.write(Path::new(PYPROJECT_TOML), &doc.to_string())
             .with_context(|| format!("failed to write {PYPROJECT_TOML}"))?;
         Ok(())
     }

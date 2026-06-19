@@ -1,6 +1,7 @@
 use super::handler::ManifestHandler;
+use crate::fs::Fs;
 use anyhow::{Context, Result};
-use std::fs;
+use std::path::Path;
 use toml_edit::DocumentMut;
 
 const CARGO_TOML: &str = "Cargo.toml";
@@ -12,12 +13,13 @@ impl ManifestHandler for CargoHandler {
         CARGO_TOML
     }
 
-    fn exists(&self) -> bool {
-        fs::metadata(CARGO_TOML).is_ok()
+    fn exists(&self, fs: &dyn Fs) -> bool {
+        fs.exists(Path::new(CARGO_TOML))
     }
 
-    fn update(&self, license_id: &str) -> Result<()> {
-        let content = fs::read_to_string(CARGO_TOML)
+    fn update(&self, fs: &dyn Fs, license_id: &str) -> Result<()> {
+        let content = fs
+            .read_to_string(Path::new(CARGO_TOML))
             .with_context(|| format!("failed to read {CARGO_TOML}"))?;
         let mut doc: DocumentMut = content
             .parse()
@@ -27,7 +29,7 @@ impl ManifestHandler for CargoHandler {
             .and_then(|item| item.as_table_like_mut())
             .with_context(|| format!("{CARGO_TOML} has no [package] table"))?;
         package.insert("license", toml_edit::value(license_id));
-        fs::write(CARGO_TOML, doc.to_string())
+        fs.write(Path::new(CARGO_TOML), &doc.to_string())
             .with_context(|| format!("failed to write {CARGO_TOML}"))?;
         Ok(())
     }

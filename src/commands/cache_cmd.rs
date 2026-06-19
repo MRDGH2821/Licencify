@@ -1,4 +1,4 @@
-use crate::{cli::CacheAction, provider, spdx};
+use crate::{cli::CacheAction, fs::global_fs, provider, spdx};
 use std::io::Write;
 
 fn api_dir() -> anyhow::Result<std::path::PathBuf> {
@@ -10,19 +10,13 @@ fn api_dir() -> anyhow::Result<std::path::PathBuf> {
 
 pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
     let dir = api_dir()?;
+    let fs = global_fs();
 
     match action {
         CacheAction::Clear => {
-            let count = if dir.exists() {
-                let n = std::fs::read_dir(&dir)
-                    .map(|entries| {
-                        entries
-                            .filter_map(|e| e.ok())
-                            .filter(|e| e.path().is_file())
-                            .count()
-                    })
-                    .unwrap_or(0);
-                std::fs::remove_dir_all(&dir).ok();
+            let count = if fs.exists(&dir) {
+                let n = fs.read_dir(&dir).len();
+                fs.remove_dir_all(&dir).ok();
                 n
             } else {
                 0
@@ -35,15 +29,8 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
             Ok(())
         }
         CacheAction::Info => {
-            let count = if dir.exists() {
-                std::fs::read_dir(&dir)
-                    .map(|entries| {
-                        entries
-                            .filter_map(|e| e.ok())
-                            .filter(|e| e.path().is_file())
-                            .count()
-                    })
-                    .unwrap_or(0)
+            let count = if fs.exists(&dir) {
+                fs.read_dir(&dir).len()
             } else {
                 0
             };

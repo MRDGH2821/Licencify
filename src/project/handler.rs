@@ -1,3 +1,4 @@
+use crate::fs::Fs;
 use anyhow::Result;
 
 /// Trait for project manifest handlers (Cargo.toml, package.json, etc.).
@@ -6,8 +7,8 @@ pub trait ManifestHandler {
     fn name(&self) -> &str;
 
     /// Returns true if this manifest exists in the current directory.
-    fn exists(&self) -> bool;
+    fn exists(&self, fs: &dyn Fs) -> bool;
 
     /// Update the license field in this manifest.
-    fn update(&self, license_id: &str) -> Result<()>;
+    fn update(&self, fs: &dyn Fs, license_id: &str) -> Result<()>;
 }

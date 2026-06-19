@@ -8,6 +8,10 @@ pub trait Fs: Send + Sync {
     fn write(&self, path: &Path, contents: &str) -> std::io::Result<()>;
     fn exists(&self, path: &Path) -> bool;
     fn create_dir_all(&self, path: &Path) -> std::io::Result<()>;
+    /// List direct children of a directory (file and dir names).
+    fn read_dir(&self, path: &Path) -> Vec<PathBuf>;
+    /// Remove a directory and all its contents recursively.
+    fn remove_dir_all(&self, path: &Path) -> std::io::Result<()>;
 }
 
 /// Real filesystem — delegates to `std::fs`.
@@ -28,6 +32,16 @@ impl Fs for RealFs {
 
     fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
         std::fs::create_dir_all(path)
+    }
+
+    fn read_dir(&self, path: &Path) -> Vec<PathBuf> {
+        std::fs::read_dir(path)
+            .map(|entries| entries.filter_map(|e| e.ok()).map(|e| e.path()).collect())
+            .unwrap_or_default()
+    }
+
+    fn remove_dir_all(&self, path: &Path) -> std::io::Result<()> {
+        std::fs::remove_dir_all(path)
     }
 }
 
@@ -87,6 +101,33 @@ impl Fs for MemFs {
         self.dirs.write().unwrap().insert(path.to_path_buf(), true);
         Ok(())
     }
+
+    fn read_dir(&self, path: &Path) -> Vec<PathBuf> {
+        let prefix = format!("{}/", path.display());
+        let files = self.files.read().unwrap();
+        let mut entries: Vec<PathBuf> = files
+            .keys()
+            .filter(|k| k.to_string_lossy().starts_with(&prefix))
+            .map(|k| k.to_path_buf())
+            .collect();
+        let dirs = self.dirs.read().unwrap();
+        for k in dirs.keys() {
+            if k != path && k.to_string_lossy().starts_with(&prefix) {
+                entries.push(k.to_path_buf());
+            }
+        }
+        entries
+    }
+
+    fn remove_dir_all(&self, path: &Path) -> std::io::Result<()> {
+        let prefix = format!("{}/", path.display());
+        self.files
+            .write()
+            .unwrap()
+            .retain(|k, _| !k.to_string_lossy().starts_with(&prefix));
+        self.dirs.write().unwrap().remove(path);
+        Ok(())
+    }
 }
 
 /// Global filesystem handle, swapable for testing.
@@ -133,5 +174,30 @@ mod tests {
         assert!(!fs.exists(dir));
         fs.create_dir_all(dir).unwrap();
         assert!(fs.exists(dir));
+    }
+
+    #[test]
+    fn memfs_read_dir() {
+        let fs = MemFs::new();
+        fs.create_dir_all(Path::new("/project")).unwrap();
+        fs.write_file("/project/a.txt", "a");
+        fs.write_file("/project/b.txt", "b");
+        fs.write_file("/other/c.txt", "c");
+
+        let entries = fs.read_dir(Path::new("/project"));
+        assert_eq!(entries.len(), 2);
+    }
+
+    #[test]
+    fn memfs_remove_dir_all() {
+        let fs = MemFs::new();
+        fs.create_dir_all(Path::new("/project")).unwrap();
+        fs.write_file("/project/a.txt", "a");
+        fs.write_file("/project/b.txt", "b");
+
+        assert!(fs.exists(Path::new("/project/a.txt")));
+        fs.remove_dir_all(Path::new("/project")).unwrap();
+        assert!(!fs.exists(Path::new("/project/a.txt")));
+        assert!(!fs.exists(Path::new("/project")));
     }
 }

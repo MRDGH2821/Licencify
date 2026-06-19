@@ -1,3 +1,4 @@
+use crate::fs::global_fs;
 use anyhow::Result;
 
 mod cargo;
@@ -8,17 +9,19 @@ mod python;
 /// Check if any supported project manifest exists in the current directory.
 #[allow(dead_code)]
 pub fn exists_any() -> bool {
-    handlers().iter().any(|h| h.exists())
+    let fs = global_fs();
+    handlers().iter().any(|h| h.exists(&*fs))
 }
 
 /// Update the license field in every manifest found in the current directory.
 ///
 /// Returns a list of manifests that were updated (e.g. `["Cargo.toml", "package.json"]`).
 pub fn update_manifest(license_id: &str, _author: &str, _year: &str) -> Result<Vec<String>> {
+    let fs = global_fs();
     let mut updated = Vec::new();
     for handler in handlers() {
-        if handler.exists() {
-            handler.update(license_id)?;
+        if handler.exists(&*fs) {
+            handler.update(&*fs, license_id)?;
             updated.push(handler.name().to_string());
         }
     }
