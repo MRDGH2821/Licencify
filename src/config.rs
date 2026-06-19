@@ -174,38 +174,12 @@ impl Config {
         Ok(cwd.join(".licencify.toml"))
     }
 
-    /// Legacy path() — returns global path for backwards compat.
-    pub fn path() -> Result<PathBuf> {
-        Self::global_path()
-    }
-
     /// Load the global config from config dir.
     fn load_global() -> Option<Self> {
         let path = Self::global_path().ok()?;
         let fs = global_fs();
         let content = fs.read_to_string(&path)?;
         toml::from_str(&content).ok()
-    }
-
-    /// Load the project-level config from CWD or parent directories.
-    fn load_project() -> Option<Self> {
-        let (_, path) = Self::find_project_root()?;
-        let fs = global_fs();
-        let content = fs.read_to_string(&path)?;
-        toml::from_str(&content).ok()
-    }
-
-    /// Load the effective config (global + project, merged).
-    pub fn load() -> Result<Self> {
-        let global = Self::load_global();
-        let project = Self::load_project();
-
-        match (global, project) {
-            (Some(g), Some(p)) => Ok(merge(g, p)),
-            (Some(g), None) => Ok(g),
-            (None, Some(p)) => Ok(p),
-            (None, None) => Ok(Self::default()),
-        }
     }
 
     /// Load effective config with explicit project root.
@@ -324,14 +298,6 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         let path = Self::global_path()?;
         self.save_to_path(&path)
-    }
-
-    /// Get the licence file base name (LICENCE or LICENSE).
-    /// Resolves: config → locale detection → default LICENCE.
-    pub fn licence_name(&self) -> String {
-        crate::licence_name::LicenceName::resolve(self.default.licence_name.as_deref())
-            .as_str()
-            .to_string()
     }
 
     /// Get the licence name setting from config (if configured).

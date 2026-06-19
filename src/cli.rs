@@ -142,19 +142,4 @@ pub enum ConfigAction {
 
     /// Show current configuration
     Show,
-
-    /// Get a config value
-    Get {
-        /// Config key (default_author, default_license, default_format, year_override)
-        key: String,
-    },
-
-    /// Set a config value
-    Set {
-        /// Config key
-        key: String,
-
-        /// Config value
-        value: String,
-    },
 }
