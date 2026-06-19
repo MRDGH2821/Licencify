@@ -1,113 +1,243 @@
 ---
-env:
-  CARGO_TERM_COLOR: always
 jobs:
   build:
+    continue-on-error: false
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust toolchain
+      - uses: actions/checkout@v6
+      # Native builds (macOS / Windows / Linux x86_64 GNU): install the matrix target on the runner host.
+      # Linux + `cross`: do NOT install the target via rustup; `cross` provides a containerized toolchain.
+      - if: matrix.os != 'ubuntu-latest' || matrix.target == 'x86_64-unknown-linux-gnu'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - if: matrix.use-cross
-        name: Install cross (if needed)
-        run: cargo install cross --git https://github.com/cross-rs/cross
-      - name: Build release binary
+      - if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
+        uses: dtolnay/rust-toolchain@stable
+      - name: Set artifact base name
         run: |
-          if [ "${{ matrix.use-cross }}" = "true" ]; then
-            cross build --release --locked --target ${{ matrix.target }}
+          echo "ASSET_BASE=smt-${{ matrix.target }}" >> "$GITHUB_ENV"
+          if [[ "${{ matrix.target }}" == *"-windows-"* ]]; then
+            echo "BIN_NAME=smt.exe" >> "$GITHUB_ENV"
+            echo "ASSET_FILE=smt-${{ matrix.target }}.exe" >> "$GITHUB_ENV"
           else
-            cargo build --release --locked --target ${{ matrix.target }}
-          fi
-      - name: Determine binary name and archive
-        run: |
-          BINARY="licencify"
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            BINARY="licencify.exe"
-          fi
-          echo "BINARY=${BINARY}" >> $GITHUB_ENV
-
-          # Create archive
-          ARCHIVE_NAME="licencify-${{ matrix.target }}"
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            7z a "${ARCHIVE_NAME}.zip" "target/${{ matrix.target }}/release/${BINARY}"
-            echo "ARCHIVE=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
-          else
-            tar czf "${ARCHIVE_NAME}.tar.gz" -C "target/${{ matrix.target }}/release" "${BINARY}"
-            echo "ARCHIVE=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+            echo "BIN_NAME=smt" >> "$GITHUB_ENV"
+            echo "ASSET_FILE=smt-${{ matrix.target }}" >> "$GITHUB_ENV"
           fi
         shell: bash
-      - name: Upload artifact
+      - if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
+        name: Install Cross (for non-native targets)
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      # `x86_64-pc-windows-gnullvm` requires the LLVM/MinGW clang driver (`x86_64-w64-mingw32-clang`) on PATH.
+      - if: matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-gnullvm'
+        name: Install LLVM/MinGW (gnullvm linker)
+        uses: msys2/setup-msys2@v2
+        with:
+          install: mingw-w64-x86_64-clang mingw-w64-x86_64-llvm
+          msystem: MINGW64
+          path-type: inherit
+          update: true
+      - if: matrix.target == 'x86_64-unknown-linux-gnu' || startsWith(matrix.os, 'macos') || startsWith(matrix.os, 'windows')
+        name: Build Release Binary (native)
+        run: cargo build --release --target ${{ matrix.target }}
+      - if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
+        name: Build Release Binary (cross)
+        run: cross build --release --target ${{ matrix.target }}
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p artifacts
+          cp "target/${{ matrix.target }}/release/${BIN_NAME}" "artifacts/${ASSET_FILE}"
+          if [[ "${BIN_NAME}" != *.exe ]]; then
+            chmod +x "artifacts/${ASSET_FILE}"
+          fi
+        shell: bash
+      - name: Create Binary Checksum
+        run: |
+          cd artifacts
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # certutil exists on Windows runners; Linux/macOS runners should not rely on it.
+            certUtil -hashfile "${ASSET_FILE}" SHA256 | grep -v "SHA256 hash" | tr -d ' ' > "${ASSET_FILE}.sha256"
+          else
+            sha256sum "${ASSET_FILE}" > "${ASSET_FILE}.sha256"
+          fi
+        shell: bash
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}
-          path: ${{ env.ARCHIVE }}
+          if-no-files-found: error
+          name: ${{ env.ASSET_BASE }}
+          path: artifacts/
     strategy:
-      fail-fast: false
       matrix:
         include:
-          # Tier 1 targets
+          # Linux x86_64 (Tier 1)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            use-cross: false
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            use-cross: false
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            use-cross: false
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            use-cross: false
-          # Tier 2 targets
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            use-cross: true
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            use-cross: true
+          # Linux i686 (Tier 1)
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            use-cross: true
+          # Linux ARM64 (Tier 2)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          # Linux x86_64 musl (Tier 2)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          # Linux ARM64 musl (Tier 2)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+          # macOS x86_64 (Tier 1)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          # macOS ARM64 (Tier 1)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          # Windows x86_64 (Tier 1)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          # Windows i686 (Tier 1)
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+          # Windows ARM64 (Tier 2)
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+          # Windows x86_64 GNU — cross Docker image
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+          - os: ubuntu-latest
+            target: i686-pc-windows-gnu
+          # gnullvm has no cross-rs image; build on Windows (LLVM/MinGW Rust toolchain)
+          - os: windows-latest
+            target: x86_64-pc-windows-gnullvm
+          # FreeBSD x86_64 (Tier 2)
+          - os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+          # ---- Additional cross-rs supported targets ----
+          # Linux (x86 variants)
+          - os: ubuntu-latest
+            target: i586-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: i586-unknown-linux-musl
+          - os: ubuntu-latest
+            target: i686-unknown-linux-musl
+          # Linux (ARM / AArch64)
           - os: ubuntu-latest
             target: arm-unknown-linux-gnueabi
-            use-cross: true
+          - os: ubuntu-latest
+            target: arm-unknown-linux-gnueabihf
+          - os: ubuntu-latest
+            target: arm-unknown-linux-musleabi
+          - os: ubuntu-latest
+            target: arm-unknown-linux-musleabihf
+          - os: ubuntu-latest
+            target: armv5te-unknown-linux-gnueabi
+          - os: ubuntu-latest
+            target: armv5te-unknown-linux-musleabi
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabi
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            use-cross: true
           - os: ubuntu-latest
-            target: aarch64-linux-android
-            use-cross: true
+            target: armv7-unknown-linux-musleabi
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
+          - os: ubuntu-latest
+            target: thumbv7neon-unknown-linux-gnueabihf
+          # Linux (LoongArch)
+          - os: ubuntu-latest
+            target: loongarch64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: loongarch64-unknown-linux-musl
+          # Linux (PowerPC)
+          - os: ubuntu-latest
+            target: powerpc-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: powerpc64-unknown-linux-gnu
           - os: ubuntu-latest
             target: powerpc64le-unknown-linux-gnu
-            use-cross: true
+          # Linux (RISC-V / S390x / SPARC)
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: riscv64gc-unknown-linux-musl
           - os: ubuntu-latest
             target: s390x-unknown-linux-gnu
-            use-cross: true
-  release:
-    name: Create Release
+          - os: ubuntu-latest
+            target: sparc64-unknown-linux-gnu
+          # BSDs / illumos / Solaris (cross std targets)
+          - os: ubuntu-latest
+            target: i686-unknown-freebsd
+          - os: ubuntu-latest
+            target: x86_64-unknown-netbsd
+          - os: ubuntu-latest
+            target: x86_64-unknown-illumos
+          - os: ubuntu-latest
+            target: sparcv9-sun-solaris
+          - os: ubuntu-latest
+            target: x86_64-pc-solaris
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4.1.3
         with:
-          merge-multiple: true
-          path: artifacts
+          path: release-artifacts
+      - name: Check for Required Builds
+        run: |
+          # Verify at least one x86_64 build per OS succeeded
+          LINUX_X86_64=$(find release-artifacts -name "smt-x86_64-unknown-linux-gnu*" -type f 2>/dev/null | wc -l)
+          MACOS_X86_64=$(find release-artifacts -name "smt-x86_64-apple-darwin*" -type f 2>/dev/null | wc -l)
+          WINDOWS_X86_64=$(find release-artifacts -name "smt-x86_64-pc-windows-msvc*" -type f 2>/dev/null | wc -l)
+          echo "Linux x86_64 artifacts: $LINUX_X86_64"
+          echo "macOS x86_64 artifacts: $MACOS_X86_64"
+          echo "Windows x86_64 artifacts: $WINDOWS_X86_64"
+          if [ "$LINUX_X86_64" -eq 0 ] || [ "$MACOS_X86_64" -eq 0 ] || [ "$WINDOWS_X86_64" -eq 0 ]; then
+            echo "ERROR: Missing required x86_64 builds!"
+            exit 1
+          fi
+        shell: bash
+      - name: Flatten Artifacts Directory
+        run: |
+          mkdir -p flat-artifacts
+          find release-artifacts -type f -exec cp {} flat-artifacts/ \;
+          ls -lah flat-artifacts/
+        shell: bash
+      - id: changelog
+        name: Get Changelog Entry
+        run: |
+          # Extract changelog for this version from CHANGELOG.md
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ -f "CHANGELOG.md" ]; then
+            # Get content between this version and next version header
+            awk "/^## \[${VERSION}\]/{flag=1; next} /^## /{flag=0} flag" CHANGELOG.md > changelog_entry.txt
+            if [ -s changelog_entry.txt ]; then
+              echo "changelog<<EOF" >> $GITHUB_OUTPUT
+              cat changelog_entry.txt >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "changelog=Release $VERSION" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changelog=Release $VERSION" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        name: Create GitHub Release
+        name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
-          generate_release_notes: true
-name: Release
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          files: flat-artifacts/*
+          prerelease: false
+name: Release Binary Builds
 on:
   push:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
+      - v[0-9]+.[0-9]+.[0-9]+-*
 permissions:
   contents: write
