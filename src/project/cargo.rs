@@ -34,3 +34,64 @@ impl ManifestHandler for CargoHandler {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fs::MemFs;
+
+    fn sample_cargo_toml() -> &'static str {
+        r#"[package]
+name = "test-project"
+version = "0.1.0"
+license = "MIT"
+"#
+    }
+
+    #[test]
+    fn cargo_exists_returns_true_when_file_present() {
+        let fs = MemFs::new();
+        fs.write_file(Path::new(CARGO_TOML), sample_cargo_toml());
+        let handler = CargoHandler;
+        assert!(handler.exists(&fs));
+    }
+
+    #[test]
+    fn cargo_exists_returns_false_when_file_absent() {
+        let fs = MemFs::new();
+        let handler = CargoHandler;
+        assert!(!handler.exists(&fs));
+    }
+
+    #[test]
+    fn cargo_update_sets_license_field() {
+        let fs = MemFs::new();
+        fs.write_file(
+            Path::new(CARGO_TOML),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        );
+        let handler = CargoHandler;
+        handler.update(&fs, "Apache-2.0").unwrap();
+
+        let content = fs.read_to_string(Path::new(CARGO_TOML)).unwrap();
+        assert!(content.contains("Apache-2.0"));
+    }
+
+    #[test]
+    fn cargo_update_preserves_existing_fields() {
+        let fs = MemFs::new();
+        fs.write_file(Path::new(CARGO_TOML), sample_cargo_toml());
+        let handler = CargoHandler;
+        handler.update(&fs, "GPL-3.0-only").unwrap();
+
+        let content = fs.read_to_string(Path::new(CARGO_TOML)).unwrap();
+        assert!(content.contains("test-project"));
+        assert!(content.contains("GPL-3.0-only"));
+    }
+
+    #[test]
+    fn cargo_name_returns_correct_manifest_name() {
+        let handler = CargoHandler;
+        assert_eq!(handler.name(), "Cargo.toml");
+    }
+}

@@ -6,13 +6,6 @@ pub mod handler;
 mod npm;
 mod python;
 
-/// Check if any supported project manifest exists in the current directory.
-#[allow(dead_code)]
-pub fn exists_any() -> bool {
-    let fs = global_fs();
-    handlers().iter().any(|h| h.exists(&*fs))
-}
-
 /// Update the license field in every manifest found in the current directory.
 ///
 /// Returns a list of manifests that were updated (e.g. `["Cargo.toml", "package.json"]`).

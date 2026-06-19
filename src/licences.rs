@@ -48,8 +48,53 @@ pub fn get(spdx_lower: &str) -> Option<&'static str> {
     TEMPLATES.get(spdx_lower).copied()
 }
 
-/// Return all supported SPDX identifiers for which built-in templates exist.
-#[allow(dead_code)]
-pub fn supported_ids() -> Vec<&'static str> {
-    TEMPLATES.keys().copied().collect()
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_returns_mit_template() {
+        let template = get("mit").unwrap();
+        assert!(template.contains("MIT"));
+    }
+
+    #[test]
+    fn get_returns_apache_template() {
+        let template = get("apache-2.0").unwrap();
+        assert!(template.contains("Apache"));
+    }
+
+    #[test]
+    fn get_returns_none_for_unknown() {
+        assert!(get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn get_is_case_sensitive() {
+        // Built-in templates are stored lowercase
+        assert!(get("MIT").is_none()); // uppercase not in map
+        assert!(get("mit").is_some()); // lowercase works
+    }
+
+    #[test]
+    fn all_expected_templates_exist() {
+        let expected = [
+            "mit",
+            "apache-2.0",
+            "gpl-3.0-only",
+            "gpl-2.0-only",
+            "agpl-3.0-only",
+            "lgpl-3.0-only",
+            "bsd-2-clause",
+            "bsd-3-clause",
+            "mpl-2.0",
+            "unlicense",
+            "cc0-1.0",
+            "isc",
+            "wtfpl",
+        ];
+        for id in &expected {
+            assert!(get(id).is_some(), "Missing template for: {}", id);
+        }
+    }
 }

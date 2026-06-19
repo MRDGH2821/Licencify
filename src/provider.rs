@@ -4,13 +4,9 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct LicenseInfo {
     pub id: String,
     pub name: String,
-    pub is_osi_approved: bool,
-    pub is_fsf_libre: bool,
-    pub is_deprecated: bool,
 }
 
 /// Unified license data provider — owns the SPDX index, template cache
@@ -44,27 +40,6 @@ impl LicenseProvider {
         })
     }
 
-    /// Find a license by exact ID.
-    #[allow(dead_code)]
-    pub fn find(&self, license_id: &str) -> Option<&SpdxLicense> {
-        self.index.find(license_id)
-    }
-
-    /// Validate a license ID — returns the canonical ID or an error.
-    /// Rejects deprecated IDs.
-    #[allow(dead_code)]
-    pub fn validate(&self, license_id: &str) -> Result<String> {
-        match self.index.find(license_id) {
-            Some(license) => {
-                if license.is_deprecated_license_id {
-                    anyhow::bail!("License '{}' is deprecated", license_id);
-                }
-                Ok(license.license_id.clone())
-            }
-            None => anyhow::bail!("Unknown license ID: '{}'", license_id),
-        }
-    }
-
     /// Get structured license info by ID.
     pub fn info(&self, license_id: &str) -> Result<LicenseInfo> {
         let license = self
@@ -74,9 +49,6 @@ impl LicenseProvider {
         Ok(LicenseInfo {
             id: license.license_id.clone(),
             name: license.name.clone(),
-            is_osi_approved: license.is_osi_approved,
-            is_fsf_libre: license.is_fsf_libre,
-            is_deprecated: license.is_deprecated_license_id,
         })
     }
 

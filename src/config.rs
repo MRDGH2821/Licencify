@@ -332,3 +332,106 @@ impl Config {
         Ok(config_dir.join("licencify").join("licencify-schema.json"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn merge_prefers_overriding_values() {
+        let base = Config {
+            default: DefaultConfig {
+                author: Some("Base Author".into()),
+                license: Some("MIT".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        let overriding = Config {
+            default: DefaultConfig {
+                author: Some("Override Author".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        let merged = merge(base, overriding);
+        assert_eq!(merged.default.author.as_deref(), Some("Override Author"));
+        assert_eq!(merged.default.license.as_deref(), Some("MIT")); // base preserved
+    }
+
+    #[test]
+    fn merge_uses_base_when_overriding_is_none() {
+        let base = Config {
+            default: DefaultConfig {
+                author: Some("Base Author".into()),
+                license: Some("MIT".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        let overriding = Config::default();
+        let merged = merge(base, overriding);
+        assert_eq!(merged.default.author.as_deref(), Some("Base Author"));
+        assert_eq!(merged.default.license.as_deref(), Some("MIT"));
+    }
+
+    #[test]
+    fn merge_template_configs() {
+        let base = Config {
+            default: DefaultConfig::default(),
+            template: Some(TemplateConfig {
+                paths: Some(vec!["/base/path".into()]),
+            }),
+            subdirs: None,
+        };
+        let overriding = Config {
+            default: DefaultConfig::default(),
+            template: Some(TemplateConfig {
+                paths: Some(vec!["/override/path".into()]),
+            }),
+            subdirs: None,
+        };
+        let merged = merge(base, overriding);
+        let paths = merged.template.unwrap().paths.unwrap();
+        assert_eq!(paths, vec!["/override/path"]);
+    }
+
+    #[test]
+    fn schema_json_is_valid_json() {
+        let schema = Config::schema_json().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&schema).unwrap();
+        assert!(parsed.is_object());
+        assert!(parsed.get("properties").is_some());
+    }
+
+    #[test]
+    fn config_default_is_empty() {
+        let config = Config::default();
+        assert!(config.default.author.is_none());
+        assert!(config.default.license.is_none());
+        assert!(config.template.is_none());
+        assert!(config.subdirs.is_none());
+    }
+
+    #[test]
+    fn licence_name_setting_returns_some_when_configured() {
+        let config = Config {
+            default: DefaultConfig {
+                licence_name: Some("LICENSE".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        assert_eq!(config.licence_name_setting(), Some("LICENSE"));
+    }
+
+    #[test]
+    fn licence_name_setting_returns_none_when_not_configured() {
+        let config = Config::default();
+        assert!(config.licence_name_setting().is_none());
+    }
+}

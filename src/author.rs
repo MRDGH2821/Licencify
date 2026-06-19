@@ -64,3 +64,100 @@ pub fn resolve_author(
          or configure git with `git config user.name \"Your Name\"`"
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::process::ExitStatusExt;
+    use std::process::Output;
+
+    /// Mock runner that returns configurable output.
+    struct MockRunner {
+        output: Option<Output>,
+    }
+
+    impl Runner for MockRunner {
+        fn run_command(&self, _program: &str, _args: &[&str]) -> Option<Output> {
+            self.output.clone()
+        }
+
+        fn exit(&self, _code: i32) -> ! {
+            panic!("exit called in test");
+        }
+    }
+
+    #[test]
+    fn cli_author_takes_precedence() {
+        let resolvers: Vec<&dyn AuthorResolver> = vec![];
+        let result = resolve_author(Some("CLI Author".into()), None, &resolvers).unwrap();
+        assert_eq!(result, "CLI Author");
+    }
+
+    #[test]
+    fn git_author_resolver_works() {
+        let mock = MockRunner {
+            output: Some(Output {
+                status: std::process::ExitStatus::from_raw(0),
+                stdout: b"Git Author\n".to_vec(),
+                stderr: Vec::new(),
+            }),
+        };
+        let resolver = GitAuthorResolver { runner: &mock };
+        let result = resolver.resolve(None);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().unwrap(), "Git Author");
+    }
+
+    #[test]
+    fn git_author_resolver_returns_none_on_failure() {
+        let mock = MockRunner { output: None };
+        let resolver = GitAuthorResolver { runner: &mock };
+        let result = resolver.resolve(None);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn config_author_resolver_works() {
+        let config = Config {
+            default: crate::config::DefaultConfig {
+                author: Some("Config Author".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        let resolver = ConfigAuthorResolver;
+        let result = resolver.resolve(Some(&config));
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().unwrap(), "Config Author");
+    }
+
+    #[test]
+    fn config_author_resolver_returns_none_when_no_config() {
+        let resolver = ConfigAuthorResolver;
+        let result = resolver.resolve(None);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn config_author_resolver_returns_none_when_empty() {
+        let config = Config {
+            default: crate::config::DefaultConfig {
+                author: Some("   ".into()),
+                ..Default::default()
+            },
+            template: None,
+            subdirs: None,
+        };
+        let resolver = ConfigAuthorResolver;
+        let result = resolver.resolve(Some(&config));
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn resolve_author_chain_falls_through_to_error() {
+        let resolvers: Vec<&dyn AuthorResolver> = vec![];
+        let result = resolve_author(None, None, &resolvers);
+        assert!(result.is_err());
+    }
+}

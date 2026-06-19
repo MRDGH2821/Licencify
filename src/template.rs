@@ -37,3 +37,64 @@ fn replace_spdx_placeholders(text: &str, year: &str, author: &str) -> String {
 pub fn default_year() -> String {
     chrono::Local::now().format("%Y").to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_replaces_year_placeholder() {
+        let template = "Copyright {{ year }} Author";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright 2024 Author");
+    }
+
+    #[test]
+    fn render_replaces_author_placeholder() {
+        let template = "Copyright 2024 {{ author }}";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright 2024 Alice");
+    }
+
+    #[test]
+    fn render_replaces_spdx_year_placeholder() {
+        let template = "Copyright <year> Author";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright 2024 Author");
+    }
+
+    #[test]
+    fn render_replaces_spdx_author_placeholder() {
+        let template = "Copyright 2024 <author>";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright 2024 Alice");
+    }
+
+    #[test]
+    fn render_replaces_copyright_holders_placeholder() {
+        let template = "Copyright <copyright holders>";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright Alice");
+    }
+
+    #[test]
+    fn render_handles_html_encoded_placeholders() {
+        let template = "Copyright &lt;year&gt; &lt;author&gt;";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "Copyright 2024 Alice");
+    }
+
+    #[test]
+    fn render_preserves_literal_text() {
+        let template = "MIT License\n\nPermission is hereby granted...";
+        let result = render(template, "2024", "Alice").unwrap();
+        assert_eq!(result, "MIT License\n\nPermission is hereby granted...");
+    }
+
+    #[test]
+    fn default_year_returns_current_year() {
+        let year = default_year();
+        assert_eq!(year.len(), 4);
+        assert!(year.chars().all(|c| c.is_ascii_digit()));
+    }
+}
