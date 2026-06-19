@@ -325,6 +325,6 @@ impl Config {
     /// Path for the schema file (next to global config file)
     pub fn schema_path() -> Result<PathBuf> {
         let config_dir = dirs::config_dir().context("Could not determine config directory")?;
-        Ok(config_dir.join("licencify").join("config-schema.json"))
+        Ok(config_dir.join("licencify").join("licencify-schema.json"))
     }
 }

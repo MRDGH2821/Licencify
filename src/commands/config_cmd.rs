@@ -45,7 +45,7 @@ fn write_schema_file() -> Result<()> {
     let project_cfg = Config::project_path()?;
     if project_cfg.exists() {
         if let Some(parent) = project_cfg.parent() {
-            let proj_schema = parent.join("config-schema.json");
+            let proj_schema = parent.join("licencify-schema.json");
             std::fs::write(&proj_schema, &json)?;
             println!("✅ Schema written: {}", proj_schema.display());
         }
