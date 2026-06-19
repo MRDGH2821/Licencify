@@ -1,6 +1,7 @@
 use crate::{
     cli::ConfigAction,
     config::{self, Config},
+    fs::global_fs,
 };
 use anyhow::Result;
 
@@ -18,7 +19,8 @@ pub fn cmd_schema(output: Option<&str>) -> Result<()> {
 
     match output {
         Some(path) => {
-            std::fs::write(path, &json)?;
+            let fs = global_fs();
+            fs.write(std::path::Path::new(path), &json)?;
             println!("✅ Schema written to {}", path);
         }
         None => {
@@ -31,22 +33,23 @@ pub fn cmd_schema(output: Option<&str>) -> Result<()> {
 /// Write schema JSON to the global config dir and (if it exists) alongside
 /// the project config.
 fn write_schema_file() -> Result<()> {
+    let fs = global_fs();
     let json = Config::schema_json()?;
 
     // --- global schema ---
     let global_schema = Config::schema_path()?;
     if let Some(parent) = global_schema.parent() {
-        std::fs::create_dir_all(parent)?;
+        fs.create_dir_all(parent)?;
     }
-    std::fs::write(&global_schema, &json)?;
+    fs.write(&global_schema, &json)?;
     println!("✅ Schema written: {}", global_schema.display());
 
     // --- project schema (next to licencify.toml) ---
     let project_cfg = Config::project_path()?;
-    if project_cfg.exists() {
+    if fs.exists(&project_cfg) {
         if let Some(parent) = project_cfg.parent() {
             let proj_schema = parent.join("licencify-schema.json");
-            std::fs::write(&proj_schema, &json)?;
+            fs.write(&proj_schema, &json)?;
             println!("✅ Schema written: {}", proj_schema.display());
         }
     }
@@ -57,25 +60,26 @@ fn write_schema_file() -> Result<()> {
 // ─── init ────────────────────────────────────────────────────────────────────
 
 fn cmd_config_init() -> Result<()> {
+    let fs = global_fs();
     let project_path = Config::project_path()?;
     let global_path = Config::global_path()?;
 
     // Create global config if it doesn't exist yet
-    if !global_path.exists() {
+    if !fs.exists(&global_path) {
         let global = Config::default();
         global.save()?;
         println!("✅ Created global config: {}", global_path.display());
     }
 
     // Create project config if it doesn't exist yet
-    if project_path.exists() {
+    if fs.exists(&project_path) {
         println!("Project config already exists: {}", project_path.display());
         println!("Use `licencify config show` to view current configuration.");
         return Ok(());
     }
 
     let config = Config::default();
-    save_project_config(&config, &project_path)?;
+    config.save_to_path(&project_path)?;
 
     println!("✅ Created project config: {}", project_path.display());
 
@@ -109,11 +113,12 @@ fn cmd_config_init() -> Result<()> {
 // ─── show ────────────────────────────────────────────────────────────────────
 
 fn cmd_config_show() -> Result<()> {
+    let fs = global_fs();
     let global_path = Config::global_path()?;
     let project_path = Config::project_path()?;
 
-    let global_exists = global_path.exists();
-    let project_exists = project_path.exists();
+    let global_exists = fs.exists(&global_path);
+    let project_exists = fs.exists(&project_path);
 
     // File locations
     println!(
@@ -305,33 +310,5 @@ fn cmd_config_set(key: &str, value: &str) -> Result<()> {
     let path = Config::path()?;
     println!("✅ Set {} = {}", key, value);
     println!("   Saved to {}", path.display());
-    Ok(())
-}
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-/// Write a Config to a project-level file path (.licencify.toml).
-/// This is used only for the project config; global config uses `Config::save()`.
-fn save_project_config(config: &Config, path: &std::path::Path) -> Result<()> {
-    use anyhow::Context;
-
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
-    }
-
-    // Build TOML with schema comment header
-    let doc: toml_edit::DocumentMut = toml::to_string_pretty(config)
-        .context("Failed to serialize config")?
-        .parse()
-        .context("Failed to parse serialized config")?;
-
-    let schema_path = Config::schema_path()?;
-    let header = format!("#:schema {}\n\n", schema_path.display());
-    let mut prefixed = header;
-    prefixed.push_str(&doc.to_string());
-
-    std::fs::write(path, prefixed)
-        .with_context(|| format!("Failed to write config file: {}", path.display()))?;
     Ok(())
 }

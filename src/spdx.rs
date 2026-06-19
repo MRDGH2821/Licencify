@@ -1,9 +1,9 @@
 use serde::Deserialize;
-use std::collections::HashMap;
 
 const SPDX_INDEX: &str = include_str!("../data/licenses.json");
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct SpdxIndex {
     #[serde(rename = "licenseListVersion")]
     pub license_list_version: String,
@@ -11,6 +11,7 @@ pub struct SpdxIndex {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct SpdxLicense {
     #[serde(rename = "licenseId")]
     pub license_id: String,
@@ -28,6 +29,7 @@ pub struct SpdxLicense {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct SpdxLicenseDetail {
     #[serde(rename = "licenseId")]
     pub license_id: String,
@@ -59,13 +61,6 @@ impl SpdxIndex {
             .filter(|l| {
                 l.name.to_lowercase().contains(&q) || l.license_id.to_lowercase().contains(&q)
             })
-            .collect()
-    }
-
-    pub fn by_id(&self) -> HashMap<&str, &SpdxLicense> {
-        self.licenses
-            .iter()
-            .map(|l| (l.license_id.as_str(), l))
             .collect()
     }
 }

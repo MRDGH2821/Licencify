@@ -1,29 +1,31 @@
-use crate::detect;
+use crate::{
+    detect,
+    fs::global_fs,
+    licence_name::LicenceName,
+    process::{RealRunner, Runner},
+};
 
 pub fn cmd_detect() -> anyhow::Result<()> {
-    let candidates = [
-        "LICENSE",
-        "LICENSE.txt",
-        "LICENSE.md",
-        "COPYING",
-        "COPYING.txt",
-    ];
+    let runner = RealRunner;
+    let fs = global_fs();
 
-    for name in &candidates {
-        if std::path::Path::new(name).exists() {
-            let content = std::fs::read_to_string(name)?;
-            if let Some(spdx_id) = detect::detect_license(&content) {
-                println!("Detected: {} ({})", spdx_id, name);
-                return Ok(());
-            } else {
-                println!("Found {} but could not determine license type", name);
-                println!("Hint: use 'licencify search' to find the right SPDX ID");
-                return Ok(());
+    for name in LicenceName::candidates() {
+        let path = std::path::Path::new(name);
+        if fs.exists(path) {
+            if let Some(content) = fs.read_to_string(path) {
+                if let Some(spdx_id) = detect::detect_license(&content) {
+                    println!("Detected: {} ({})", spdx_id, name);
+                    return Ok(());
+                } else {
+                    println!("Found {} but could not determine license type", name);
+                    println!("Hint: use 'licencify search' to find the right SPDX ID");
+                    return Ok(());
+                }
             }
         }
     }
 
     eprintln!("No license file found in current directory");
     eprintln!("Hint: use 'licencify add <SPDX-ID>' to add one");
-    std::process::exit(1);
+    runner.exit(1);
 }

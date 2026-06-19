@@ -1,4 +1,7 @@
-use crate::{cli::LicenseFormat, config::Config, project, provider, resolution, template};
+use crate::{
+    cli::LicenseFormat, config::Config, fs::global_fs, licence_name::LicenceName, project,
+    provider, resolution, template,
+};
 
 pub fn cmd_update(
     spdx: &str,
@@ -9,14 +12,15 @@ pub fn cmd_update(
     let prov = provider::LicenseProvider::load()?;
     let config = Config::load_effective().ok();
     let info = prov.info(spdx)?;
-    let author = resolution::resolve_author(author)?;
-    let year = resolution::resolve_year(year);
-    let base_name = config
-        .as_ref()
-        .map(|c| c.licence_name())
-        .unwrap_or_else(|| "LICENCE".to_string());
+    let author = resolution::resolve_author(author, config.as_ref())?;
+    let year = resolution::resolve_year(year, config.as_ref());
+    let licence_name = LicenceName::resolve(
+        config
+            .as_ref()
+            .and_then(|c| c.default.licence_name.as_deref()),
+    );
 
-    let resolved = resolution::resolve_template(&info.id)?;
+    let resolved = resolution::resolve_template(&info.id, config.as_ref())?;
 
     let (content, ext) = match &format {
         LicenseFormat::Html => {
@@ -30,20 +34,24 @@ pub fn cmd_update(
         }
     };
 
-    let filename = format!("{}.{}", base_name, ext);
+    let filename = licence_name.file_path(ext);
+    let fs = global_fs();
 
-    if !std::path::Path::new(&filename).exists() {
+    if !fs.exists(&filename) {
         anyhow::bail!(
             "{} not found. Use `licencify add {}` to create it first.",
-            filename,
+            filename.display(),
             spdx
         );
     }
 
-    std::fs::write(&filename, &content)?;
+    fs.write(&filename, &content)?;
     println!(
         "✅ Updated {} ({}) [from {}] as {}",
-        info.name, info.id, resolved.source, filename
+        info.name,
+        info.id,
+        resolved.source,
+        filename.display()
     );
 
     match project::update_manifest(&info.id, &author, &year) {

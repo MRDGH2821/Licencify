@@ -1,9 +1,10 @@
+use crate::fs::global_fs;
 use crate::spdx::{SpdxIndex, SpdxLicense, SpdxLicenseDetail};
 use anyhow::{Context, Result};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct LicenseInfo {
     pub id: String,
     pub name: String,
@@ -44,12 +45,14 @@ impl LicenseProvider {
     }
 
     /// Find a license by exact ID.
+    #[allow(dead_code)]
     pub fn find(&self, license_id: &str) -> Option<&SpdxLicense> {
         self.index.find(license_id)
     }
 
     /// Validate a license ID — returns the canonical ID or an error.
     /// Rejects deprecated IDs.
+    #[allow(dead_code)]
     pub fn validate(&self, license_id: &str) -> Result<String> {
         match self.index.find(license_id) {
             Some(license) => {
@@ -79,20 +82,17 @@ impl LicenseProvider {
 
     /// Check if a license detail is already cached locally.
     pub fn get_cached(&self, license_id: &str) -> Option<SpdxLicenseDetail> {
+        let fs = global_fs();
         let cache_path = self.api_cache_dir.join(format!("{license_id}.json"));
-        let text = fs::read_to_string(&cache_path).ok()?;
+        let text = fs.read_to_string(&cache_path)?;
         serde_json::from_str(&text).ok()
     }
 
     /// Fetch full license detail from SPDX (with disk caching).
+    /// Caller should check `get_cached` first to avoid redundant disk reads.
     pub fn fetch_detail(&self, license_id: &str) -> Result<SpdxLicenseDetail> {
+        let fs = global_fs();
         let cache_path = self.api_cache_dir.join(format!("{license_id}.json"));
-
-        // Check cache first
-        if cache_path.exists() {
-            let text = fs::read_to_string(&cache_path)?;
-            return Ok(serde_json::from_str(&text)?);
-        }
 
         let url = format!("https://spdx.org/licenses/{license_id}.json");
         let mut resp = ureq::get(&url)
@@ -104,9 +104,9 @@ impl LicenseProvider {
             .context("Failed to read response body")?;
 
         if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent)?;
+            fs.create_dir_all(parent)?;
         }
-        fs::write(&cache_path, &body)?;
+        fs.write(&cache_path, &body)?;
         Ok(serde_json::from_str(&body)?)
     }
 

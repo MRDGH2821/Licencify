@@ -6,6 +6,7 @@ mod npm;
 mod python;
 
 /// Check if any supported project manifest exists in the current directory.
+#[allow(dead_code)]
 pub fn exists_any() -> bool {
     handlers().iter().any(|h| h.exists())
 }

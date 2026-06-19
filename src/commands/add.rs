@@ -1,4 +1,7 @@
-use crate::{cli::LicenseFormat, config::Config, project, provider, resolution, template};
+use crate::{
+    cli::LicenseFormat, config::Config, fs::global_fs, licence_name::LicenceName, project,
+    provider, resolution, template,
+};
 use std::io::Write;
 
 pub fn cmd_add(
@@ -11,12 +14,13 @@ pub fn cmd_add(
     let prov = provider::LicenseProvider::load()?;
     let config = Config::load_effective().ok();
     let info = prov.info(spdx)?;
-    let author = resolution::resolve_author(author)?;
-    let year = resolution::resolve_year(year);
-    let base_name = config
-        .as_ref()
-        .map(|c| c.licence_name())
-        .unwrap_or_else(|| "LICENCE".to_string());
+    let author = resolution::resolve_author(author, config.as_ref())?;
+    let year = resolution::resolve_year(year, config.as_ref());
+    let licence_name = LicenceName::resolve(
+        config
+            .as_ref()
+            .and_then(|c| c.default.licence_name.as_deref()),
+    );
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
@@ -34,7 +38,7 @@ pub fn cmd_add(
         }
     }
 
-    let resolved = resolution::resolve_template(&info.id)?;
+    let resolved = resolution::resolve_template(&info.id, config.as_ref())?;
 
     let (content, ext) = match &format {
         LicenseFormat::Html => {
@@ -48,10 +52,11 @@ pub fn cmd_add(
         }
     };
 
-    let filename = format!("{}.{}", base_name, ext);
+    let filename = licence_name.file_path(ext);
+    let fs = global_fs();
 
-    if std::path::Path::new(&filename).exists() && !yes {
-        println!("{} exists. Overwrite? [y/N] ", filename);
+    if fs.exists(&filename) && !yes {
+        println!("{} exists. Overwrite? [y/N] ", filename.display());
         std::io::stdout().flush()?;
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -61,10 +66,13 @@ pub fn cmd_add(
         }
     }
 
-    std::fs::write(&filename, &content)?;
+    fs.write(&filename, &content)?;
     println!(
         "✅ Added {} ({}) [from {}] as {}",
-        info.name, info.id, resolved.source, filename
+        info.name,
+        info.id,
+        resolved.source,
+        filename.display()
     );
 
     match project::update_manifest(&info.id, &author, &year) {

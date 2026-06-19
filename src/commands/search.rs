@@ -1,6 +1,10 @@
-use crate::provider::LicenseProvider;
+use crate::{
+    process::{RealRunner, Runner},
+    provider::LicenseProvider,
+};
 
 pub fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result<()> {
+    let runner = RealRunner;
     let prov = LicenseProvider::load()?;
     let results = prov.search(query);
 
@@ -20,7 +24,7 @@ pub fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result
 
     if results.is_empty() {
         eprintln!("No licenses found matching '{}'", query);
-        std::process::exit(1);
+        runner.exit(1);
     }
 
     for license in &results {

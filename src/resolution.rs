@@ -1,4 +1,4 @@
-use crate::{author, config::Config, licences, provider, template};
+use crate::{author, config::Config, licences, process::RealRunner, provider, template};
 
 pub struct ResolvedTemplate {
     pub text: String,
@@ -11,9 +11,11 @@ pub struct ResolvedTemplate {
 /// 2. Custom template paths (from config [template].paths)
 /// 3. SPDX API (network)
 /// 4. Built-in templates (embedded in binary)
-pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
+pub fn resolve_template(
+    spdx_id: &str,
+    config: Option<&Config>,
+) -> anyhow::Result<ResolvedTemplate> {
     let prov = provider::LicenseProvider::load()?;
-    let config = Config::load_effective().ok();
 
     // Tier 1: API cache
     if let Some(detail) = prov.get_cached(spdx_id) {
@@ -25,10 +27,7 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
     }
 
     // Tier 2: Custom template paths from config [template].paths
-    if let Some((text, html, source)) = config
-        .as_ref()
-        .and_then(|cfg| cfg.find_custom_template(spdx_id))
-    {
+    if let Some((text, html, source)) = config.and_then(|cfg| cfg.find_custom_template(spdx_id)) {
         return Ok(ResolvedTemplate { text, html, source });
     }
 
@@ -59,21 +58,26 @@ pub fn resolve_template(spdx_id: &str) -> anyhow::Result<ResolvedTemplate> {
 }
 
 /// Resolve year from CLI arg → config → current year.
-pub fn resolve_year(cli_year: Option<String>) -> String {
+pub fn resolve_year(cli_year: Option<String>, config: Option<&Config>) -> String {
     if let Some(year) = cli_year {
         return year;
     }
-    if let Ok(cfg) = crate::config::Config::load_effective() {
-        if let Some(year) = cfg.default.year {
-            return year;
+    if let Some(cfg) = config {
+        if let Some(year) = &cfg.default.year {
+            return year.clone();
         }
     }
     template::default_year()
 }
 
 /// Resolve author using CLI arg → config → git config chain.
-pub fn resolve_author(cli_author: Option<String>) -> anyhow::Result<String> {
+pub fn resolve_author(
+    cli_author: Option<String>,
+    config: Option<&Config>,
+) -> anyhow::Result<String> {
+    let runner = RealRunner;
+    let git_resolver = author::GitAuthorResolver { runner: &runner };
     let resolvers: Vec<&dyn author::AuthorResolver> =
-        vec![&author::ConfigAuthorResolver, &author::GitAuthorResolver];
-    author::resolve_author(cli_author, &resolvers)
+        vec![&author::ConfigAuthorResolver, &git_resolver];
+    author::resolve_author(cli_author, config, &resolvers)
 }

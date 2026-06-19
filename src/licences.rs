@@ -49,6 +49,7 @@ pub fn get(spdx_lower: &str) -> Option<&'static str> {
 }
 
 /// Return all supported SPDX identifiers for which built-in templates exist.
+#[allow(dead_code)]
 pub fn supported_ids() -> Vec<&'static str> {
     TEMPLATES.keys().copied().collect()
 }

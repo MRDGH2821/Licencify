@@ -1,10 +1,12 @@
-#![allow(dead_code)]
 mod author;
 pub mod cli;
 mod commands;
 mod config;
 mod detect;
+pub mod fs;
+mod licence_name;
 mod licences;
+mod process;
 mod project;
 mod provider;
 mod resolution;

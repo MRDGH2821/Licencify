@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::fs::global_fs;
+
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[schemars(
     title = "Licencify Config",
@@ -63,23 +65,9 @@ pub struct SubdirConfig {
 /// Detect whether the system locale uses en-GB or en-US spelling.
 /// Returns "LICENCE" for en-GB and "LICENSE" for en-US/other.
 pub fn detect_licence_name() -> String {
-    for var in &["LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"] {
-        if let Ok(val) = std::env::var(var) {
-            let lower = val.to_lowercase();
-            if lower.contains("en_gb")
-                || lower.contains("en-gb")
-                || lower.contains("en.au")
-                || lower.contains("en_nz")
-                || lower.contains("en-in")
-            {
-                return "LICENCE".to_string();
-            }
-            if lower.starts_with("en") {
-                return "LICENSE".to_string();
-            }
-        }
-    }
-    "LICENCE".to_string()
+    crate::licence_name::LicenceName::detect()
+        .as_str()
+        .to_string()
 }
 
 /// Merge two configs: `overriding` values take priority over `base`.
@@ -133,11 +121,12 @@ impl Config {
     /// Checks `.licencify.toml` first, then `licencify.toml`.
     /// Returns (project_root, project_config_path) if found.
     fn find_project_root() -> Option<(PathBuf, PathBuf)> {
+        let fs = global_fs();
         let mut dir = std::env::current_dir().ok()?;
         loop {
             for name in Self::PROJECT_FILENAMES {
                 let candidate = dir.join(name);
-                if candidate.exists() {
+                if fs.exists(&candidate) {
                     return Some((dir, candidate));
                 }
             }
@@ -151,11 +140,12 @@ impl Config {
     /// Return the project-level config file path.
     /// Checks CWD for `.licencify.toml` first, then `licencify.toml`, then walks up.
     pub fn project_path() -> Result<PathBuf> {
+        let fs = global_fs();
         let cwd = std::env::current_dir().context("Could not determine current directory")?;
         // Check CWD for both filenames
         for name in Self::PROJECT_FILENAMES {
             let candidate = cwd.join(name);
-            if candidate.exists() {
+            if fs.exists(&candidate) {
                 return Ok(candidate);
             }
         }
@@ -174,40 +164,41 @@ impl Config {
 
     /// Load the global config from config dir.
     fn load_global() -> Option<Self> {
+        let fs = global_fs();
         let path = Self::global_path().ok()?;
-        if !path.exists() {
+        if !fs.exists(&path) {
             return None;
         }
-        let contents = std::fs::read_to_string(&path).ok()?;
-        toml::from_str(&contents).ok()
+        let text = fs.read_to_string(&path)?;
+        toml::from_str(&text).ok()
     }
 
-    /// Load the project-level config by walking up from CWD.
-    fn load_project() -> Option<Self> {
-        let (_, path) = Self::find_project_root()?;
-        let contents = std::fs::read_to_string(&path).ok()?;
-        toml::from_str(&contents).ok()
+    /// Load the project config from the project root.
+    /// Returns (merged config, project_root path) so callers don't re-walk.
+    fn load_project_with_root() -> Option<(Self, PathBuf)> {
+        let fs = global_fs();
+        let (project_root, path) = Self::find_project_root()?;
+        let text = fs.read_to_string(&path)?;
+        let config = toml::from_str(&text).ok()?;
+        Some((config, project_root))
     }
 
-    /// Load merged config: global + project-level (project overrides global).
+    /// Load global config only (no merging).
     pub fn load() -> Result<Self> {
-        let global = Self::load_global().unwrap_or_default();
-        let project = Self::load_project().unwrap_or_default();
-        Ok(merge(global, project))
+        Self::load_global().context("No global config found. Run `licencify config init` first.")
     }
 
-    /// Load the effective config, including subdir resolution.
-    /// 1. Merge global + project
-    /// 2. Find project root (dir containing licencify.toml)
-    /// 3. Compute relative CWD from project root
-    /// 4. Find longest-prefix match in [subdirs]
-    /// 5. Merge matched subdir config on top
+    /// Load the effective config: global + project + subdir overrides merged.
     pub fn load_effective() -> Result<Self> {
-        let merged = Self::load()?;
+        let global = Self::load_global().unwrap_or_default();
+        let (project, project_root) = Self::load_project_with_root()
+            .map(|(cfg, root)| (cfg, Some(root)))
+            .unwrap_or_default();
+        let merged = merge(global, project);
 
-        // Find project root and check for subdirs
-        let (project_root, _project_path) = match Self::find_project_root() {
-            Some((root, path)) => (root, path),
+        // Apply subdir overrides based on CWD
+        let project_root = match project_root {
+            Some(root) => root,
             None => return Ok(merged),
         };
 
@@ -221,10 +212,15 @@ impl Config {
         let rel = cwd.strip_prefix(&project_root).unwrap_or(&cwd);
         let rel_str = rel.to_string_lossy();
 
-        // Find longest prefix match
+        // Find longest prefix match (avoid allocation per iteration)
         let best = subdirs
             .iter()
-            .filter(|(key, _)| rel_str == key.as_str() || rel_str.starts_with(&format!("{}/", key)))
+            .filter(|(key, _)| {
+                rel_str == key.as_str()
+                    || (rel_str.len() > key.len()
+                        && rel_str.as_bytes().get(key.len()) == Some(&b'/')
+                        && rel_str.starts_with(key.as_str()))
+            })
             .max_by_key(|(key, _)| key.len());
 
         if let Some((matched_path, subdir_cfg)) = best {
@@ -256,16 +252,16 @@ impl Config {
         Ok(merged)
     }
 
-    /// Save always writes to global config.
-    pub fn save(&self) -> Result<()> {
-        let path = Self::global_path()?;
+    /// Save config to an explicit path with schema header.
+    /// Used by both `save()` (global) and project config writes.
+    pub fn save_to_path(&self, path: &std::path::Path) -> Result<()> {
+        use crate::fs::global_fs;
+        let fs = global_fs();
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("Failed to create config directory: {}", parent.display())
-            })?;
+            fs.create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
         }
 
-        // Build TOML with schema comment header
         let doc: toml_edit::DocumentMut = toml::to_string_pretty(self)
             .context("Failed to serialize config")?
             .parse()
@@ -276,38 +272,40 @@ impl Config {
         let mut prefixed = header;
         prefixed.push_str(&doc.to_string());
 
-        std::fs::write(&path, prefixed)
+        fs.write(path, &prefixed)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
         Ok(())
+    }
+
+    /// Save always writes to global config.
+    pub fn save(&self) -> Result<()> {
+        let path = Self::global_path()?;
+        self.save_to_path(&path)
     }
 
     /// Get the licence file base name (LICENCE or LICENSE).
     /// Resolves: config → locale detection → default LICENCE.
     pub fn licence_name(&self) -> String {
-        self.default
-            .licence_name
-            .clone()
-            .unwrap_or_else(detect_licence_name)
+        crate::licence_name::LicenceName::resolve(self.default.licence_name.as_deref())
+            .as_str()
+            .to_string()
     }
 
     /// Search configured template paths for a template file matching the SPDX ID.
     pub fn find_custom_template(&self, spdx_id: &str) -> Option<(String, Option<String>, String)> {
+        let fs = global_fs();
         let paths = self.template.as_ref()?.paths.as_ref()?;
         let filename = format!("{}.txt", spdx_id);
         let html_filename = format!("{}.html", spdx_id);
 
         for dir in paths {
             let dir = std::path::Path::new(dir);
-            if !dir.is_dir() {
-                continue;
-            }
 
             let text_path = dir.join(&filename);
             let html_path = dir.join(&html_filename);
 
-            if text_path.is_file() {
-                let text = std::fs::read_to_string(&text_path).ok()?;
-                let html = std::fs::read_to_string(&html_path).ok();
+            if let Some(text) = fs.read_to_string(&text_path) {
+                let html = fs.read_to_string(&html_path);
                 let source = format!("custom ({})", dir.display());
                 return Some((text, html, source));
             }
