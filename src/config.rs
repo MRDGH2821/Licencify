@@ -291,6 +291,12 @@ impl Config {
             .to_string()
     }
 
+    /// Get the licence name setting from config (if configured).
+    /// Used by callers who need `Option<&str>` for LicenceName::resolve().
+    pub fn licence_name_setting(&self) -> Option<&str> {
+        self.default.licence_name.as_deref()
+    }
+
     /// Search configured template paths for a template file matching the SPDX ID.
     pub fn find_custom_template(&self, spdx_id: &str) -> Option<(String, Option<String>, String)> {
         let fs = global_fs();

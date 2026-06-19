@@ -1,7 +1,4 @@
-use crate::{
-    cli::LicenseFormat, config::Config, fs::global_fs, licence_name::LicenceName, project,
-    provider, resolution, template,
-};
+use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution, template};
 use std::io::Write;
 
 pub fn cmd_add(
@@ -12,20 +9,14 @@ pub fn cmd_add(
     yes: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
-    let config = Config::load_effective().ok();
+    let config = crate::config::Config::load_effective().ok();
     let info = prov.info(spdx)?;
-    let author = resolution::resolve_author(author, config.as_ref())?;
-    let year = resolution::resolve_year(year, config.as_ref());
-    let licence_name = LicenceName::resolve(
-        config
-            .as_ref()
-            .and_then(|c| c.default.licence_name.as_deref()),
-    );
+    let ctx = resolution::resolve_context(spdx, author, year, config.as_ref(), &prov)?;
 
     if !yes {
         println!("About to add license: {} ({})", info.name, info.id);
-        println!("  Author: {}", author);
-        println!("  Year:   {}", year);
+        println!("  Author: {}", ctx.author);
+        println!("  Year:   {}", ctx.year);
         println!("  Format: {}", format);
         println!();
         print!("Continue? [Y/n] ");
@@ -38,21 +29,19 @@ pub fn cmd_add(
         }
     }
 
-    let resolved = resolution::resolve_template(&info.id, config.as_ref())?;
-
     let (content, ext) = match &format {
         LicenseFormat::Html => {
-            let html = resolved.html.as_deref().unwrap_or(&resolved.text);
-            let rendered = template::render(html, &year, &author)?;
+            let html = ctx.resolved.html.as_deref().unwrap_or(&ctx.resolved.text);
+            let rendered = template::render(html, &ctx.year, &ctx.author)?;
             (rendered, "html")
         }
         LicenseFormat::Txt => {
-            let rendered = template::render(&resolved.text, &year, &author)?;
+            let rendered = template::render(&ctx.resolved.text, &ctx.year, &ctx.author)?;
             (rendered, "txt")
         }
     };
 
-    let filename = licence_name.file_path(ext);
+    let filename = ctx.licence_name.file_path(ext);
     let fs = global_fs();
 
     if fs.exists(&filename) && !yes {
@@ -71,11 +60,11 @@ pub fn cmd_add(
         "✅ Added {} ({}) [from {}] as {}",
         info.name,
         info.id,
-        resolved.source,
+        ctx.resolved.source,
         filename.display()
     );
 
-    match project::update_manifest(&info.id, &author, &year) {
+    match project::update_manifest(&info.id, &ctx.author, &ctx.year) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
         }

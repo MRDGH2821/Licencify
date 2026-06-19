@@ -1,9 +1,48 @@
-use crate::{author, config::Config, licences, process::RealRunner, provider, template};
+use crate::{
+    author, config::Config, licence_name::LicenceName, licences, process::RealRunner,
+    provider::LicenseProvider, template,
+};
 
 pub struct ResolvedTemplate {
     pub text: String,
     pub html: Option<String>,
     pub source: String,
+}
+
+/// Full resolved context for adding or updating a licence file.
+pub struct ResolvedContext {
+    pub author: String,
+    pub year: String,
+    pub licence_name: LicenceName,
+    pub resolved: ResolvedTemplate,
+}
+
+/// Resolve licence name from config (if configured) or locale detection.
+pub fn resolve_licence_name(config: Option<&Config>) -> LicenceName {
+    LicenceName::resolve(config.and_then(|c| c.licence_name_setting()))
+}
+
+/// Resolve all context needed for add/update: author, year, licence name, template.
+/// Avoids redundant `LicenseProvider::load()` by reusing the provider for both
+/// `info()` and `resolve_template()`.
+pub fn resolve_context(
+    spdx_id: &str,
+    cli_author: Option<String>,
+    cli_year: Option<String>,
+    config: Option<&Config>,
+    provider: &LicenseProvider,
+) -> anyhow::Result<ResolvedContext> {
+    let author = resolve_author(cli_author, config)?;
+    let year = resolve_year(cli_year, config);
+    let licence_name = resolve_licence_name(config);
+    let resolved = resolve_template(spdx_id, config, Some(provider))?;
+
+    Ok(ResolvedContext {
+        author,
+        year,
+        licence_name,
+        resolved,
+    })
 }
 
 /// Resolve license template text using 4-tier chain:
@@ -14,8 +53,12 @@ pub struct ResolvedTemplate {
 pub fn resolve_template(
     spdx_id: &str,
     config: Option<&Config>,
+    provider: Option<&LicenseProvider>,
 ) -> anyhow::Result<ResolvedTemplate> {
-    let prov = provider::LicenseProvider::load()?;
+    let prov = match provider {
+        Some(p) => p,
+        None => &LicenseProvider::load()?,
+    };
 
     // Tier 1: API cache
     if let Some(detail) = prov.get_cached(spdx_id) {
