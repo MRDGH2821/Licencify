@@ -1,6 +1,6 @@
 {
   "name": "licencify",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "license": "MIT",
   "devDependencies": {
     "@prettier/plugin-xml": "^3.4.2",
