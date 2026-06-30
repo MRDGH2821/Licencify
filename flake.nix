@@ -10,13 +10,14 @@
       packages = with pkgs; [
         alejandra
         bun
+        cargo
+        just
         libxml2
         nil
         nixd
         nixfmt
         prettypst
         shfmt
-        cargo
         treefmt
         uv
         yq-go
