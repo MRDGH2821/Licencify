@@ -16,6 +16,7 @@
         nixfmt
         prettypst
         shfmt
+        cargo
         treefmt
         uv
         yq-go
