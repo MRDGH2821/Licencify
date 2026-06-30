@@ -1,6 +1,13 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::{Arc, LazyLock, Mutex, RwLock};
+
+/// Serializes tests that use the global filesystem.
+///
+/// Rust runs tests in parallel by default. Without this, two tests calling
+/// `set_global_fs()` / `reset_global_fs()` concurrently race on the RwLock.
+#[doc(hidden)]
+pub static GLOBAL_FS_TEST_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 /// Abstraction over filesystem operations, enabling testing without real I/O.
 pub trait Fs: Send + Sync {
@@ -186,6 +193,36 @@ pub fn set_global_fs(fs: Arc<dyn Fs>) {
 /// Reset to real filesystem.
 pub fn reset_global_fs() {
     *GLOBAL_FS.write().unwrap() = Arc::new(RealFs);
+}
+
+/// Drop guard that auto-resets global fs on drop (panic-safe).
+///
+/// Also acquires a global test mutex to serialize tests that use
+/// `set_global_fs`, preventing race conditions from parallel test execution.
+///
+/// Use in tests instead of manual `set_global_fs`/`reset_global_fs`:
+/// ```ignore
+/// let _guard = FsGuard::new();
+/// // ... test code ...
+/// // guard drops here, resetting global fs even on panic
+/// ```
+pub struct FsGuard {
+    _lock: std::sync::MutexGuard<'static, ()>,
+}
+
+impl FsGuard {
+    pub fn new() -> Self {
+        // Reset is not needed here — caller sets up their own fs.
+        // The guard ensures cleanup on drop.
+        let _lock = GLOBAL_FS_TEST_LOCK.lock().unwrap();
+        FsGuard { _lock }
+    }
+}
+
+impl Drop for FsGuard {
+    fn drop(&mut self) {
+        reset_global_fs();
+    }
 }
 
 /// Access the global filesystem.

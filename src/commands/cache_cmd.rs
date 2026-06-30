@@ -84,3 +84,29 @@ fn cmd_cache_fetch_all() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::CacheAction;
+    use crate::fs::{FsGuard, MemFs};
+    use std::sync::Arc;
+
+    #[test]
+    fn cmd_cache_info_with_empty_cache() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let result = cmd_cache(CacheAction::Info);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_cache_clear_with_empty_cache() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let result = cmd_cache(CacheAction::Clear);
+        assert!(result.is_ok());
+    }
+}

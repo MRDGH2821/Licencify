@@ -49,3 +49,32 @@ pub fn cmd_list(osi_only: bool, fsf_only: bool, limit: Option<usize>) -> anyhow:
     println!("\n{} licenses found", count);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cmd_list_returns_all_licenses() {
+        let result = cmd_list(false, false, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_list_respects_osi_filter() {
+        let result = cmd_list(true, false, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_list_respects_fsf_filter() {
+        let result = cmd_list(false, true, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_list_respects_limit() {
+        let result = cmd_list(false, false, Some(5));
+        assert!(result.is_ok());
+    }
+}

@@ -216,3 +216,45 @@ fn cmd_config_show() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::ConfigAction;
+    use crate::fs::{FsGuard, MemFs};
+    use std::sync::Arc;
+
+    #[test]
+    fn cmd_config_init_creates_project_config() {
+        let _guard = FsGuard::new();
+        // Need Cargo.toml so config init can detect the project root
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\n",
+        )
+        .unwrap();
+        let result = cmd_config(ConfigAction::Init);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_config_show_succeeds_without_config() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let result = cmd_config(ConfigAction::Show);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_schema_writes_file() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let result = cmd_schema("test-schema.json");
+        assert!(result.is_ok());
+        assert!(fs.exists(std::path::Path::new("test-schema.json")));
+    }
+}

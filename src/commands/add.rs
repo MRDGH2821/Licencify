@@ -105,3 +105,61 @@ pub fn cmd_add(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::LicenseFormat;
+    use crate::fs::{FsGuard, MemFs};
+    use std::sync::Arc;
+
+    #[test]
+    fn cmd_add_mit_returns_ok() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        let result = cmd_add(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            None,
+            LicenseFormat::Txt,
+            true,
+        );
+        assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
+        let expected_path = std::path::Path::new("LICENCE.txt");
+        assert!(fs.exists(expected_path), "LICENCE.txt not written");
+    }
+
+    #[test]
+    fn cmd_add_proprietary_returns_ok() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        let result = cmd_add(
+            "proprietary",
+            Some("Acme Corp".into()),
+            Some("Acme Corp".into()),
+            Some("legal@acme.com".into()),
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            true,
+        );
+        assert!(
+            result.is_ok(),
+            "cmd_add proprietary failed: {:?}",
+            result.err()
+        );
+    }
+}

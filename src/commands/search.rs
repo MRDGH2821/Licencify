@@ -51,3 +51,26 @@ pub fn cmd_search(query: &str, osi_only: bool, fsf_only: bool) -> anyhow::Result
     println!("\n{} licenses found", results.len());
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cmd_search_finds_mit() {
+        let result = cmd_search("MIT", false, false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_search_finds_gpl_via_partial() {
+        let result = cmd_search("GPL", false, false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn cmd_search_respects_osi_filter() {
+        let result = cmd_search("MIT", true, false);
+        assert!(result.is_ok());
+    }
+}

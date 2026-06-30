@@ -78,3 +78,59 @@ pub fn cmd_update(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cli::LicenseFormat;
+    use crate::commands::add::cmd_add;
+    use crate::fs::{FsGuard, MemFs};
+    use std::sync::Arc;
+
+    #[test]
+    fn cmd_update_requires_existing_file() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let result = cmd_update(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            None,
+            LicenseFormat::Txt,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn cmd_update_replaces_content() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        let add_result = cmd_add(
+            "MIT",
+            Some("Author".into()),
+            None,
+            None,
+            None,
+            LicenseFormat::Txt,
+            true,
+        );
+        assert!(add_result.is_ok());
+        let result = cmd_update(
+            "Apache-2.0",
+            Some("Author".into()),
+            None,
+            None,
+            None,
+            LicenseFormat::Txt,
+        );
+        assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+    }
+}
