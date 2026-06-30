@@ -1,5 +1,15 @@
 ---
 jobs:
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run security audit
+        run: cargo audit
   build:
     continue-on-error: false
     name: Build ${{ matrix.target }}
@@ -16,13 +26,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Set artifact base name
         run: |
-          echo "ASSET_BASE=smt-${{ matrix.target }}" >> "$GITHUB_ENV"
+          echo "ASSET_BASE=licencify-${{ matrix.target }}" >> "$GITHUB_ENV"
           if [[ "${{ matrix.target }}" == *"-windows-"* ]]; then
-            echo "BIN_NAME=smt.exe" >> "$GITHUB_ENV"
-            echo "ASSET_FILE=smt-${{ matrix.target }}.exe" >> "$GITHUB_ENV"
+            echo "BIN_NAME=licencify.exe" >> "$GITHUB_ENV"
+            echo "ASSET_FILE=licencify-${{ matrix.target }}.exe" >> "$GITHUB_ENV"
           else
-            echo "BIN_NAME=smt" >> "$GITHUB_ENV"
-            echo "ASSET_FILE=smt-${{ matrix.target }}" >> "$GITHUB_ENV"
+            echo "BIN_NAME=licencify" >> "$GITHUB_ENV"
+            echo "ASSET_FILE=licencify-${{ matrix.target }}" >> "$GITHUB_ENV"
           fi
         shell: bash
       - if: matrix.os == 'ubuntu-latest' && matrix.target != 'x86_64-unknown-linux-gnu'
@@ -188,9 +198,9 @@ jobs:
       - name: Check for Required Builds
         run: |
           # Verify at least one x86_64 build per OS succeeded
-          LINUX_X86_64=$(find release-artifacts -name "smt-x86_64-unknown-linux-gnu*" -type f 2>/dev/null | wc -l)
-          MACOS_X86_64=$(find release-artifacts -name "smt-x86_64-apple-darwin*" -type f 2>/dev/null | wc -l)
-          WINDOWS_X86_64=$(find release-artifacts -name "smt-x86_64-pc-windows-msvc*" -type f 2>/dev/null | wc -l)
+          LINUX_X86_64=$(find release-artifacts -name "licencify-x86_64-unknown-linux-gnu*" -type f 2>/dev/null | wc -l)
+          MACOS_X86_64=$(find release-artifacts -name "licencify-x86_64-apple-darwin*" -type f 2>/dev/null | wc -l)
+          WINDOWS_X86_64=$(find release-artifacts -name "licencify-x86_64-pc-windows-msvc*" -type f 2>/dev/null | wc -l)
           echo "Linux x86_64 artifacts: $LINUX_X86_64"
           echo "macOS x86_64 artifacts: $MACOS_X86_64"
           echo "Windows x86_64 artifacts: $WINDOWS_X86_64"
