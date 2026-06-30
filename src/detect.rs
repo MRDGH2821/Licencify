@@ -13,7 +13,7 @@ pub fn detect_license(text: &str) -> Option<&'static str> {
     if lower.contains("mozilla public license") && lower.contains("version 2.0") {
         return Some("MPL-2.0");
     }
-    if lower.contains("apache license") || lower.contains("version 2.0") {
+    if lower.contains("apache license") && lower.contains("version 2.0") {
         return Some("Apache-2.0");
     }
     if lower.contains("gnu general public license") && lower.contains("version 3") {

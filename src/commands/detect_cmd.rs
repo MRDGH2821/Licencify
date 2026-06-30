@@ -1,12 +1,6 @@
-use crate::{
-    detect,
-    fs::global_fs,
-    licence_name::LicenceName,
-    process::{RealRunner, Runner},
-};
+use crate::{detect, fs::global_fs, licence_name::LicenceName};
 
 pub fn cmd_detect() -> anyhow::Result<()> {
-    let runner = RealRunner;
     let fs = global_fs();
 
     for name in LicenceName::candidates() {
@@ -27,5 +21,5 @@ pub fn cmd_detect() -> anyhow::Result<()> {
 
     eprintln!("No license file found in current directory");
     eprintln!("Hint: use 'licencify add <SPDX-ID>' to add one");
-    runner.exit(1);
+    anyhow::bail!("No license file found in current directory");
 }
