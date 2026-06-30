@@ -50,6 +50,10 @@ pub struct DefaultConfig {
     /// Licence file base name: "LICENCE" (en-GB) or "LICENSE" (en-US)
     #[schemars(description = "Licence file base name (LICENCE or LICENSE)")]
     pub licence_name: Option<String>,
+
+    /// Automatically update README with license badge on add/update
+    #[schemars(description = "Automatically update README with license badge")]
+    pub update_readme: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -118,6 +122,10 @@ fn merge(base: Config, overriding: Config) -> Config {
                 .default
                 .licence_name
                 .or(base.default.licence_name),
+            update_readme: overriding
+                .default
+                .update_readme
+                .or(base.default.update_readme),
         },
         template: match (base.template, overriding.template) {
             (Some(base_t), Some(over_t)) => {
@@ -275,6 +283,7 @@ impl Config {
                         format: subdir_cfg.format.clone(),
                         year: subdir_cfg.year.clone(),
                         licence_name: subdir_cfg.licence_name.clone(),
+                        update_readme: None,
                     };
                     let override_config = Config {
                         default: default_override,

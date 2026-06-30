@@ -7,6 +7,7 @@ pub fn cmd_update(
     email: Option<String>,
     year: Option<String>,
     format: LicenseFormat,
+    update_readme: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None).ok();
@@ -76,6 +77,19 @@ pub fn cmd_update(
         }
     }
 
+    // Update README with license badge if requested
+    if update_readme {
+        match crate::readme::update_readme(&info.id) {
+            Ok(true) => {}
+            Ok(false) => {
+                println!("   README: not found or already has license section");
+            }
+            Err(e) => {
+                eprintln!("   Warning: could not update README: {}", e);
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -99,6 +113,7 @@ mod tests {
             None,
             None,
             LicenseFormat::Txt,
+            false,
         );
         assert!(result.is_err());
     }
@@ -121,6 +136,7 @@ mod tests {
             None,
             LicenseFormat::Txt,
             true,
+            false,
         );
         assert!(add_result.is_ok());
         let result = cmd_update(
@@ -130,6 +146,7 @@ mod tests {
             None,
             None,
             LicenseFormat::Txt,
+            false,
         );
         assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
     }

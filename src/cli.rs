@@ -59,6 +59,10 @@ pub enum Commands {
         /// Skip all prompts and use defaults
         #[arg(short = 'Y', long)]
         yes: bool,
+
+        /// Update README with license badge (if README exists)
+        #[arg(long)]
+        update_readme: bool,
     },
 
     /// List available licenses
@@ -117,6 +121,10 @@ pub enum Commands {
         /// Output format: txt (default) or html
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
+
+        /// Update README with license badge (if README exists)
+        #[arg(long)]
+        update_readme: bool,
     },
 
     /// Manage local template cache

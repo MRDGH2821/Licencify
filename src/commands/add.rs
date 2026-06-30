@@ -9,6 +9,7 @@ pub fn cmd_add(
     year: Option<String>,
     format: LicenseFormat,
     yes: bool,
+    update_readme: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None).ok();
@@ -103,6 +104,21 @@ pub fn cmd_add(
         }
     }
 
+    // Update README with license badge if requested
+    if update_readme {
+        match crate::readme::update_readme(&info.id) {
+            Ok(true) => {}
+            Ok(false) => {
+                if !yes {
+                    println!("   README: not found or already has license section");
+                }
+            }
+            Err(e) => {
+                eprintln!("   Warning: could not update README: {}", e);
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -131,6 +147,7 @@ mod tests {
             None,
             LicenseFormat::Txt,
             true,
+            false,
         );
         assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
         let expected_path = std::path::Path::new("LICENCE.txt");
@@ -155,6 +172,7 @@ mod tests {
             Some("2024".into()),
             LicenseFormat::Txt,
             true,
+            false,
         );
         assert!(
             result.is_ok(),
