@@ -22,3 +22,6 @@ target/
 .licencify.toml
 licencify-schema.json
 licencify.toml
+
+# APM dependencies
+apm_modules/

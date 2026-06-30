@@ -5,7 +5,7 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Native builds (macOS / Windows / Linux x86_64 GNU): install the matrix target on the runner host.
       # Linux + `cross`: do NOT install the target via rustup; `cross` provides a containerized toolchain.
       - if: matrix.os != 'ubuntu-latest' || matrix.target == 'x86_64-unknown-linux-gnu'
@@ -31,7 +31,7 @@ jobs:
       # `x86_64-pc-windows-gnullvm` requires the LLVM/MinGW clang driver (`x86_64-w64-mingw32-clang`) on PATH.
       - if: matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-gnullvm'
         name: Install LLVM/MinGW (gnullvm linker)
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
         with:
           install: mingw-w64-x86_64-clang mingw-w64-x86_64-llvm
           msystem: MINGW64
@@ -62,7 +62,7 @@ jobs:
           fi
         shell: bash
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           if-no-files-found: error
           name: ${{ env.ASSET_BASE }}
@@ -180,9 +180,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Download All Artifacts
-        uses: actions/download-artifact@v4.1.3
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: release-artifacts
       - name: Check for Required Builds
@@ -227,7 +227,7 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
