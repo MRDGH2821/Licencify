@@ -133,9 +133,9 @@ pub enum Commands {
 
     /// Generate JSON schema for config file
     Schema {
-        /// Write schema to file instead of stdout
-        #[arg(short, long)]
-        output: Option<String>,
+        /// Output file path (default: licencify-schema.json)
+        #[arg(short, long, default_value = "licencify-schema.json")]
+        output: String,
     },
 }
 

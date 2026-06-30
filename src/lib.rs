@@ -50,6 +50,6 @@ pub fn main() -> anyhow::Result<()> {
         } => commands::cmd_update(&spdx, author, company, email, year, format),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
-        Commands::Schema { output } => commands::cmd_schema(output.as_deref()),
+        Commands::Schema { output } => commands::cmd_schema(&output),
     }
 }

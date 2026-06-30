@@ -12,19 +12,11 @@ pub fn cmd_config(action: ConfigAction) -> Result<()> {
     }
 }
 
-pub fn cmd_schema(output: Option<&str>) -> Result<()> {
+pub fn cmd_schema(output: &str) -> Result<()> {
     let json = Config::schema_json()?;
-
-    match output {
-        Some(path) => {
-            let fs = global_fs();
-            fs.write(std::path::Path::new(path), &json)?;
-            println!("✅ Schema written to {}", path);
-        }
-        None => {
-            println!("{}", json);
-        }
-    }
+    let fs = global_fs();
+    fs.write(std::path::Path::new(output), &json)?;
+    println!("✅ Schema written to {}", output);
     Ok(())
 }
 
