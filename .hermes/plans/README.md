@@ -14,7 +14,7 @@ before starting any plan: `git diff --stat 90eb384..HEAD -- <plan's in-scope pat
 | 001  | Fix release workflow binary names (`smt` → `licencify`) | P1       | M      | —               | DONE (`b6e7c13`)                  |
 | 002  | Fix Apache-2.0 license detection false positive         | P1       | S      | —               | DONE (`44bd08b`)                  |
 | 003  | Add `cargo audit` to CI and justfile                    | P2       | S      | 001 (same file) | DONE (`b6e7c13`, merged with 001) |
-| 004  | Add integration tests for CLI commands                  | P2       | L      | —               | SKIPPED (user request)            |
+| 004  | Add integration tests for CLI commands                  | P2       | L      | —               | DONE (`fea3ecc`)                  |
 | 005  | Write project README                                    | P2       | S      | —               | DONE (`7c6d6b4`)                  |
 
 ## Dependency notes
