@@ -1,6 +1,6 @@
 version: 1
 generator: capa@2.2.4
-generatedAt: '2026-09-29T11:31:50.573Z'
+generatedAt: '2026-09-29T23:43:11.150Z'
 skills:
   - id: bootstrap
     source: github
@@ -67,6 +67,17 @@ skills:
     resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
     resolvedVersion: v1.2.3
 plugins:
+  - id: improve
+    source: github
+    repo: shadcn/improve
+    subpath: null
+    requestedSearchName: null
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: cac56e1ebd3c279aa9153616cfeac7b174ab90f9
+    resolvedVersion: null
+    manifestName: improve
+    manifestVersion: 1.0.0
   - id: megalinter
     source: github
     repo: oxsecurity/megalinter
