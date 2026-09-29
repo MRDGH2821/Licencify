@@ -174,7 +174,7 @@ mod tests {
 
 **Verify**:
 
-```
+```text
 cargo test -- commands::list::tests commands::search::tests 2>&1
 ```
 
@@ -235,7 +235,7 @@ mod tests {
 
 **Verify**:
 
-```
+```text
 cargo test -- commands::detect_cmd::tests 2>&1
 ```
 
@@ -294,7 +294,7 @@ mod tests {
 
 **Verify**:
 
-```
+```text
 cargo test -- commands::config_cmd::tests 2>&1
 ```
 
@@ -338,7 +338,7 @@ mod tests {
 
 **Verify**:
 
-```
+```text
 cargo test -- commands::cache_cmd::tests 2>&1
 ```
 
@@ -468,7 +468,7 @@ mod tests {
 
 **Verify**:
 
-```
+```text
 cargo test -- commands::add::tests commands::update::tests 2>&1
 ```
 

@@ -73,13 +73,13 @@ tooling detail, not useful for end-users.
 
 Run the following and capture the output for inclusion in the README:
 
-```
+```text
 ./target/debug/licencify --help
 ```
 
 Also capture:
 
-```
+```text
 ./target/debug/licencify add --help
 ./target/debug/licencify list --help
 ```
@@ -139,13 +139,13 @@ licencify detect
 
 ## Usage
 
-```
+```text
 <insert output of `licencify --help` here>
 ```
 
 ### Adding a license
 
-```
+```text
 <insert output of `licencify add --help` here>
 ```
 
@@ -201,7 +201,7 @@ Writes `licencify-schema.json` to the current directory for IDE autocompletion.
 
 See [LICENCE](./LICENSE)
 
-```
+```text
 
 **Important**: Replace `<insert output of ...>` with the actual help text
 from Step 1, formatted as code blocks.
@@ -222,7 +222,7 @@ it, move it to the bottom or to a "Development" section.
 
 cargo build 2>&1 | tail -3
 
-```
+```text
 Expected: shows no errors (doc build doesn't fail on README, but confirms
 the repo is in a valid state).
 

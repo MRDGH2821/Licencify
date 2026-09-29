@@ -48,7 +48,7 @@ Most proprietary projects have **no LICENCE.txt** (or have an EULA). The manifes
 
 Creates `LICENCE.txt` with:
 
-```
+```text
 Copyright (c) {year} {author}
 
 All rights reserved.

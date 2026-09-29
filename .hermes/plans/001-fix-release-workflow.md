@@ -110,7 +110,7 @@ everywhere they appear:
 
 **Verify**:
 
-```
+```text
 grep -rn 'smt' .github/workflows/release.yml
 ```
 
@@ -123,7 +123,7 @@ template and don't fit this project:
 
 **Verify**:
 
-```
+```text
 grep -n 'smt\|smt-' .github/workflows/release.yml
 ```
 

@@ -12,7 +12,7 @@
 
 ## Proposed Directory Structure
 
-```
+```text
 licencify/
 ├── Cargo.toml
 ├── src/
@@ -125,7 +125,7 @@ git commit -m "feat: scaffold Rust project with dependencies"
 
 **Command structure:**
 
-```
+```text
 licencify add <SPDX> [--author <name>] [--year <year>] [--yes]
 licencify list [--remote]
 licencify detect

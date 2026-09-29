@@ -35,7 +35,7 @@ issues at PR time and before release.
 
 The release workflow is structured as:
 
-```
+```text
 jobs:
   build:     # 22-matrix build (each target)
   create-release:  # after all builds pass, creates GitHub release
@@ -73,21 +73,21 @@ findings the maintainer should address, not a plan failure.
 
 The current `justfile` contains a single recipe:
 
-```
+```text
 schema:
     cargo run schema -o licencify-schema.json
 ```
 
 Append an `audit` recipe after it:
 
-```
+```text
 audit:
     cargo audit
 ```
 
 **Verify**:
 
-```
+```text
 just audit 2>&1
 ```
 
@@ -127,7 +127,7 @@ definition. The exact pin versions to use for the actions:
 
 **Verify**: After editing, run:
 
-```
+```text
 grep -c 'cargo audit' .github/workflows/release.yml
 ```
 
@@ -135,7 +135,7 @@ Expected: `1` (the `run: cargo audit` line exists).
 
 The workflow YAML must parse correctly. If `yamllint` is available:
 
-```
+```text
 yamllint .github/workflows/release.yml
 ```
 

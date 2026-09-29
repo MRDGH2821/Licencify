@@ -72,7 +72,7 @@ licence_name = "LICENCE"
 
 ### Resolution logic
 
-```
+```text
 merged_config = merge(global, project)
 effective_config = merge(merged_config, matched_subdir_config)
 

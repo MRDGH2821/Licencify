@@ -30,7 +30,7 @@
 
 ### Registry Index (`licenses.json`)
 
-```
+```text
 GET https://spdx.org/licenses/licenses.json
 332KB | No auth | CDN-cached
 ```
@@ -53,7 +53,7 @@ Fields per entry:
 
 ### Per-License Detail (`{licenseId}.json`)
 
-```
+```text
 GET https://spdx.org/licenses/MIT.json
 ~2-5KB per license | No auth
 ```
@@ -81,7 +81,7 @@ Fields:
 
 ### Revised 3-Tier Chain
 
-```
+```text
 Tier 1: Local XDG disk cache (fastest, $0)
 Tier 2: SPDX detail URL (727 licenses, no auth, CDN)
 Tier 3: Built-in embedded templates (MIT, Apache-2.0, GPL-3.0, BSD-3 — always works)

@@ -107,7 +107,7 @@ In `src/detect.rs`, change line 16 from `||` to `&&`:
 
 **Verify**:
 
-```
+```text
 cargo test detect_apache 2>&1 | grep -E "(PASS|FAIL|test result)"
 ```
 
@@ -122,9 +122,11 @@ In `src/commands/detect_cmd.rs`:
    change to just `process::Runner`… actually, check if `Runner` is used
    anywhere else in the file. It's not — remove the entire `use crate::process::...` line.
 3. Replace `runner.exit(1);` at line 30 with:
+
    ```rust
    anyhow::bail!("No license file found in current directory");
    ```
+
 4. Add `use anyhow::bail;` to the imports at the top.
 
 The current imports at the top of `detect_cmd.rs`:
@@ -146,7 +148,7 @@ use crate::{detect, fs::global_fs, licence_name::LicenceName};
 
 **Verify**:
 
-```
+```text
 cargo build 2>&1
 ```
 

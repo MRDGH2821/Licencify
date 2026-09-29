@@ -42,7 +42,7 @@ licencify detect
 
 ## Usage
 
-```
+```text
 Add open-source licenses to projects
 
 Usage: licencify <COMMAND>

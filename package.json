@@ -1,8 +1,8 @@
 {
-  "name": "licencify",
-  "version": "0.1.0",
-  "license": "MIT",
   "devDependencies": {
     "oxfmt": "^0.70.0"
-  }
+  },
+  "license": "MIT",
+  "name": "licencify",
+  "version": "0.1.0"
 }

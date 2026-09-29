@@ -110,8 +110,7 @@ Update all 14 `.html.tera` files to use a minimal valid HTML document wrapper:
   <body>
     <pre>
 {{ licence_text }}
-</pre
-    >
+</pre>
   </body>
 </html>
 ```
@@ -240,8 +239,7 @@ For each template:
   <body>
     <pre>
 {{ licence_text }}
-</pre
-    >
+</pre>
   </body>
 </html>
 ```
@@ -285,8 +283,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-</pre
-    >
+</pre>
   </body>
 </html>
 ```
@@ -307,8 +304,7 @@ Copyright (C) {{ company }} - All Rights Reserved
 Unauthorized copying of this file, via any medium is strictly prohibited
 Proprietary and confidential
 Written by {{ author }} &lt;{{ email }}&gt;, {{ date }}
-</pre
-    >
+</pre>
   </body>
 </html>
 ```
