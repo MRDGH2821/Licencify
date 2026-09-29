@@ -1,3 +1,4 @@
+# :schema https://docs.cocogitto.io/cog-schema.json
 branch_whitelist = []
 disable_bump_commit = false
 disable_changelog = true
@@ -5,7 +6,7 @@ from_latest_tag = false
 generate_mono_repository_global_tag = true
 generate_mono_repository_package_tags = true
 ignore_fixup_commits = false
-ignore_merge_commits = false
+ignore_merge_commits = true
 post_bump_hooks = []
 post_package_bump_hooks = []
 pre = "alpha.*"
@@ -14,7 +15,7 @@ pre_bump_hooks = [
   "cargo bump {{version}}",
   "bun pm version {{version}} --no-git-tag-version",
   "bunx git-cliff -o CHANGELOG.md --tag {{version_tag}}",
-  "treefmt CHANGELOG.md"
+  "hk fix CHANGELOG.md"
 ]
 pre_package_bump_hooks = []
 # tombi: format.rules.array-values-order = "ascending"
@@ -23,8 +24,10 @@ scopes = [
   "copier",
   "cspell",
   "github",
+  "hk",
   "jscpd",
   "megalinter",
+  "mise",
   "pre-commit",
   "prettier",
   "treefmt",
@@ -42,6 +45,8 @@ tag_prefix = "v"
 authors = [{ signature = "ask.mrdgh2821@outlook.com", username = "MRDGH2821" }]
 owner = "MRDGH2821"
 path = "CHANGELOG.md"
+remote = "github.com"
+repository = "Licencify"
 template = "remote"
 
 [commit_types]

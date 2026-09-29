@@ -1,18 +1,49 @@
+# agents
+.agent-talk/
+.agent/skills
+.agents/mcp_config.json
+.agents/skills
+.claude/agents
+.claude/settings.json
+.claude/skills
+.codex/agents
+.codex/config.toml
+.cursor/agents
+.cursor/hooks.json
+.cursor/mcp.json
+.cursor/skills
+.gemini/settings.json
+.github/skills
+.mcp.json
+.opencode/agents
+.opencode/skills
+.superpowers
+.vscode/mcp.json
+apm.lock.yaml
+apm_modules/
+opencode.json
+
+# env files
+.env
+.env.*
+!.env.sample
+
+# others
 *.local
 .DS_Store
 .devenv
 .direnv
-.env
-.env.*
-!.env.sample
 .git
+.pre-commit-config.yaml
 .svn
 .venv/
+.worktrees
 __MACOSX
 __pycache__
 dist/
 megalinter-reports/
 node_modules/
+report/
 target/
 
 # Added by cargo
@@ -22,6 +53,3 @@ target/
 .licencify.toml
 licencify-schema.json
 licencify.toml
-
-# APM dependencies
-apm_modules/

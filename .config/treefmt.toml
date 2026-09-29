@@ -1,0 +1,66 @@
+# :schema https://schemastore.org/treefmt.json
+
+allow-missing-formatter = true
+# tombi: format.rules.array-values-order = "ascending"
+excludes = [
+  "**/*.lock",
+  "**/go.sum",
+  "**/locks/**",
+  "**/npm-shrinkwrap.json",
+  "**/package-lock.json",
+  "**/pnpm-lock.yaml",
+  ".mise/**"
+]
+
+[formatter.cspell-sort]
+command = "yq"
+# tombi: format.rules.array-values-order = "ascending"
+includes = [
+  "**/.cSpell*",
+  "**/.cspell*",
+  "**/cSpell*",
+  "**/cspell*",
+  ".cSpell*",
+  ".cspell*",
+  "cSpell*",
+  "cspell*"
+]
+no-positional-arg-support = true
+options = ["-i", ".words|= sort_by(downcase)|.ignorePaths|=sort_by(downcase)"]
+priority = 9
+
+[formatter.jscpd-sort]
+command = "yq"
+# tombi: format.rules.array-values-order = "ascending"
+includes = ["**/.jscpd*", "**/jscpd*", ".jscpd*", "jscpd*"]
+no-positional-arg-support = true
+options = ["-i", ".ignore|= sort_by(downcase)|.reporters|=sort_by(downcase)"]
+priority = 9
+
+[formatter.prettypst-default]
+command = "prettypst"
+includes = ["*.typ"]
+no-positional-arg-support = true
+options = ["-s", "default"]
+priority = 2
+
+[formatter.prettypst-otbs]
+command = "prettypst"
+includes = ["*.typ"]
+no-positional-arg-support = true
+options = ["-s", "otbs"]
+priority = 3
+
+[formatter.typstyle]
+command = "typstyle"
+includes = ["*.typ"]
+options = ["-i"]
+priority = 1
+
+[formatter.yq-key-sort]
+command = "yq"
+# tombi: format.rules.array-values-order = "ascending"
+includes = ["*.json", "*.yaml", "*.yml"]
+no-positional-arg-support = true
+options = ["-i", "-P", "sort_keys(..)"]
+priority = 0

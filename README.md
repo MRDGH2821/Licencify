@@ -1,5 +1,7 @@
 # Licencify
 
+[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/refs/heads/master/img/badge/black-badge.json)](https://github.com/copier-org/copier)
+
 A CLI tool to add open-source licences to your projects. Fetches licence templates from the SPDX index, renders them with your details, and writes them to `LICENCE` or `LICENSE`.
 
 ## Install

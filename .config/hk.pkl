@@ -1,0 +1,91 @@
+amends "package://github.com/jdx/hk/releases/download/v2.3.0/hk@2.3.0#/Config.pkl"
+
+import "package://github.com/jdx/hk/releases/download/v2.3.0/hk@2.3.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+  ["betterleaks"] = Builtins.betterleaks
+  ["check-merge-conflict"] = Builtins.check_merge_conflict
+  ["check-placeholders"] {
+    check =
+      "if grep -EIn '(<placeholder>|CHANGEME|FILL_ME_IN|NOCOMMIT)' {{files}}; then false; else test $? -eq 1; fi"
+    exclude = List(".config/hk.pkl", ".config/cspell.json")
+  }
+  ["cspell"] {
+    check = "cspell --no-must-find-files --no-progress --no-summary --gitignore --files {{files}}"
+    batch = false
+  }
+  ["detect-private-key"] = Builtins.detect_private_key
+  ["editorconfig-checker"] = Builtins.editorconfig_checker
+  ["gitignore-tidy"] {
+    check = "gitignore-tidy {{files}}"
+    fix = "gitignore-tidy {{files}}"
+    glob = List("**/.*ignore", ".*ignore")
+  }
+  ["keep-sorted"] {
+    check = "keep-sorted --mode lint {{files}}"
+    fix = "keep-sorted --mode fix {{files}}"
+  }
+  ["ls-lint"] = Builtins.ls_lint
+  ["mise"] = Builtins.mise
+  ["newlines"] = Builtins.newlines
+  ["pkl"] = Builtins.pkl
+  ["pkl-format"] = Builtins.pkl_format
+  ["oxfmt"] = Builtins.oxfmt
+  ["ruff"] = (Builtins.ruff) { depends = List("ruff-format") }
+  ["ruff-format"] = Builtins.ruff_format
+  ["rumdl"] = (Builtins.rumdl) { depends = List("rumdl-format") }
+  ["rumdl-format"] = Builtins.rumdl_format
+  ["ryl"] = (Builtins.ryl) { depends = List("yamlfix") }
+  ["ryl_markdown"] = Builtins.ryl_markdown
+  ["sort-markdown-tables"] {
+    check = "smt --check {{files}}"
+    fix = "smt --in-place {{files}}"
+    types = List("markdown")
+  }
+  ["tombi"] = Builtins.tombi
+  ["tombi-format"] = Builtins.tombi_format
+  ["toml-sort"] {
+    fix = "toml-sort --in-place --sort-table-keys --sort-inline-tables {{files}}"
+    check = "toml-sort --check --sort-table-keys --sort-inline-tables {{files}}"
+    types = List("toml")
+  }
+  ["trailing-whitespace"] = Builtins.trailing_whitespace
+  ["typos"] = Builtins.typos
+  ["typstyle"] {
+    check = "typstyle -c {{files}}"
+    fix = "typstyle -i {{files}}"
+    glob = List("*.typ", "**/*.typ")
+  }
+  ["yamlfix"] {
+    check = "yamlfix --check {{files}}"
+    depends = List("oxfmt")
+    fix = "yamlfix {{files}}"
+    types = List("yaml")
+  }
+}
+exclude =
+  List(
+    // keep-sorted start
+    "**/*.lock",
+    "**/.mise/**",
+    "**/go.sum",
+    "**/locks/**",
+    "**/npm-shrinkwrap.json",
+    "**/package-lock.json",
+    "**/pnpm-lock.yaml"
+    // keep-sorted end
+  )
+steps = linters
+hooks {
+  ["commit-msg"] {
+    steps {
+      ["check-conventional-commit"] = Builtins.check_conventional_commit
+      ["conventional-commit"] = Builtins.cocogitto_commit_msg
+      ["cspell"] {
+        check =
+          "cspell --no-must-find-files --no-progress --no-summary --gitignore --files {{commit_msg_file}}"
+      }
+      ["typos"] = Builtins.typos
+    }
+  }
+}

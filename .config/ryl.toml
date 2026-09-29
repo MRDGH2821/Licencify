@@ -1,0 +1,58 @@
+# tombi: format.rules.array-values-order = "ascending"
+ignore = [
+  "**/*.lock",
+  "**/.mise/**",
+  "**/go.sum",
+  "**/locks/**",
+  "**/npm-shrinkwrap.json",
+  "**/package-lock.json",
+  "**/pnpm-lock.yaml"
+]
+
+[files]
+yaml = ["*.yaml", "*.yml"]
+
+[rules]
+anchors = "enable"
+brackets = "enable"
+colons = "enable"
+commas = "enable"
+document-end = "disable"
+empty-lines = "enable"
+empty-values = "disable"
+float-values = "disable"
+hyphens = "enable"
+indentation = "enable"
+key-duplicates = "enable"
+key-ordering = "enable"
+new-line-at-end-of-file = "enable"
+octal-values = "disable"
+trailing-spaces = "enable"
+
+[rules.braces]
+max-spaces-inside = 1
+
+[rules.comments]
+level = "warning"
+min-spaces-from-content = 1
+
+[rules.comments-indentation]
+level = "warning"
+
+[rules.document-start]
+level = "warning"
+
+[rules.line-length]
+max = 500
+
+[rules.new-lines]
+level = "warning"
+type = "unix"
+
+[rules.quoted-strings]
+allow-quoted-quotes = true
+quote-type = "double"
+required = false
+
+[rules.truthy]
+level = "warning"

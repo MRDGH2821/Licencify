@@ -28,7 +28,7 @@ jobs:
     steps:
       # Git Checkout
       - name: Checkout Code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # If you use VALIDATE_ALL_CODEBASE = true, you can remove this line to
           # improve performance
@@ -70,10 +70,10 @@ jobs:
             ${{
               github.event_name != 'pull_request' ||
               (github.event.pull_request.user.login != 'dependabot[bot]' &&
-               github.event.pull_request.user.login != 'renovate[bot]' &&
-               github.event.pull_request.user.login != 'github-actions[bot]' &&
-               !startsWith(github.event.pull_request.user.login, 'dependabot') &&
-               !startsWith(github.event.pull_request.user.login, 'renovate'))
+                github.event.pull_request.user.login != 'renovate[bot]' &&
+                github.event.pull_request.user.login != 'github-actions[bot]' &&
+                !startsWith(github.event.pull_request.user.login, 'dependabot') &&
+                !startsWith(github.event.pull_request.user.login, 'renovate'))
             }}
           # Validates all source when push on main, else just the git diff with
           # main. Override with true if you always want to lint all sources
@@ -92,7 +92,7 @@ jobs:
         name: MegaLinter
         # You can override MegaLinter flavor used to have faster performances
         # More info at https://megalinter.io/latest/flavors/
-        uses: oxsecurity/megalinter@ef3e84b8b836d76db562d0f3ed7da61e8fd538bc # v9.6.0
+        uses: oxsecurity/megalinter@9949bad031045f366be2467e00e8371a7328a2e2 # v10.1.0
       # Upload MegaLinter artifacts
       - if: success() || failure()
         name: Archive production artifacts
@@ -175,7 +175,7 @@ jobs:
 name: MegaLinter
 # Trigger mega-linter at every push. Action will also be visible from
 # Pull Requests to main
-on:
+on: # yamllint disable-line rule:truthy
   pull_request:
     branches:
       - main

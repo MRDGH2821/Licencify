@@ -1,3 +1,5 @@
 comments_min_spaces_from_content = 1
 line_length = 800
+preserve_quotes = true
+quote_representation = '"'
 sequence_style = "block_style"

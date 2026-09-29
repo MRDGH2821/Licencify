@@ -1,0 +1,103 @@
+version: 1
+generator: capa@2.2.4
+generatedAt: '2026-09-29T11:31:50.573Z'
+skills:
+  - id: bootstrap
+    source: github
+    repo: infragate/capa
+    skillName: bootstrap
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 7f868cd23ea59db5f5b50122a4ed57a101905f50
+    resolvedVersion: v2.2.4
+  - id: capabilities-manager
+    source: github
+    repo: infragate/capa
+    skillName: capabilities-manager
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 7f868cd23ea59db5f5b50122a4ed57a101905f50
+    resolvedVersion: v2.2.4
+  - id: gh
+    source: github
+    repo: cli/cli
+    skillName: gh
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 0cf1092493af067646fc5f3db9421c6a6ec9c938
+    resolvedVersion: v2.101.0
+  - id: git-commit
+    source: github
+    repo: github/awesome-copilot
+    skillName: git-commit
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 997e95a6e42869c350f8ca6ec4c066287697c9f0
+    resolvedVersion: null
+  - id: grill-me
+    source: github
+    repo: mattpocock/skills
+    skillName: grill-me
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+    resolvedVersion: v1.2.3
+  - id: grill-with-docs
+    source: github
+    repo: mattpocock/skills
+    skillName: grill-with-docs
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+    resolvedVersion: v1.2.3
+  - id: grilling
+    source: github
+    repo: mattpocock/skills
+    skillName: grilling
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+    resolvedVersion: v1.2.3
+  - id: to-tickets
+    source: github
+    repo: mattpocock/skills
+    skillName: to-tickets
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+    resolvedVersion: v1.2.3
+plugins:
+  - id: megalinter
+    source: github
+    repo: oxsecurity/megalinter
+    subpath: null
+    requestedSearchName: null
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 9949bad031045f366be2467e00e8371a7328a2e2
+    resolvedVersion: v10.1.0
+    manifestName: megalinter
+    manifestVersion: 1.0.5
+  - id: paad
+    source: github
+    repo: Ovid/paad
+    subpath: plugins/paad
+    requestedSearchName: null
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: b249a91b150f5429846fbe70666cdcc552d186f5
+    resolvedVersion: null
+    manifestName: paad
+    manifestVersion: 1.31.0
+  - id: superpowers
+    source: github
+    repo: obra/superpowers
+    subpath: null
+    requestedSearchName: null
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 8ca22dba9a94f28898bbce59f2537ff4d87c747d
+    resolvedVersion: v6.4.2
+    manifestName: superpowers
+    manifestVersion: 6.4.2
+hooks: []

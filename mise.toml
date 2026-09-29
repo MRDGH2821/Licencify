@@ -1,0 +1,60 @@
+[env]
+HK_MISE = 1
+
+[hooks]
+# Automatically install/update hooks when tools are installed
+postinstall = ["hk install --mise"]
+
+[settings]
+lockfile = true
+
+[settings.github]
+use_git_credentials = true
+
+[tasks]
+ai-setup = "capa install --yes"
+check = ["hk check --all", "cog check"]
+prepare = ["bun install"]
+
+[tasks.format]
+alias = "fmt"
+run = [{ task = "treefmt" }, "hk fix --all"]
+
+[tasks.treefmt]
+run = "treefmt"
+run_windows = "echo 'Treefmt not supported on Windows'"
+
+[tools]
+"aqua:google/keep-sorted" = "latest"
+"aqua:numtide/treefmt" = { os = ["linux", "macos"], version = "2.6.0" }
+"aqua:owenlamont/ryl" = "latest"
+betterleaks = "latest"
+bun = { postinstall = "bun install", version = "latest" }
+cocogitto = "latest"
+cspell = "latest"
+editorconfig-checker = "latest"
+
+gh = "latest"
+
+git-cliff = "latest"
+
+"github:MRDGH2821/Sort-Markdown-Tables" = "latest"
+"github:infragate/capa" = { postinstall = "capa install --yes", version = "2.2.4" }
+hk = "2.3.0"
+ls-lint = "latest"
+oxfmt = "latest"
+"pipx:lorenzwalthert/gitignore-tidy" = "latest"
+"pipx:toml-sort" = "latest"
+"pipx:yamlfix" = "latest"
+pkl = "latest"
+ruff = "latest"
+rumdl = "latest"
+tombi = "latest"
+typos = "latest"
+typstyle = "latest"
+uv = "latest"
+yq = "latest"
+
+[[watch_files]]
+patterns = ["capabilities.yaml"]
+task = "ai-setup"
