@@ -5,7 +5,7 @@
   <title>GNU Lesser General Public License v3.0</title>
 </head>
 <body>
-<div class="optional-license-text"> 
+<div class="optional-license-text">
       <p>
         GNU LESSER GENERAL PUBLIC LICENSE<br />
 
@@ -30,13 +30,13 @@
     </p>
 
 <ul style="list-style:none">
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 0.</span></var>
         Additional Definitions.
-        
+
 <ul style="list-style:none">
-          
+
 <li>
             <p>
               As used herein, &quot;this License&quot; refers to version 3 of
@@ -45,7 +45,7 @@
             </p>
 
           </li>
-          
+
 <li>
             <p>
               &quot;The Library&quot; refers to a covered work governed by this License,
@@ -53,7 +53,7 @@
             </p>
 
           </li>
-          
+
 <li>
             <p>
               An &quot;Application&quot; is any work that makes use of an interface
@@ -63,7 +63,7 @@
             </p>
 
           </li>
-          
+
 <li>
             <p>
               A &quot;Combined Work&quot; is a work produced by combining or
@@ -73,7 +73,7 @@
             </p>
 
           </li>
-          
+
 <li>
             <p>
               The &quot;Minimal Corresponding Source&quot; for a Combined
@@ -84,7 +84,7 @@
             </p>
 
           </li>
-          
+
 <li>
             <p>
               The &quot;Corresponding Application Code&quot; for a Combined
@@ -95,30 +95,30 @@
             </p>
 
           </li>
-        
+
 </ul>
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1.</span></var>
         Exception to Section 3 of the GNU GPL.<br />
-   
+
         You may convey a covered work under sections 3 and 4 of this
         License without being bound by section 3 of the GNU GPL.
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 2.</span></var>
         Conveying Modified Versions.<br />
-   
+
         If you modify a copy of the Library, and, in your
         modifications, a facility refers to a function or data
         to be supplied by an Application that uses the facility
         (other than as an argument passed when the facility is
         invoked), then you may convey a copy of the modified version:
-        
+
 <ul style="list-style:none">
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
             under this License, provided that you make a good faith
@@ -126,69 +126,69 @@
             supply the function or data, the facility still operates, and
             performs whatever part of its purpose remains meaningful, or
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
             under the GNU GPL, with none of the additional
             permissions of this License applicable to that copy.
           </li>
-        
+
 </ul>
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 3.</span></var>
         Object Code Incorporating Material from Library Header Files.<br />
-   
+
         The object code form of an Application may incorporate material from
         a header file that is part of the Library. You may convey such object
         code under terms of your choice, provided that, if the incorporated
         material is not limited to numerical parameters, data structure
         layouts and accessors, or small macros, inline functions and templates
         (ten or fewer lines in length), you do both of the following:
-        
+
 <ul style="list-style:none">
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
             Give prominent notice with each copy of the object
             code that the Library is used in it and that the
             Library and its use are covered by this License.
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
             Accompany the object code with a copy of
             the GNU GPL and this license document.
           </li>
-        
+
 </ul>
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 4.</span></var>
         Combined Works.<br />
-   
+
         You may convey a Combined Work under terms of your choice that, taken
         together, effectively do not restrict modification of the portions of
         the Library contained in the Combined Work and reverse engineering for
         debugging such modifications, if you also do each of the following:
-        
+
 <ul style="list-style:none">
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
             Give prominent notice with each copy of the Combined
             Work that the Library is used in it and that the
             Library and its use are covered by this License.
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
             Accompany the Combined Work with a copy
             of the GNU GPL and this license document.
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> c)</span></var>
             For a Combined Work that displays copyright notices during
@@ -196,13 +196,13 @@
             among these notices, as well as a reference directing the
             user to the copies of the GNU GPL and this license document.
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> d)</span></var>
             Do one of the following:
-            
+
 <ul style="list-style:none">
-              
+
 <li>
                 <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 0)</span></var>
                 Convey the Minimal Corresponding Source under the terms
@@ -213,7 +213,7 @@
                 modified Combined Work, in the manner specified by section
                 6 of the GNU GPL for conveying Corresponding Source.
               </li>
-              
+
 <li>
                 <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1)</span></var>
                 Use a suitable shared library mechanism for linking
@@ -223,10 +223,10 @@
                 operate properly with a modified version of the Library
                 that is interface-compatible with the Linked Version.
               </li>
-            
+
 </ul>
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> e)</span></var>
             Provide Installation Information, but only if you would otherwise
@@ -240,39 +240,39 @@
             provide the Installation Information in the manner specified by
             section 6 of the GNU GPL for conveying Corresponding Source.)
           </li>
-        
+
 </ul>
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 5.</span></var>
         Combined Libraries.<br />
-   
+
         You may place library facilities that are a work based on
         the Library side by side in a single library together with
         other library facilities that are not Applications and are not
         covered by this License, and convey such a combined library
         under terms of your choice, if you do both of the following:
-        
+
 <ul style="list-style:none">
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
             Accompany the combined library with a copy of the same work
             based on the Library, uncombined with any other library
             facilities, conveyed under the terms of this License.
           </li>
-          
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
             Give prominent notice with the combined library that part
             of it is a work based on the Library, and explaining where
             to find the accompanying uncombined form of the same work.
           </li>
-        
+
 </ul>
       </li>
-      
+
 <li>
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 6.</span></var>
         Revised Versions of the GNU Lesser General Public License.
@@ -304,9 +304,9 @@
         </p>
 
       </li>
-    
+
 </ul>
-    <div class="optional-license-text"> 
+    <div class="optional-license-text">
       <p>
         GNU GENERAL PUBLIC LICENSE<br />
 
@@ -411,7 +411,7 @@
       </p>
 
 <ul style="list-style:none">
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 0.</span></var>
           Definitions.
@@ -470,11 +470,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1.</span></var>
           Source Code.<br />
-   
+
           The &quot;source code&quot; for a work means the preferred
           form of the work for making modifications to it.
           &quot;Object code&quot; means any non-source form of a work.
@@ -524,11 +524,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 2.</span></var>
           Basic Permissions.<br />
-   
+
           All rights granted under this License are granted for the term of
           copyright on the Program, and are irrevocable provided the stated
           conditions are met. This License explicitly affirms your unlimited
@@ -556,11 +556,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 3.</span></var>
           Protecting Users&apos; Legal Rights From Anti-Circumvention Law.<br />
-   
+
           No covered work shall be deemed part of an effective technological
           measure under any applicable law fulfilling obligations under article
           11 of the WIPO copyright treaty adopted on 20 December 1996, or
@@ -576,11 +576,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 4.</span></var>
           Conveying Verbatim Copies.<br />
-   
+
           You may convey verbatim copies of the Program&apos;s source code as
           you receive it, in any medium, provided that you conspicuously
           and appropriately publish on each copy an appropriate copyright
@@ -594,23 +594,23 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 5.</span></var>
           Conveying Modified Source Versions.<br />
-   
+
           You may convey a work based on the Program, or the modifications to
           produce it from the Program, in the form of source code under the terms
           of section 4, provided that you also meet all of these conditions:
-          
+
 <ul style="list-style:none">
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
               The work must carry prominent notices stating
               that you modified it, and giving a relevant date.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
               The work must carry prominent notices stating that
@@ -618,7 +618,7 @@
               added under section 7. This requirement modifies the
               requirement in section 4 to &quot;keep intact all notices&quot;.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> c)</span></var>
               You must license the entire work, as a whole, under this License
@@ -629,7 +629,7 @@
               permission to license the work in any other way, but it does not
               invalidate such permission if you have separately received it.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> d)</span></var>
               If the work has interactive user interfaces, each must
@@ -637,7 +637,7 @@
               has interactive interfaces that do not display Appropriate
               Legal Notices, your work need not make them do so.
             </li>
-          
+
 </ul>
           <p>
             A compilation of a covered work with other separate and independent
@@ -652,18 +652,18 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 6.</span></var>
           Conveying Non-Source Forms.<br />
-   
+
           You may convey a covered work in object code form
           under the terms of sections 4 and 5, provided that you
           also convey the machine-readable Corresponding Source
           under the terms of this License, in one of these ways:
-          
+
 <ul style="list-style:none">
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
               Convey the object code in, or embodied in, a physical
@@ -671,7 +671,7 @@
               accompanied by the Corresponding Source fixed on a durable
               physical medium customarily used for software interchange.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
               Convey the object code in, or embodied in, a physical product
@@ -686,7 +686,7 @@
               performing this conveying of source, or (2) access to copy
               the Corresponding Source from a network server at no charge.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> c)</span></var>
               Convey individual copies of the object code with a
@@ -695,7 +695,7 @@
               and noncommercially, and only if you received the object
               code with such an offer, in accord with subsection 6b.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> d)</span></var>
               Convey the object code by offering access from a designated place
@@ -711,7 +711,7 @@
               the Corresponding Source, you remain obligated to ensure that it
               is available for as long as needed to satisfy these requirements.
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> e)</span></var>
               Convey the object code using peer-to-peer transmission,
@@ -719,7 +719,7 @@
               and Corresponding Source of the work are being offered
               to the general public at no charge under subsection 6d.
             </li>
-          
+
 </ul>
           <p>
             A separable portion of the object code, whose source code is
@@ -786,11 +786,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 7.</span></var>
           Additional Terms.<br />
-   
+
           &quot;Additional permissions&quot; are terms that supplement the terms of this
           License by making exceptions from one or more of its conditions.
           Additional permissions that are applicable to the entire Program
@@ -815,39 +815,39 @@
           </p>
 
 <ul style="list-style:none">
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a)</span></var>
               Disclaiming warranty or limiting liability differently
               from the terms of sections 15 and 16 of this License; or
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b)</span></var>
               Requiring preservation of specified reasonable legal
               notices or author attributions in that material or in the
               Appropriate Legal Notices displayed by works containing it; or
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> c)</span></var>
               Prohibiting misrepresentation of the origin of that material,
               or requiring that modified versions of such material be marked
               in reasonable ways as different from the original version; or
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> d)</span></var>
               Limiting the use for publicity purposes of names
               of licensors or authors of the material; or
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> e)</span></var>
               Declining to grant rights under trademark law for use
               of some trade names, trademarks, or service marks; or
             </li>
-            
+
 <li>
               <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> f)</span></var>
               Requiring indemnification of licensors and authors of that
@@ -856,7 +856,7 @@
               to the recipient, for any liability that these contractual
               assumptions directly impose on those licensors and authors.
             </li>
-          
+
 </ul>
           <p>
             All other non-permissive additional terms are considered &quot;further
@@ -884,11 +884,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 8.</span></var>
           Termination.<br />
-   
+
           You may not propagate or modify a covered work except as
           expressly provided under this License. Any attempt otherwise
           to propagate or modify it is void, and will automatically
@@ -921,11 +921,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 9.</span></var>
           Acceptance Not Required for Having Copies.<br />
-   
+
           You are not required to accept this License in order to receive or
           run a copy of the Program. Ancillary propagation of a covered work
           occurring solely as a consequence of using peer-to-peer transmission
@@ -935,11 +935,11 @@
           do not accept this License. Therefore, by modifying or propagating a
           covered work, you indicate your acceptance of this License to do so.
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 10.</span></var>
           Automatic Licensing of Downstream Recipients.<br />
-   
+
           Each time you convey a covered work, the recipient automatically
           receives a license from the original licensors, to run, modify and
           propagate that work, subject to this License. You are not responsible
@@ -967,11 +967,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 11.</span></var>
           Patents.<br />
-   
+
           A &quot;contributor&quot; is a copyright holder who authorizes use under this
           License of the Program or a work on which the Program is based. The
           work thus licensed is called the contributor&apos;s &quot;contributor version&quot;.
@@ -1053,11 +1053,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 12.</span></var>
           No Surrender of Others&apos; Freedom.<br />
-   
+
           If conditions are imposed on you (whether by court order, agreement
           or otherwise) that contradict the conditions of this License,
           they do not excuse you from the conditions of this License. If
@@ -1069,11 +1069,11 @@
           Program, the only way you could satisfy both those terms and this
           License would be to refrain entirely from conveying the Program.
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 13.</span></var>
           Use with the GNU Affero General Public License.<br />
-   
+
           Notwithstanding any other provision of this License, you have
           permission to link or combine any covered work with a work licensed
           under version 3 of the GNU Affero General Public License into
@@ -1083,11 +1083,11 @@
           Affero General Public License, section 13, concerning interaction
           through a network will apply to the combination as such.
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 14.</span></var>
           Revised Versions of this License.<br />
-   
+
           The Free Software Foundation may publish revised and/or new
           versions of the GNU General Public License from time to time. Such
           new versions will be similar in spirit to the present version,
@@ -1118,11 +1118,11 @@
           </p>
 
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 15.</span></var>
           Disclaimer of Warranty.<br />
-   
+
           THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
           APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
           HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM &quot;AS IS&quot; WITHOUT
@@ -1132,11 +1132,11 @@
           OF THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU
           ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 16.</span></var>
           Limitation of Liability.<br />
-   
+
           IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
           WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR
           CONVEYS THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
@@ -1147,7 +1147,7 @@
           PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER
           OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
         </li>
-        
+
 <li>
           <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 17.</span></var>
           Interpretation of Sections 15 and 16.
@@ -1161,9 +1161,9 @@
       </p>
 
         </li>
-      
+
 </ul>
-      <div class="optional-license-text"> 
+      <div class="optional-license-text">
         <p>
           END OF TERMS AND CONDITIONS
         </p>
@@ -1259,7 +1259,7 @@
         </p>
 
       </div>
-  
+
     </div>
 </body>
 </html>

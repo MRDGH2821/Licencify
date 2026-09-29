@@ -60,8 +60,7 @@ pub fn resolve_author(
         }
     }
     anyhow::bail!(
-        "No author specified. Set one via `licencify config --author <name>` \
-         or configure git with `git config user.name \"Your Name\"`"
+        "No author specified. Set one via `licencify config --author <name>` or configure git with `git config user.name \"Your Name\"`"
     )
 }
 

@@ -47,7 +47,7 @@ All notable changes to this project will be documented in this file. See [conven
 # postprocessors
 postprocessors = [
   # Replace the placeholder `<REPO>` with the repository URL.
-  { pattern = '\$REPO', replace = "__FILL_ME_IN__" }
+  { pattern = '\$REPO', replace = "https://github.com/MRDGH2821/Licencify" }
 ]
 # Remove leading and trailing whitespaces from the changelog's body.
 trim = true
@@ -87,9 +87,5 @@ split_commits = false
 topo_order = false
 
 [remote.github]
-owner = "__FILL_ME_IN__"
-repo = "__FILL_ME_IN__"
-
-[remote.gitlab]
-owner = "__FILL_ME_IN__"
-repo = "__FILL_ME_IN__"
+owner = "MRDGH2821"
+repo = "Licencify"

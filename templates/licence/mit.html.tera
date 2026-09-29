@@ -5,18 +5,18 @@
   <title>MIT License</title>
 </head>
 <body>
-<div class="optional-license-text"> 
+<div class="optional-license-text">
          <p>MIT License</p>
 
       </div>
-      <div class="replaceable-license-text"><span title="can be replaced with the pattern .{0,5000}"> 
+      <div class="replaceable-license-text"><span title="can be replaced with the pattern .{0,5000}">
          <p>Copyright (c) {{ year }} {{ author }}
          </p>
 
       </span></div>
 
       <p>Permission is hereby granted, free of charge, to any person obtaining a copy of
-         <var class="replaceable-license-text"><span title="can be replaced with the pattern this\s+software\s+and\s+associated\s+documentation\s+files|this\s+source\s+file"> 
+         <var class="replaceable-license-text"><span title="can be replaced with the pattern this\s+software\s+and\s+associated\s+documentation\s+files|this\s+source\s+file">
          this software and associated documentation files</span></var> (the
          &quot;<var class="replaceable-license-text"><span title="can be replaced with the pattern Software|Materials"> Software</span></var>&quot;),
          to deal in the

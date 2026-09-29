@@ -5,7 +5,7 @@
   <title>Apache License 2.0</title>
 </head>
 <body>
-<div class="optional-license-text"> 
+<div class="optional-license-text">
          <p>Apache License
         <br />
 Version 2.0, January 2004
@@ -14,31 +14,31 @@ http://www.apache.org/licenses/
       </p>
 
       </div>
-      <div class="optional-license-text"> 
+      <div class="optional-license-text">
          <p>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION</p>
 
       </div>
 
 <ul style="list-style:none">
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1.</span></var>
           Definitions.
-          
+
 <ul style="list-style:none">
-               
+
 <li>
                   <p>&quot;License&quot; shall mean the terms and conditions for use, reproduction, and distribution
               as defined by Sections 1 through 9 of this document.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Licensor&quot; shall mean the copyright owner or entity authorized by the copyright owner
                  that is granting the License.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Legal Entity&quot; shall mean the union of the acting entity and all other entities that
                  control, are controlled by, or are under common control with that entity. For the purposes of
@@ -48,33 +48,33 @@ http://www.apache.org/licenses/
                  entity.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;You&quot; (or &quot;Your&quot;) shall mean an individual or Legal Entity exercising
                 permissions granted by this License.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Source&quot; form shall mean the preferred form for making modifications, including but not
                 limited to software source code, documentation source, and configuration files.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Object&quot; form shall mean any form resulting from mechanical transformation or
                  translation of a Source form, including but not limited to compiled object code, generated
                  documentation, and conversions to other media types.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Work&quot; shall mean the work of authorship, whether in Source or Object form, made
                  available under the License, as indicated by a copyright notice that is included in or
                  attached to the work (an example is provided in the Appendix below).</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Derivative Works&quot; shall mean any work, whether in Source or Object form, that is based
                  on (or derived from) the Work and for which the editorial revisions, annotations,
@@ -84,7 +84,7 @@ http://www.apache.org/licenses/
                  Works thereof.</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Contribution&quot; shall mean any work of authorship, including the original version of the
                  Work and any modifications or additions to that Work or Derivative Works thereof, that is
@@ -98,17 +98,17 @@ http://www.apache.org/licenses/
                  designated in writing by the copyright owner as &quot;Not a Contribution.&quot;</p>
 
                </li>
-               
+
 <li>
                   <p>&quot;Contributor&quot; shall mean Licensor and any individual or Legal Entity on behalf of whom
                  a Contribution has been received by Licensor and subsequently incorporated within the
                  Work.</p>
 
                </li>
-            
+
 </ul>
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 2.</span></var>
           Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor
@@ -117,7 +117,7 @@ http://www.apache.org/licenses/
              publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or
              Object form.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 3.</span></var>
           Grant of Patent License. Subject to the terms and conditions of this License, each Contributor
@@ -132,32 +132,32 @@ http://www.apache.org/licenses/
              infringement, then any patent licenses granted to You under this License for that Work shall
              terminate as of the date such litigation is filed.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 4.</span></var>
           Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof
              in any medium, with or without modifications, and in Source or Object form, provided that You
              meet the following conditions:
-          
+
 <ul style="list-style:none">
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> (a)</span></var>
               You must give any other recipients of the Work or Derivative Works a copy of this License; and
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> (b)</span></var>
               You must cause any modified files to carry prominent notices stating that You changed the files; and
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> (c)</span></var>
               You must retain, in the Source form of any Derivative Works that You distribute, all
                  copyright, patent, trademark, and attribution notices from the Source form of the Work,
                  excluding those notices that do not pertain to any part of the Derivative Works; and
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> (d)</span></var>
               If the Work includes a &quot;NOTICE&quot; text file as part of its distribution, then any
@@ -172,7 +172,7 @@ http://www.apache.org/licenses/
                  distribute, alongside or as an addendum to the NOTICE text from the Work, provided that
                  such additional attribution notices cannot be construed as modifying the License.
                </li>
-            
+
 </ul>
               <p>You may add Your own copyright statement to Your modifications and may provide additional or
                  different license terms and conditions for use, reproduction, or distribution of Your
@@ -181,7 +181,7 @@ http://www.apache.org/licenses/
                  in this License.</p>
 
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 5.</span></var>
           Submission of Contributions. Unless You explicitly state otherwise, any Contribution
@@ -190,14 +190,14 @@ http://www.apache.org/licenses/
              Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate
              license agreement you may have executed with Licensor regarding such Contributions.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 6.</span></var>
           Trademarks. This License does not grant permission to use the trade names, trademarks, service
              marks, or product names of the Licensor, except as required for reasonable and customary use
              in describing the origin of the Work and reproducing the content of the NOTICE file.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 7.</span></var>
           Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor
@@ -208,7 +208,7 @@ http://www.apache.org/licenses/
              appropriateness of using or redistributing the Work and assume any risks associated with Your
              exercise of permissions under this License.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 8.</span></var>
           Limitation of Liability. In no event and under no legal theory, whether in tort (including
@@ -220,7 +220,7 @@ http://www.apache.org/licenses/
              malfunction, or any and all other commercial damages or losses), even if such Contributor has
              been advised of the possibility of such damages.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 9.</span></var>
           Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works
@@ -232,14 +232,14 @@ http://www.apache.org/licenses/
              against, such Contributor by reason of your accepting any such warranty or additional
              liability.
         </li>
-      
+
 </ul>
 
-      <div class="optional-license-text"> 
+      <div class="optional-license-text">
          <p>END OF TERMS AND CONDITIONS</p>
 
       </div>
-      <div class="optional-license-text"> 
+      <div class="optional-license-text">
          <p>APPENDIX: How to apply the Apache License to your work.</p>
 
          <p>To apply the Apache License to your work, attach the following boilerplate notice, with the fields

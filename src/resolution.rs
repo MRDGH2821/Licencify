@@ -109,8 +109,7 @@ pub fn resolve_template(
     }
 
     anyhow::bail!(
-        "License '{}' not available. Not cached, not fetchable from SPDX API, \
-         no custom template found, and no built-in template exists.",
+        "License '{}' not available. Not cached, not fetchable from SPDX API, no custom template found, and no built-in template exists.",
         spdx_id
     )
 }

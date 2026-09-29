@@ -51,8 +51,7 @@ mod tests {
 
     #[test]
     fn detect_mit() {
-        let text = "MIT License\n\nCopyright (c) 2024 Test\n\n\
-                     Permission is hereby granted, free of charge...";
+        let text = "MIT License\n\nCopyright (c) 2024 Test\n\nPermission is hereby granted, free of charge...";
         assert_eq!(detect_license(text), Some("MIT"));
     }
 

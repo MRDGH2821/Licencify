@@ -199,7 +199,7 @@ Writes `licencify-schema.json` to the current directory for IDE autocompletion.
 
 ## License
 
-See [LICENCE](./LICENSE)
+See [LICENCE](../../LICENCE)
 
 ```text
 

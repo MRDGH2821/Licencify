@@ -5,8 +5,8 @@
   <title>BSD 2-Clause License</title>
 </head>
 <body>
-<div class="replaceable-license-text"><span title="can be replaced with the pattern .{0,5000}"> 
-         <p>Copyright (c) {{ year }} {{ author }}. 
+<div class="replaceable-license-text"><span title="can be replaced with the pattern .{0,5000}">
+         <p>Copyright (c) {{ year }} {{ author }}.
       </p>
 
       </span></div>
@@ -15,20 +15,20 @@
          that the following conditions are met:</p>
 
 <ul style="list-style:none">
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1.</span></var>
           Redistributions of source code must retain the above copyright notice, this list of conditions
              and the following disclaimer.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 2.</span></var>
           Redistributions in binary form must reproduce the above copyright notice, this list of conditions
              and the following disclaimer in the documentation and/or other materials provided with the
              distribution.
         </li>
-      
+
 </ul>
       <p>THIS <var class="optional-license-text"> SOFTWARE</var> IS PROVIDED BY
         <var class="replaceable-license-text"><span title="can be replaced with the pattern .+"> THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span></var> &quot;AS IS&quot; AND ANY

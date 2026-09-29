@@ -5,15 +5,15 @@
   <title>CC0 1.0 Universal</title>
 </head>
 <body>
-<div class="optional-license-text"> 
-         <div class="optional-license-text"> 
+<div class="optional-license-text">
+         <div class="optional-license-text">
             <p>Creative Commons<var class="optional-license-text">  Legal Code</var></p>
 
          </div>
          <p>CC0 1.0 Universal</p>
 
       </div>
-      <div class="optional-license-text"> 
+      <div class="optional-license-text">
          <p>CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL SERVICES. DISTRIBUTION OF THIS
          DOCUMENT DOES NOT CREATE AN ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS INFORMATION
          ON AN &quot;AS-IS&quot; BASIS. CREATIVE COMMONS MAKES NO WARRANTIES REGARDING THE USE OF THIS DOCUMENT
@@ -43,41 +43,41 @@
          Related Rights in the Work and the meaning and intended legal effect of CC0 on those rights.</p>
 
 <ul style="list-style:none">
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 1.</span></var>
           Copyright and Related Rights. A Work made available under CC0 may be protected by copyright and
              related or neighboring rights (&quot;Copyright and Related Rights&quot;). Copyright and
              Related Rights include, but are not limited to, the following:
-          
+
 <ul style="list-style:none">
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> i.</span></var>
               the right to reproduce, adapt, distribute, perform, display, communicate, and translate a Work;
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> ii.</span></var>
               moral rights retained by the original author(s) and/or performer(s);
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> iii.</span></var>
               publicity and privacy rights pertaining to a person&apos;s image or likeness depicted in a Work;
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> iv.</span></var>
               rights protecting against unfair competition in regards to a Work, subject to the limitations
                  in paragraph 4(a), below;
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> v.</span></var>
               rights protecting the extraction, dissemination, use and reuse of data in a Work;
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> vi.</span></var>
               database rights (such as those arising under Directive 96/9/EC of the European Parliament and
@@ -85,16 +85,16 @@
                  national implementation thereof, including any amended or successor version of such
                  directive); and
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> vii.</span></var>
               other similar, equivalent or corresponding rights throughout the world based on applicable
                  law or treaty, and any national implementations thereof.
             </li>
-            
+
 </ul>
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 2.</span></var>
           Waiver. To the greatest extent permitted by, but not in contravention of, applicable law,
@@ -111,7 +111,7 @@
              legal or equitable action to disrupt the quiet enjoyment of the Work by the public as
              contemplated by Affirmer&apos;s express Statement of Purpose.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 3.</span></var>
           Public License Fallback. Should any part of the Waiver for any reason be judged legally invalid
@@ -132,19 +132,19 @@
              causes of action with respect to the Work, in either case contrary to Affirmer&apos;s express
              Statement of Purpose.
         </li>
-        
+
 <li>
             <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> 4.</span></var>
           Limitations and Disclaimers.
-          
+
 <ul style="list-style:none">
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> a.</span></var>
               No trademark or patent rights held by Affirmer are waived, abandoned, surrendered, licensed
                  or otherwise affected by this document.
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> b.</span></var>
               Affirmer offers the Work as-is and makes no representations or warranties of any kind
@@ -154,7 +154,7 @@
                  absence of errors, whether or not discoverable, all to the greatest extent permissible
                  under applicable law.
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> c.</span></var>
               Affirmer disclaims responsibility for clearing rights of other persons that may apply to the
@@ -162,16 +162,16 @@
                  Related Rights in the Work. Further, Affirmer disclaims responsibility for obtaining any
                  necessary consents, permissions or other rights required for any use of the Work.
             </li>
-               
+
 <li>
                   <var class="replaceable-license-text"><span title="can be replaced with the pattern .{0,20}"> d.</span></var>
               Affirmer understands and acknowledges that Creative Commons is not a party to this document
                  and has no duty or obligation with respect to this CC0 or use of the Work.
             </li>
-            
+
 </ul>
         </li>
-      
+
 </ul>
       <var class="optional-license-text"> <var class="replaceable-license-text"><span title="can be replaced with the pattern For more information, please see <http://creativecommons.org/publicdomain/zero/1.0/>"> </span></var></var>
 </body>

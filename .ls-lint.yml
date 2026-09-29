@@ -12,11 +12,6 @@ ignore:
   # keep-sorted start
   - .git
   - .gradle
-  - dist
-  - build
-  - target # Rust/Java build output
-  - .gradle
-  - __pycache__
   - .pytest_cache
   - .venv
   - __pycache__
