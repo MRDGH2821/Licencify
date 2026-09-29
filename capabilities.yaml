@@ -19,10 +19,6 @@ plugins:
       repo: oxsecurity/megalinter
     id: megalinter
     type: github
-
-
-
-
 providers:
   # keep-sorted start
   - antigravity
@@ -79,10 +75,8 @@ skills:
       repo: mattpocock/skills@to-tickets
     id: to-tickets
     type: github
-
   - def:
       repo: cli/cli@gh
     id: gh
     type: github
-
 tools: []
