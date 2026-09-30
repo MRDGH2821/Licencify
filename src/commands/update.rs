@@ -9,12 +9,13 @@ pub fn cmd_update(
     format: LicenseFormat,
     yes: bool,
     permit_promotion: bool,
-    update_readme: bool,
+    update_readme: Option<bool>,
     no_file: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
-    let update_readme = update_readme || config.default.update_readme.unwrap_or(false);
+    let update_readme =
+        crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
     resolution::resolve_author(author.clone(), Some(&config))?;
     let spdx = super::generate::selected_licence_id(Some(spdx), None, true)?;
     let info = prov.info(&spdx)?;
@@ -101,16 +102,8 @@ pub fn cmd_update(
         }
     }
 
-    if update_readme {
-        match crate::readme::update_readme(&info.id) {
-            Ok(true) => {}
-            Ok(false) => {
-                println!("   README: not found or already has license section");
-            }
-            Err(e) => {
-                eprintln!("   Warning: could not update README: {}", e);
-            }
-        }
+    if update_readme && !no_file {
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
 
     Ok(())
@@ -140,7 +133,7 @@ mod tests {
             format,
             true,
             permit_promotion,
-            false,
+            None,
             false,
         )
     }
@@ -188,7 +181,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
             false,
         );
         assert!(add_result.is_ok());

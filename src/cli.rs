@@ -84,13 +84,16 @@ pub enum Commands {
         #[arg(long)]
         permit_promotion: bool,
 
-        /// Update README with license badge (if README exists)
-        #[arg(long)]
+        /// Add or refresh the README licence badge and section
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
 
         /// Skip writing every licence file, including additional licences
         #[arg(long)]
         no_file: bool,
+        /// Leave the README unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_readme")]
+        no_update_readme: bool,
     },
 
     /// List available licenses
@@ -164,13 +167,16 @@ pub enum Commands {
         #[arg(long)]
         permit_promotion: bool,
 
-        /// Update README with license badge (if README exists)
-        #[arg(long)]
+        /// Add or refresh the README licence badge and section
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
 
         /// Skip writing every licence file, including additional licences
         #[arg(long)]
         no_file: bool,
+        /// Leave the README unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_readme")]
+        no_update_readme: bool,
     },
 
     /// Manage the global SPDX detail cache
@@ -212,4 +218,55 @@ pub enum ConfigAction {
 
     /// Show current configuration
     Show,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Cli, Commands};
+    use clap::Parser;
+
+    #[test]
+    fn readme_flags_enable_disable_and_conflict() {
+        let enabled = Cli::try_parse_from(["licencify", "add", "MIT", "--update-readme"]).unwrap();
+        assert!(matches!(
+            enabled.command,
+            Commands::Add {
+                update_readme: true,
+                no_update_readme: false,
+                ..
+            }
+        ));
+
+        let disabled =
+            Cli::try_parse_from(["licencify", "update", "MIT", "--no-update-readme"]).unwrap();
+        assert!(matches!(
+            disabled.command,
+            Commands::Update {
+                update_readme: false,
+                no_update_readme: true,
+                ..
+            }
+        ));
+
+        let unset = Cli::try_parse_from(["licencify", "add", "MIT"]).unwrap();
+        assert!(matches!(
+            unset.command,
+            Commands::Add {
+                update_readme: false,
+                no_update_readme: false,
+                ..
+            }
+        ));
+
+        assert!(
+            Cli::try_parse_from([
+                "licencify",
+                "add",
+                "MIT",
+                "--update-readme",
+                "--no-update-readme",
+            ])
+            .is_err()
+        );
+    }
 }
