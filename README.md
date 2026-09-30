@@ -75,11 +75,12 @@ Options:
 ```text
 Add a license to the current project
 
-Usage: licencify add [OPTIONS] <SPDX>
+Usage: licencify add [OPTIONS] [SPDX]
 
 Arguments:
-  <SPDX>
-          SPDX license identifier (e.g., MIT, Apache-2.0, proprietary)
+  [SPDX]
+          SPDX license identifier (e.g., MIT, Apache-2.0, proprietary);
+          defaults to the effective configured licence
 
 Options:
   -a, --author <AUTHOR>
@@ -107,11 +108,18 @@ Options:
   -Y, --yes
           Skip all prompts and use defaults
 
+      --permit-promotion
+          Explicitly promote one matching additional licence to primary
+
   -h, --help
           Print help (see a summary with '-h')
 ```
 
 The `-Y` (or `--yes`) flag is useful for scripting — it skips all confirmation prompts and uses defaults for any unset values.
+
+`--permit-promotion` is separate from `--yes`: promotion requires exactly one
+matching additional file and retains that file's format. An ambiguous set of
+existing primary files is not changed.
 
 ## Listing licences
 
@@ -177,9 +185,19 @@ Options:
 
           [default: txt]
 
+  -Y, --yes
+          Skip confirmation prompts
+
+      --permit-promotion
+          Explicitly promote one matching additional licence to primary
+
   -h, --help
           Print help (see a summary with '-h')
 ```
+
+Updating requires an explicit replacement ID. A format change stages the new
+primary before removing the old file; ambiguous existing primaries are left
+untouched. Promotion also needs `--permit-promotion`, even with `--yes`.
 
 ## Licence detection
 
