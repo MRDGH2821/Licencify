@@ -19,7 +19,10 @@ use cli::{Cli, Commands};
 
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let yes = matches!(&cli.command, Commands::Add { yes: true, .. });
+    let yes = match &cli.command {
+        Commands::Add { yes, .. } | Commands::Update { yes, .. } => *yes,
+        _ => false,
+    };
     config::set_cli_context(config::CliContext {
         verbose: cli.verbose,
         yes,
@@ -38,15 +41,17 @@ pub fn main() -> anyhow::Result<()> {
             year,
             format,
             yes,
+            permit_promotion,
             update_readme,
         } => commands::cmd_add(
-            &spdx,
+            spdx.as_deref(),
             author,
             company,
             email,
             year,
             format,
             yes,
+            permit_promotion,
             update_readme,
         ),
         Commands::List {
@@ -67,8 +72,20 @@ pub fn main() -> anyhow::Result<()> {
             email,
             year,
             format,
+            yes,
+            permit_promotion,
             update_readme,
-        } => commands::cmd_update(&spdx, author, company, email, year, format, update_readme),
+        } => commands::cmd_update(
+            &spdx,
+            author,
+            company,
+            email,
+            year,
+            format,
+            yes,
+            permit_promotion,
+            update_readme,
+        ),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
         Commands::Schema { output } => commands::cmd_schema(&output),

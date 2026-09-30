@@ -613,7 +613,13 @@ fn set_preserved_string(table: &mut toml_edit::Table, key: &str, new_value: &str
     table.insert(key, toml_edit::value(new_value.to_owned()));
 }
 
-fn set_saved_fields(table: &mut toml_edit::Table, license: &str, author: &str, format: &str) {
+fn set_saved_fields(
+    table: &mut toml_edit::Table,
+    license: &str,
+    author: &str,
+    format: &str,
+    additional: Option<&[String]>,
+) {
     if table.contains_key("license") && !table.contains_key("licence") {
         set_preserved_string(table, "license", license);
     } else {
@@ -621,6 +627,20 @@ fn set_saved_fields(table: &mut toml_edit::Table, license: &str, author: &str, f
     }
     set_preserved_string(table, "author", author);
     set_preserved_string(table, "format", format);
+    if let Some(ids) = additional {
+        let key = if table.contains_key("additional_licences")
+            && !table.contains_key("additional-licences")
+        {
+            "additional_licences"
+        } else {
+            "additional-licences"
+        };
+        let mut array = toml_edit::Array::new();
+        for id in ids {
+            array.push(id.as_str());
+        }
+        table.insert(key, toml_edit::Item::Value(toml_edit::Value::Array(array)));
+    }
 }
 
 fn edit_config_text(
@@ -631,6 +651,7 @@ fn edit_config_text(
     license: &str,
     author: &str,
     format: &str,
+    additional: Option<&[String]>,
 ) -> Result<String> {
     let mut doc = if text.trim().is_empty() {
         toml_edit::DocumentMut::new()
@@ -647,7 +668,7 @@ fn edit_config_text(
                 .get_mut("default")
                 .and_then(toml_edit::Item::as_table_mut)
                 .context("`[default]` must be a table")?;
-            set_saved_fields(table, license, author, format);
+            set_saved_fields(table, license, author, format, additional);
         }
         ConfigWriteTarget::ExactSubdir => {
             let path = subdir_path.unwrap_or(relative);
@@ -681,11 +702,11 @@ fn edit_config_text(
                 let table = tables
                     .get_mut(position)
                     .context("Missing subdirectory table")?;
-                set_saved_fields(table, license, author, format);
+                set_saved_fields(table, license, author, format, additional);
             } else {
                 let mut table = toml_edit::Table::new();
                 table.insert("path", toml_edit::value(path.to_owned()));
-                set_saved_fields(&mut table, license, author, format);
+                set_saved_fields(&mut table, license, author, format, additional);
                 tables.push(table);
             }
         }
@@ -702,6 +723,30 @@ fn write_project_selection(
     license: &str,
     author: &str,
     format: &str,
+) -> Result<bool> {
+    write_saved_selection(
+        shared_path,
+        local_path,
+        root,
+        relative,
+        target,
+        license,
+        author,
+        format,
+        None,
+    )
+}
+
+fn write_saved_selection(
+    shared_path: &Path,
+    local_path: &Path,
+    root: &Path,
+    relative: &str,
+    target: ConfigWriteTarget,
+    license: &str,
+    author: &str,
+    format: &str,
+    additional: Option<&[String]>,
 ) -> Result<bool> {
     refuse_child_config_write(root, shared_path)?;
     refuse_child_config_write(root, local_path)?;
@@ -736,6 +781,7 @@ fn write_project_selection(
         license,
         author,
         format,
+        additional,
     )?;
     let output = if created {
         format!("#:schema {}\n\n{edited}", Config::schema_path()?.display())
@@ -1154,6 +1200,16 @@ impl Config {
     }
 
     pub fn update_project_defaults(license: &str, author: &str, format: &str) -> Result<bool> {
+        Self::update_saved_selection(license, author, format, None)
+    }
+
+    /// Record the primary selection. `additional`, when set, replaces the additional-licence list.
+    pub fn update_saved_selection(
+        license: &str,
+        author: &str,
+        format: &str,
+        additional: Option<&[String]>,
+    ) -> Result<bool> {
         let root = Self::project_root()?;
         let cwd = std::env::current_dir().context("Could not determine current directory")?;
         let relative = relative_within_root(&root, &cwd)?;
@@ -1165,7 +1221,7 @@ impl Config {
         } else {
             prompt_config_target(&relative)?
         };
-        write_project_selection(
+        write_saved_selection(
             &Self::project_path()?,
             &Self::local_path()?,
             &root,
@@ -1174,6 +1230,7 @@ impl Config {
             license,
             author,
             format,
+            additional,
         )
     }
 
