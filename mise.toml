@@ -33,11 +33,8 @@ bun = { postinstall = "bun install", version = "latest" }
 cocogitto = "latest"
 cspell = "latest"
 editorconfig-checker = "latest"
-
 gh = "latest"
-
 git-cliff = "latest"
-
 "github:MRDGH2821/Sort-Markdown-Tables" = "latest"
 "github:infragate/capa" = { postinstall = "capa install --yes", version = "2.2.4" }
 hk = "2.3.0"
