@@ -19,6 +19,15 @@ use cli::{Cli, Commands};
 
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    let yes = matches!(&cli.command, Commands::Add { yes: true, .. });
+    config::set_cli_context(config::CliContext {
+        verbose: cli.verbose,
+        yes,
+        config_target: cli.config_target.map(|target| match target {
+            cli::ConfigTargetChoice::Shared => config::ConfigWriteTarget::SharedDefaults,
+            cli::ConfigTargetChoice::Subdir => config::ConfigWriteTarget::ExactSubdir,
+        }),
+    });
 
     match cli.command {
         Commands::Add {
