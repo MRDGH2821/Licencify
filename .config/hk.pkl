@@ -44,11 +44,6 @@ local linters = new Mapping<String, Step> {
   }
   ["tombi"] = Builtins.tombi
   ["tombi-format"] = Builtins.tombi_format
-  ["toml-sort"] {
-    fix = "toml-sort --in-place --sort-table-keys --sort-inline-tables {{files}}"
-    check = "toml-sort --check --sort-table-keys --sort-inline-tables {{files}}"
-    types = List("toml")
-  }
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   ["typos"] = Builtins.typos
   ["typstyle"] {

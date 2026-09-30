@@ -117,6 +117,12 @@ pub enum Commands {
     /// Detect the current project's license
     Detect,
 
+    /// Report licence files and README claims without changing files
+    Scan {
+        /// Expected primary licence ID; does not replace additional licences
+        id: Option<String>,
+    },
+
     /// Change the project's license
     Update {
         /// SPDX license identifier to change to

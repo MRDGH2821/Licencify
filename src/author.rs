@@ -148,6 +148,7 @@ mod tests {
             },
             template: None,
             subdirs: None,
+            scan: None,
         };
         let resolver = ConfigAuthorResolver;
         let result = resolver.resolve(Some(&config));
@@ -171,6 +172,7 @@ mod tests {
             },
             template: None,
             subdirs: None,
+            scan: None,
         };
         let resolver = ConfigAuthorResolver;
         let result = resolver.resolve(Some(&config));
