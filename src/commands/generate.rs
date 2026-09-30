@@ -27,22 +27,120 @@ pub struct PlannedPrimary {
 /// Render the primary licence. Add and update share this path so format and
 /// placeholder decisions cannot drift between commands.
 pub fn render_primary(ctx: &ResolvedContext) -> anyhow::Result<RenderedPrimary> {
+    let content = render_resolved(ctx, &ctx.resolved)?;
+    let ext = ctx.resolved.format.to_string();
+    let path = ctx.licence_name.file_path(&ext);
+    ensure_output_path(&path)?;
+    Ok(RenderedPrimary { path, content })
+}
+
+/// One additional licence that is not already on disk.
+pub struct PlannedExtra {
+    pub id: String,
+    pub path: PathBuf,
+    pub content: String,
+}
+
+/// Missing extras to create, and existing extra files to leave untouched.
+pub struct ExtraPlan {
+    pub missing: Vec<PlannedExtra>,
+    pub skipped: Vec<PathBuf>,
+}
+
+fn render_resolved(
+    ctx: &ResolvedContext,
+    resolved: &crate::resolution::ResolvedTemplate,
+) -> anyhow::Result<String> {
     let render_ctx = template::render_context(
         &ctx.year,
         &ctx.author,
         ctx.company.as_deref(),
         ctx.email.as_deref(),
     );
-    let ext = ctx.resolved.format.to_string();
-    let content = match &ctx.resolved.format {
-        LicenseFormat::Md => {
-            template::render_markdown_with_context(&ctx.resolved.text, &render_ctx)?
+    match &resolved.format {
+        LicenseFormat::Md => template::render_markdown_with_context(&resolved.text, &render_ctx),
+        _ => template::render_with_context(&resolved.text, &render_ctx),
+    }
+}
+
+/// Resolve every additional licence before any file changes.
+/// An existing extra of any supported extension is skipped, not rewritten.
+pub fn plan_missing_extras(
+    ctx: &ResolvedContext,
+    config: &crate::config::Config,
+    provider: &crate::provider::LicenseProvider,
+    additional: &[String],
+    format: &LicenseFormat,
+) -> anyhow::Result<ExtraPlan> {
+    let fs = global_fs();
+    let mut missing = Vec::new();
+    let mut skipped = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for requested in additional {
+        let info = provider.info(requested)?;
+        if !seen.insert(info.id.clone()) {
+            continue;
         }
-        _ => template::render_with_context(&ctx.resolved.text, &render_ctx)?,
-    };
-    let path = ctx.licence_name.file_path(&ext);
-    ensure_output_path(&path)?;
-    Ok(RenderedPrimary { path, content })
+        let resolved =
+            crate::resolution::resolve_template(&info.id, Some(config), Some(provider), format)?;
+        let content = render_resolved(ctx, &resolved)?;
+        let path = PathBuf::from(format!(
+            "{}-{}.{}",
+            ctx.licence_name.as_str(),
+            info.id,
+            resolved.format
+        ));
+        ensure_output_path(&path)?;
+        let canonical = info.id.clone();
+        let present = present_extra_files(&*fs, &[canonical.as_str(), requested.as_str()]);
+        if present.is_empty() {
+            missing.push(PlannedExtra {
+                id: canonical,
+                path,
+                content,
+            });
+        } else {
+            skipped.extend(present);
+        }
+    }
+    Ok(ExtraPlan { missing, skipped })
+}
+
+/// Create missing extras without replacing a file that appears after planning.
+pub fn write_missing_extras(extras: &[PlannedExtra]) -> anyhow::Result<()> {
+    let fs = global_fs();
+    for extra in extras {
+        fs.create_new(&extra.path, &extra.content)
+            .with_context(|| {
+                format!(
+                    "Failed to write additional licence {} as {}",
+                    extra.id,
+                    extra.path.display()
+                )
+            })?;
+    }
+    Ok(())
+}
+
+/// Write the planned licence files, or record the selection only when `no_file` is set.
+pub fn publish_licence(
+    no_file: bool,
+    plan: &PlannedPrimary,
+    extras: &[PlannedExtra],
+    license_id: &str,
+    author: &str,
+) -> anyhow::Result<bool> {
+    if no_file {
+        return crate::config::Config::update_saved_selection(
+            license_id,
+            author,
+            &plan.format,
+            None,
+        );
+    }
+    let saved = commit_primary(plan, license_id, author)?;
+    write_missing_extras(extras)?;
+    Ok(saved)
 }
 
 /// Choose the SPDX id. Update must receive one; add may use the effective setting.
@@ -256,6 +354,18 @@ fn is_additional(additional: &[String], requested_id: &str, canonical_id: &str) 
         .any(|id| id.eq_ignore_ascii_case(requested_id) || id.eq_ignore_ascii_case(canonical_id))
 }
 
+fn present_extra_files(fs: &dyn crate::fs::Fs, ids: &[&str]) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    for id in ids {
+        for path in LicenceName::extra_variants(id) {
+            if fs.exists(&path) && !found.iter().any(|existing| existing == &path) {
+                found.push(path);
+            }
+        }
+    }
+    found
+}
+
 fn existing_extras(
     fs: &dyn crate::fs::Fs,
     requested_id: &str,
@@ -277,4 +387,16 @@ fn existing_extras(
         }
     }
     found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extra_output_path_must_be_a_single_file_name() {
+        assert!(ensure_output_path(Path::new("LICENCE-MIT.txt")).is_ok());
+        assert!(ensure_output_path(Path::new("../LICENCE-MIT.txt")).is_err());
+        assert!(ensure_output_path(Path::new("nested/LICENCE-MIT.txt")).is_err());
+    }
 }
