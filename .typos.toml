@@ -1,9 +1,16 @@
+[default]
+[default.extend-words]
+ND = "ND"
+ser = "ser"
+
 [files]
 # tombi: format.rules.array-values-order = "ascending"
 extend-exclude = [
   "**/.mise/**",
   "**/locks/**",
   "*.lock",
+  "data/licences.json",
+  "data/licenses.json",
   "go.sum",
   "npm-shrinkwrap.json",
   "package-lock.json",
