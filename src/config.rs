@@ -22,6 +22,19 @@ pub struct Config {
 
     #[schemars(description = "Sub-directory licence overrides")]
     pub subdirs: Option<Vec<SubdirConfig>>,
+
+    /// Scan exclusions. The local list is added to the shared list.
+    #[schemars(description = "Scan exclusions")]
+    pub scan: Option<ScanConfig>,
+}
+
+/// Directories `scan` skips. Configured subdirectory paths still win on overlap.
+#[derive(Debug, Serialize, Deserialize, Clone, Default, JsonSchema)]
+#[serde(default)]
+pub struct ScanConfig {
+    /// Project-relative directories to skip while scanning.
+    #[schemars(description = "Project-relative directories to skip while scanning")]
+    pub exclude: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -134,6 +147,26 @@ pub fn detect_licence_name() -> String {
         .to_string()
 }
 
+/// Local `[scan] exclude` entries are appended to the shared list.
+fn union_scan(base: Option<ScanConfig>, overriding: Option<ScanConfig>) -> Option<ScanConfig> {
+    match (base, overriding) {
+        (None, None) => None,
+        (Some(base), None) => Some(base),
+        (None, Some(over)) => Some(over),
+        (Some(base), Some(over)) => {
+            let mut exclude = base.exclude.unwrap_or_default();
+            for path in over.exclude.unwrap_or_default() {
+                if !exclude.iter().any(|existing| existing == &path) {
+                    exclude.push(path);
+                }
+            }
+            Some(ScanConfig {
+                exclude: (!exclude.is_empty()).then_some(exclude),
+            })
+        }
+    }
+}
+
 /// Merge two configs: `overriding` values take priority over `base`.
 /// Only `Some` values in `overriding` replace `base`.
 fn merge(base: Config, overriding: Config) -> Config {
@@ -169,6 +202,7 @@ fn merge(base: Config, overriding: Config) -> Config {
         },
         // Subdirs: overriding replaces entirely if present
         subdirs: overriding.subdirs.or(base.subdirs),
+        scan: union_scan(base.scan, overriding.scan),
     }
 }
 
@@ -757,6 +791,7 @@ impl Default for Config {
             default: DefaultConfig::default(),
             template: None,
             subdirs: None,
+            scan: None,
         }
     }
 }
@@ -854,7 +889,7 @@ impl Config {
         let allowed_top = if global {
             &["default", "template"][..]
         } else {
-            &["default", "template", "subdirs"][..]
+            &["default", "template", "subdirs", "scan"][..]
         };
         if let Some(table) = value.as_table() {
             for key in table
@@ -924,6 +959,14 @@ impl Config {
                     }
                 }
             }
+            if let Some(scan) = table.get("scan").and_then(toml::Value::as_table) {
+                for key in scan.keys().filter(|key| *key != "exclude") {
+                    eprintln!(
+                        "Warning: {}: unknown config key `scan.{key}`",
+                        path.display()
+                    );
+                }
+            }
         }
     }
 
@@ -948,6 +991,7 @@ impl Config {
                 default: parsed.default,
                 template: parsed.template,
                 subdirs: None,
+                scan: None,
             }
         } else {
             value
@@ -958,6 +1002,11 @@ impl Config {
         if let Some(entries) = &mut config.subdirs {
             for entry in entries.iter_mut() {
                 entry.path = normalize_subdir_path(&entry.path)?;
+            }
+        }
+        if let Some(exclude) = config.scan.as_mut().and_then(|scan| scan.exclude.as_mut()) {
+            for entry in exclude.iter_mut() {
+                *entry = normalize_subdir_path(entry)?;
             }
         }
         Ok(Some(config))
@@ -1016,6 +1065,16 @@ impl Config {
                         "Invalid config value: {} subdirs[{index}].path = {:?}: {error}",
                         path.display(),
                         entry.path
+                    )
+                })?;
+            }
+        }
+        if let Some(entries) = config.scan.as_ref().and_then(|scan| scan.exclude.as_ref()) {
+            for (index, exclude) in entries.iter().enumerate() {
+                normalize_subdir_path(exclude).map_err(|error| {
+                    anyhow::anyhow!(
+                        "Invalid config value: {} scan.exclude[{index}] = {exclude:?}: {error}",
+                        path.display()
                     )
                 })?;
             }
@@ -1107,6 +1166,29 @@ impl Config {
         let shared = Self::read_config(&dir.join("config.toml"), false)?.unwrap_or_default();
         let local = Self::read_config(&dir.join("config.local.toml"), false)?.unwrap_or_default();
         resolve_layers(&global, &shared, &local, relative)
+    }
+
+    pub(crate) fn load_stacked() -> Result<(PathBuf, Config, Config, Config)> {
+        let root = Self::project_root()?;
+        let cwd = std::env::current_dir().context("Could not determine current directory")?;
+        for warning in child_config_warnings(&root, &cwd, &Self::project_path()?) {
+            eprintln!("{warning}");
+        }
+        let global = Self::read_config(&Self::global_path()?, true)?.unwrap_or_default();
+        let dir = Self::project_config_dir()?;
+        let shared = Self::read_config(&dir.join("config.toml"), false)?.unwrap_or_default();
+        let local = Self::read_config(&dir.join("config.local.toml"), false)?.unwrap_or_default();
+        Ok((root, global, shared, local))
+    }
+
+    pub(crate) fn effective_in(
+        global: &Config,
+        shared: &Config,
+        local: &Config,
+        relative: &str,
+    ) -> Result<Config> {
+        let relative = (!relative.is_empty()).then_some(relative);
+        Ok(resolve_layers(global, shared, local, relative)?.0)
     }
 
     pub fn load_effective(subdir: Option<&str>) -> Result<Self> {
@@ -1334,6 +1416,31 @@ mod tests {
         )
         .unwrap();
         assert!(config.default.author.is_none());
+    }
+
+    #[test]
+    fn local_scan_excludes_add_to_shared() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new());
+        crate::fs::set_global_fs(fs.clone());
+        fs.write_file(
+            "/project/.config/licencify/config.toml",
+            "[scan]\nexclude = ['vendor']\n",
+        );
+        fs.write_file(
+            "/project/.config/licencify/config.local.toml",
+            "[scan]\nexclude = ['build']\n",
+        );
+        let (config, _) = Config::load_project_with_paths(
+            Path::new("/project"),
+            Path::new("/empty-global-config"),
+            Path::new("/project/.config/licencify"),
+        )
+        .unwrap();
+        assert_eq!(
+            config.scan.unwrap().exclude.unwrap(),
+            vec!["vendor".to_string(), "build".to_string()]
+        );
     }
 
     #[test]

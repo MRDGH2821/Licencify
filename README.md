@@ -194,6 +194,22 @@ Options:
   -h, --help  Print help
 ```
 
+## Project licence scan
+
+`licencify scan` reads conventional licence files and explicit README declarations throughout the Git project without changing files. It reports identified text, filename or README claims, and unknown content separately. Confirmed conflicts and unreadable files fail; missing expected licences or directories warn. Git-ignored paths are skipped.
+
+```bash
+licencify scan
+licencify scan MIT # Override the expected primary ID, not additional licences.
+```
+
+Project config may exclude directories; a configured `[[subdirs]]` rule overlapping an exclusion remains scanned and produces a warning:
+
+```toml
+[scan]
+exclude = ["vendor", "build"]
+```
+
 ## Configuration
 
 Licencify supports layered configuration: global, project-level, and per-directory overrides.
