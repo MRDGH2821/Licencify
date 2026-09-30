@@ -20,200 +20,85 @@ pub fn cmd_schema(output: &str) -> Result<()> {
     Ok(())
 }
 
-/// Write schema JSON to the global config dir and (if it exists) alongside
-/// the project config.
-fn write_schema_file() -> Result<()> {
-    let fs = global_fs();
-    let json = Config::schema_json()?;
-
-    // --- global schema ---
-    let global_schema = Config::schema_path()?;
-    if let Some(parent) = global_schema.parent() {
-        fs.create_dir_all(parent)?;
-    }
-    fs.write(&global_schema, &json)?;
-    println!("✅ Schema written: {}", global_schema.display());
-
-    // --- project schema (next to licencify.toml) ---
-    let project_cfg = Config::project_path()?;
-    if fs.exists(&project_cfg) {
-        if let Some(parent) = project_cfg.parent() {
-            let proj_schema = parent.join("licencify-schema.json");
-            fs.write(&proj_schema, &json)?;
-            println!("✅ Schema written: {}", proj_schema.display());
-        }
-    }
-
-    Ok(())
-}
-
-// ─── init ────────────────────────────────────────────────────────────────────
-
 fn cmd_config_init() -> Result<()> {
     let fs = global_fs();
-    let project_path = Config::project_path()?;
-    let global_path = Config::global_path()?;
-
-    // Create global config if it doesn't exist yet
-    if !fs.exists(&global_path) {
-        let global = Config::default();
-        global.save()?;
-        println!("✅ Created global config: {}", global_path.display());
-    }
-
-    // Create project config if it doesn't exist yet
-    if fs.exists(&project_path) {
-        println!("Project config already exists: {}", project_path.display());
-        println!("Use `licencify config show` to view current configuration.");
+    let path = Config::project_path()?;
+    if fs.exists(&path) {
+        println!("Project config already exists: {}", path.display());
         return Ok(());
     }
-
-    let config = Config::default();
-    config.save_to_path(&project_path)?;
-
-    println!("✅ Created project config: {}", project_path.display());
-
-    // Generate schema alongside config
-    write_schema_file()?;
-
-    let detected = config::detect_licence_name();
-    println!();
-    println!("Available settings:");
-    println!("  [default]");
-    println!("    author        Copyright holder name");
-    println!("    license       Default SPDX license ID");
-    println!("    format        Output format (txt or html)");
-    println!("    year          Override copyright year");
-    println!(
-        "    licence_name  File base name: LICENCE or LICENSE (detected: {})",
-        detected
-    );
-    println!();
-    println!("  [template]  (optional)");
-    println!("    paths         Custom template search paths (array)");
-    println!();
-    println!("  [[subdirs]]  (optional)");
-    println!("    path           Relative directory path (required)");
-    println!("    author         Per-subdirectory author override");
-    println!("    license        Per-subdirectory license override");
-    println!();
-    println!("Use `licencify config show` to see the effective (merged) configuration.");
+    Config::default().save_to_path(&path)?;
+    println!("Created project config: {}", path.display());
     Ok(())
 }
-
-// ─── show ────────────────────────────────────────────────────────────────────
 
 fn cmd_config_show() -> Result<()> {
     let fs = global_fs();
     let global_path = Config::global_path()?;
     let project_path = Config::project_path()?;
-
-    let global_exists = fs.exists(&global_path);
-    let project_exists = fs.exists(&project_path);
-
-    // File locations
+    let local_path = Config::local_path()?;
     println!(
-        "Global config:  {} {}",
-        if global_exists { "✓" } else { "✗" },
+        "Global config: {} {}",
+        if fs.exists(&global_path) {
+            "✓"
+        } else {
+            "✗"
+        },
         global_path.display()
     );
     println!(
         "Project config: {} {}",
-        if project_exists { "✓" } else { "✗" },
+        if fs.exists(&project_path) {
+            "✓"
+        } else {
+            "✗"
+        },
         project_path.display()
     );
-    println!();
-
-    if !global_exists && !project_exists {
-        println!("No config files found. Run `licencify config init` to create one.");
-        return Ok(());
-    }
-
-    // Effective (merged + subdir) values
+    println!(
+        "Local config: {} {}",
+        if fs.exists(&local_path) { "✓" } else { "✗" },
+        local_path.display()
+    );
     let config = Config::load_effective(None)?;
-    let detected = config::detect_licence_name();
-
     println!("[default]");
     println!(
-        "  author        = {}",
+        "  author = {}",
         config.default.author.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  license       = {}",
+        "  company = {}",
+        config.default.company.as_deref().unwrap_or("(not set)")
+    );
+    println!(
+        "  email = {}",
+        config.default.email.as_deref().unwrap_or("(not set)")
+    );
+    println!(
+        "  licence = {}",
         config.default.license.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  format        = {}",
+        "  format = {}",
         config.default.format.as_deref().unwrap_or("(not set)")
     );
     println!(
-        "  year          = {}",
+        "  year = {}",
         config.default.year.as_deref().unwrap_or("(not set)")
     );
+    println!("  update_readme = {:?}", config.default.update_readme);
     println!(
-        "  licence_name  = {} (detected: {})",
+        "  additional-licences = {:?}",
+        config.default.additional_licences
+    );
+    println!(
+        "  licence_file_name = {}",
         config
             .default
             .licence_name
             .as_deref()
-            .unwrap_or("(not set)"),
-        detected
+            .unwrap_or("(not set)")
     );
-    println!();
-
-    // [template]
-    println!("[template]");
-    match &config.template {
-        Some(template) => match &template.paths {
-            Some(paths) if !paths.is_empty() => {
-                println!("  paths =");
-                for (i, p) in paths.iter().enumerate() {
-                    println!("    [{}] {}", i, p);
-                }
-            }
-            _ => {
-                println!("  paths = (not set)");
-            }
-        },
-        None => {
-            println!("  (section not configured)");
-        }
-    }
-    println!();
-
-    // [[subdirs]] — only relevant when a project config is present
-    if project_exists {
-        println!("[[subdirs]]");
-        match &config.subdirs {
-            Some(subdirs) if !subdirs.is_empty() => {
-                for (i, subdir_cfg) in subdirs.iter().enumerate() {
-                    if i > 0 {
-                        println!("[[subdirs]]");
-                    }
-                    println!("path        = \"{}\"", subdir_cfg.path);
-                    if let Some(author) = &subdir_cfg.author {
-                        println!("author      = \"{}\"", author);
-                    }
-                    if let Some(license) = &subdir_cfg.license {
-                        println!("license     = \"{}\"", license);
-                    }
-                    if let Some(format) = &subdir_cfg.format {
-                        println!("format      = \"{}\"", format);
-                    }
-                    if let Some(year) = &subdir_cfg.year {
-                        println!("year        = \"{}\"", year);
-                    }
-                    if let Some(licence_name) = &subdir_cfg.licence_name {
-                        println!("licence_name = \"{}\"", licence_name);
-                    }
-                }
-            }
-            _ => {
-                println!("  (no sub-directory overrides)");
-            }
-        }
-    }
-
     Ok(())
 }
 
