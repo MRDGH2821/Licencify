@@ -18,6 +18,8 @@ pub enum LicenseFormat {
     Txt,
     /// HTML (licenseTextHtml)
     Html,
+    /// Markdown (converted from licenseTextHtml)
+    Md,
 }
 
 impl fmt::Display for LicenseFormat {
@@ -25,6 +27,7 @@ impl fmt::Display for LicenseFormat {
         match self {
             LicenseFormat::Txt => write!(f, "txt"),
             LicenseFormat::Html => write!(f, "html"),
+            LicenseFormat::Md => write!(f, "md"),
         }
     }
 }
@@ -52,7 +55,7 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
@@ -118,7 +121,7 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
@@ -127,7 +130,7 @@ pub enum Commands {
         update_readme: bool,
     },
 
-    /// Manage local template cache
+    /// Manage the global SPDX detail cache
     Cache {
         #[command(subcommand)]
         action: CacheAction,
@@ -149,7 +152,7 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum CacheAction {
-    /// Clear all cached templates
+    /// Clear all cached SPDX details
     Clear,
 
     /// Show cache directory location and size
