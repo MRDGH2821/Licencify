@@ -55,6 +55,22 @@ pub fn resolve_context(
     })
 }
 
+/// Stored licence id for configuration and manifests.
+///
+/// `proprietary` stays `proprietary`. A provider label of `UNLICENSED` is the
+/// older display alias and is not written back into configuration.
+pub fn canonical_licence_id(requested: &str, provider_id: &str) -> String {
+    if is_proprietary_id(requested) || is_proprietary_id(provider_id) {
+        "proprietary".to_string()
+    } else {
+        provider_id.to_string()
+    }
+}
+
+fn is_proprietary_id(spdx_id: &str) -> bool {
+    spdx_id.eq_ignore_ascii_case("proprietary") || spdx_id.eq_ignore_ascii_case("UNLICENSED")
+}
+
 /// Resolve custom, SPDX detail, and bundled templates in source and format order.
 pub fn resolve_template(
     spdx_id: &str,
@@ -63,16 +79,18 @@ pub fn resolve_template(
     format: &LicenseFormat,
 ) -> anyhow::Result<ResolvedTemplate> {
     validate_template_id(spdx_id)?;
-    let proprietary = spdx_id.eq_ignore_ascii_case("proprietary");
+    reject_proprietary_extras(spdx_id, config)?;
+    let proprietary = is_proprietary_id(spdx_id);
+    let template_id = if proprietary { "proprietary" } else { spdx_id };
     let html_format = !matches!(format, LicenseFormat::Txt);
     let template_format = if html_format { "html" } else { "txt" };
 
-    if let Some((text, source)) = find_custom_template(spdx_id, template_format, config)? {
+    if let Some((text, source)) = find_custom_template(template_id, template_format, config)? {
         return Ok(resolved(text, source, format));
     }
 
     if proprietary {
-        return resolve_bundled_or_fallback(spdx_id, format);
+        return resolve_bundled_or_fallback(template_id, format, config);
     }
 
     let owned_provider;
@@ -160,6 +178,21 @@ fn resolved(text: String, source: String, format: &LicenseFormat) -> ResolvedTem
     }
 }
 
+fn reject_proprietary_extras(spdx_id: &str, config: Option<&Config>) -> anyhow::Result<()> {
+    let Some(config) = config else {
+        return Ok(());
+    };
+    let extras = config.default.additional_licences.as_deref().unwrap_or(&[]);
+    let requested_proprietary = is_proprietary_id(spdx_id);
+    let extra_proprietary = extras.iter().any(|id| is_proprietary_id(id));
+    if extra_proprietary || (requested_proprietary && !extras.is_empty()) {
+        anyhow::bail!(
+            "Invalid effective configuration: proprietary cannot be combined with open-source additional licences"
+        );
+    }
+    Ok(())
+}
+
 fn validate_template_id(spdx_id: &str) -> anyhow::Result<()> {
     anyhow::ensure!(
         !spdx_id.is_empty()
@@ -245,12 +278,16 @@ fn bundled_template(spdx_id: &str, format: &str) -> Option<String> {
 fn resolve_bundled_or_fallback(
     spdx_id: &str,
     format: &LicenseFormat,
+    config: Option<&Config>,
 ) -> anyhow::Result<ResolvedTemplate> {
     if !matches!(format, LicenseFormat::Txt) {
         if let Some(text) = bundled_template(spdx_id, "html") {
             return Ok(resolved(text, "built-in".to_string(), format));
         }
         eprintln!("Warning: no HTML template for {spdx_id}; writing plain text instead.");
+        if let Some((text, source)) = find_custom_template(spdx_id, "txt", config)? {
+            return Ok(resolved(text, source, &LicenseFormat::Txt));
+        }
     }
     if let Some(text) = bundled_template(spdx_id, "txt") {
         return Ok(resolved(text, "built-in".to_string(), &LicenseFormat::Txt));
@@ -388,5 +425,87 @@ mod tests {
 
         assert!(resolved.text.contains("All Rights Reserved"));
         assert_eq!(resolved.source, "built-in");
+    }
+
+    #[test]
+    fn canonical_licence_id_keeps_proprietary() {
+        assert_eq!(
+            canonical_licence_id("proprietary", "UNLICENSED"),
+            "proprietary"
+        );
+        assert_eq!(canonical_licence_id("MIT", "MIT"), "MIT");
+    }
+
+    #[test]
+    fn proprietary_project_template_ignores_spdx_cache() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new());
+        let project_dir = project_template_dir().unwrap();
+        fs.write_file(project_dir.join("proprietary.tera"), "project notice");
+        fs.write_file(
+            "/cache/proprietary.json",
+            r#"{"licenseId":"proprietary","name":"Cached","licenseText":"cached notice","licenseTextHtml":"<p>cached html</p>"}"#,
+        );
+        crate::fs::set_global_fs(fs);
+        let provider = LicenseProvider::with_spdx_cache(Path::new("/cache")).unwrap();
+
+        let resolved =
+            resolve_template("proprietary", None, Some(&provider), &LicenseFormat::Txt).unwrap();
+        assert_eq!(resolved.text, "project notice");
+        assert!(resolved.source.starts_with("project custom"));
+    }
+
+    #[test]
+    fn proprietary_global_then_bundled_ignore_spdx_cache() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new());
+        let project_dir = project_template_dir().unwrap();
+        let global_dir = dirs::config_dir()
+            .unwrap()
+            .join("licencify")
+            .join("templates");
+        if project_dir == global_dir {
+            return;
+        }
+        fs.write_file(
+            global_dir.join("proprietary.html.tera"),
+            "<p>global notice</p>",
+        );
+        fs.write_file(
+            "/cache/proprietary.json",
+            r#"{"licenseId":"proprietary","name":"Cached","licenseText":"cached notice","licenseTextHtml":"<p>cached html</p>"}"#,
+        );
+        crate::fs::set_global_fs(fs.clone());
+        let provider = LicenseProvider::with_spdx_cache(Path::new("/cache")).unwrap();
+
+        let html =
+            resolve_template("proprietary", None, Some(&provider), &LicenseFormat::Html).unwrap();
+        assert_eq!(html.text, "<p>global notice</p>");
+        assert!(html.source.starts_with("global custom"));
+
+        fs.remove_file(&global_dir.join("proprietary.html.tera"))
+            .unwrap();
+        let bundled =
+            resolve_template("proprietary", None, Some(&provider), &LicenseFormat::Txt).unwrap();
+        assert!(bundled.text.contains("All Rights Reserved"));
+        assert!(!bundled.text.contains("cached notice"));
+        assert_eq!(bundled.source, "built-in");
+    }
+
+    #[test]
+    fn proprietary_cannot_combine_with_open_source_extras() {
+        let mut config = Config::default();
+        config.default.additional_licences = Some(vec!["Apache-2.0".into()]);
+        let error = resolve_template("proprietary", Some(&config), None, &LicenseFormat::Txt)
+            .err()
+            .expect("proprietary extras rejected");
+        assert!(error.to_string().contains("proprietary"), "{error}");
+
+        config.default.license = Some("MIT".into());
+        config.default.additional_licences = Some(vec!["proprietary".into()]);
+        let error = resolve_template("MIT", Some(&config), None, &LicenseFormat::Txt)
+            .err()
+            .expect("proprietary extra rejected");
+        assert!(error.to_string().contains("proprietary"), "{error}");
     }
 }

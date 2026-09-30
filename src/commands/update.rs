@@ -10,6 +10,7 @@ pub fn cmd_update(
     yes: bool,
     permit_promotion: bool,
     update_readme: bool,
+    no_file: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
@@ -17,6 +18,7 @@ pub fn cmd_update(
     resolution::resolve_author(author.clone(), Some(&config))?;
     let spdx = super::generate::selected_licence_id(Some(spdx), None, true)?;
     let info = prov.info(&spdx)?;
+    let recorded = resolution::canonical_licence_id(&spdx, &info.id);
     let ctx = resolution::resolve_context(
         &spdx,
         author,
@@ -39,7 +41,7 @@ pub fn cmd_update(
         yes,
         &format!(
             "About to replace the primary licence with {} ({}). Continue? [Y/n] ",
-            info.name, info.id
+            info.name, recorded
         ),
         true,
     )? {
@@ -47,23 +49,27 @@ pub fn cmd_update(
         return Ok(());
     }
 
-    let saved = super::generate::commit_primary(&plan, &info.id, &ctx.author)?;
-    if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
-        println!("✅ Updated proprietary notice as {}", plan.path.display());
+    if no_file {
+        println!("Skipped licence file writes (--no-file).");
     } else {
-        println!(
-            "✅ Updated {} ({}) [from {}] as {}",
-            info.name,
-            info.id,
-            plan.template_source,
-            plan.path.display()
-        );
-    }
-    if saved {
-        println!("   Updated project config defaults");
+        let saved = super::generate::commit_primary(&plan, &recorded, &ctx.author)?;
+        if recorded == "proprietary" {
+            println!("✅ Updated proprietary notice as {}", plan.path.display());
+        } else {
+            println!(
+                "✅ Updated {} ({}) [from {}] as {}",
+                info.name,
+                recorded,
+                plan.template_source,
+                plan.path.display()
+            );
+        }
+        if saved {
+            println!("   Updated project config defaults");
+        }
     }
 
-    match project::update_manifest(&info.id, &ctx.author, &ctx.year) {
+    match project::update_manifest(&recorded, &ctx.author, &ctx.year) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
         }
@@ -73,7 +79,7 @@ pub fn cmd_update(
         }
     }
 
-    if update_readme {
+    if update_readme && !no_file {
         match crate::readme::update_readme(&info.id) {
             Ok(true) => {}
             Ok(false) => {
@@ -112,6 +118,7 @@ mod tests {
             format,
             true,
             permit_promotion,
+            false,
             false,
         )
     }
@@ -158,6 +165,7 @@ mod tests {
             None,
             LicenseFormat::Txt,
             true,
+            false,
             false,
             false,
         );

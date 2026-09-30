@@ -11,6 +11,7 @@ pub fn cmd_add(
     yes: bool,
     permit_promotion: bool,
     update_readme: bool,
+    no_file: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
@@ -19,6 +20,7 @@ pub fn cmd_add(
     let spdx =
         super::generate::selected_licence_id(spdx, config.default.license.as_deref(), false)?;
     let info = prov.info(&spdx)?;
+    let recorded = resolution::canonical_licence_id(&spdx, &info.id);
     let ctx = resolution::resolve_context(
         &spdx,
         author,
@@ -38,7 +40,7 @@ pub fn cmd_add(
         super::generate::plan_primary(&ctx, &spdx, &info.id, &additional, permit_promotion, false)?;
 
     if !yes && std::io::stdin().is_terminal() {
-        println!("About to add license: {} ({})", info.name, info.id);
+        println!("About to add license: {} ({})", info.name, recorded);
         println!("  Author:  {}", ctx.author);
         if let Some(ref company) = ctx.company {
             println!("  Company: {}", company);
@@ -53,35 +55,39 @@ pub fn cmd_add(
         println!("Aborted.");
         return Ok(());
     }
-    let fs = global_fs();
-    if fs.exists(&plan.path)
-        && !super::generate::confirm_proceed(
-            yes,
-            &format!("{} exists. Overwrite? [y/N] ", plan.path.display()),
-            false,
-        )?
-    {
-        println!("Aborted.");
-        return Ok(());
-    }
-
-    let saved = super::generate::commit_primary(&plan, &info.id, &ctx.author)?;
-    if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
-        println!("✅ Added proprietary notice as {}", plan.path.display());
+    if no_file {
+        println!("Skipped licence file writes (--no-file).");
     } else {
-        println!(
-            "✅ Added {} ({}) [from {}] as {}",
-            info.name,
-            info.id,
-            plan.template_source,
-            plan.path.display()
-        );
-    }
-    if saved {
-        println!("   Updated project config defaults");
+        let fs = global_fs();
+        if fs.exists(&plan.path)
+            && !super::generate::confirm_proceed(
+                yes,
+                &format!("{} exists. Overwrite? [y/N] ", plan.path.display()),
+                false,
+            )?
+        {
+            println!("Aborted.");
+            return Ok(());
+        }
+
+        let saved = super::generate::commit_primary(&plan, &recorded, &ctx.author)?;
+        if recorded == "proprietary" {
+            println!("✅ Added proprietary notice as {}", plan.path.display());
+        } else {
+            println!(
+                "✅ Added {} ({}) [from {}] as {}",
+                info.name,
+                recorded,
+                plan.template_source,
+                plan.path.display()
+            );
+        }
+        if saved {
+            println!("   Updated project config defaults");
+        }
     }
 
-    match project::update_manifest(&info.id, &ctx.author, &ctx.year) {
+    match project::update_manifest(&recorded, &ctx.author, &ctx.year) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
         }
@@ -91,7 +97,7 @@ pub fn cmd_add(
         }
     }
 
-    if update_readme {
+    if update_readme && !no_file {
         match crate::readme::update_readme(&info.id) {
             Ok(true) => {}
             Ok(false) => {
@@ -126,6 +132,7 @@ mod tests {
             true,
             false,
             false,
+            false,
         )
     }
 
@@ -155,6 +162,8 @@ mod tests {
             "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
         )
         .unwrap();
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(&config, "[default]\nlicence = \"MIT\"\n").unwrap();
         let result = cmd_add(
             Some("proprietary"),
             Some("Acme Corp".into()),
@@ -165,12 +174,97 @@ mod tests {
             true,
             false,
             false,
+            false,
         );
         assert!(
             result.is_ok(),
             "cmd_add proprietary failed: {:?}",
             result.err()
         );
+        let saved = fs.read_to_string(&config).unwrap_or_default();
+        assert!(saved.contains("proprietary"), "{saved}");
+        assert!(
+            !saved.to_ascii_lowercase().contains("unlicensed"),
+            "{saved}"
+        );
+        let cargo = fs
+            .read_to_string(std::path::Path::new("Cargo.toml"))
+            .unwrap();
+        assert!(cargo.contains("publish = false"), "{cargo}");
+        assert!(cargo.contains("license-file"), "{cargo}");
+        assert!(!cargo.contains("UNLICENSED"), "{cargo}");
+        assert!(!cargo.contains("proprietary"), "{cargo}");
+    }
+
+    #[test]
+    fn no_file_proprietary_does_not_reference_a_missing_notice() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\nlicense = \"MIT\"\n",
+        )
+        .unwrap();
+        let result = cmd_add(
+            Some("proprietary"),
+            Some("Acme Corp".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            true,
+            false,
+            false,
+            true,
+        );
+        assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
+        assert!(!fs.exists(std::path::Path::new("LICENCE.txt")));
+        let cargo = fs
+            .read_to_string(std::path::Path::new("Cargo.toml"))
+            .unwrap();
+        assert!(cargo.contains("license = \"MIT\""), "{cargo}");
+        assert!(!cargo.contains("license-file"), "{cargo}");
+        assert!(!cargo.contains("publish"), "{cargo}");
+        assert!(!cargo.contains("UNLICENSED"), "{cargo}");
+    }
+
+    #[test]
+    fn no_file_proprietary_uses_existing_notice() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\nlicense = \"MIT\"\n",
+        )
+        .unwrap();
+        fs.write(std::path::Path::new("LICENCE.txt"), "keep this notice\n")
+            .unwrap();
+        let result = cmd_add(
+            Some("proprietary"),
+            Some("Acme Corp".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            true,
+            false,
+            false,
+            true,
+        );
+        assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
+        assert_eq!(
+            fs.read_to_string(std::path::Path::new("LICENCE.txt"))
+                .as_deref(),
+            Some("keep this notice\n")
+        );
+        let cargo = fs
+            .read_to_string(std::path::Path::new("Cargo.toml"))
+            .unwrap();
+        assert!(cargo.contains("publish = false"), "{cargo}");
+        assert!(cargo.contains("license-file = \"LICENCE.txt\""), "{cargo}");
+        assert!(!cargo.contains("UNLICENSED"), "{cargo}");
     }
 
     #[test]
@@ -191,6 +285,7 @@ mod tests {
             Some("2024".into()),
             LicenseFormat::Txt,
             true,
+            false,
             false,
             false,
         );
@@ -223,6 +318,7 @@ mod tests {
             true,
             false,
             false,
+            false,
         );
         assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
         let text = fs
@@ -249,6 +345,7 @@ mod tests {
             true,
             false,
             false,
+            false,
         );
         assert!(result.is_err());
         assert_eq!(
@@ -273,6 +370,7 @@ mod tests {
             None,
             LicenseFormat::Txt,
             true,
+            false,
             false,
             false,
         );
