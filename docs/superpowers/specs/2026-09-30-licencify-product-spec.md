@@ -9,7 +9,7 @@ Licencify is a command-line tool for selecting an open-source licence, rendering
 ## Goals
 
 - Make licence discovery and metadata lookup available offline.
-- Generate plain-text or HTML licence files with user/project-specific copyright details.
+- Generate plain-text, HTML, or Markdown licence files with user/project-specific copyright details.
 - Support common licences offline and broader SPDX coverage online.
 - Apply project defaults consistently across global, project, and subdirectory configuration.
 - Update project manifests safely when requested.
@@ -26,13 +26,14 @@ Licencify is a command-line tool for selecting an open-source licence, rendering
 
 ### Add and update
 
-1. `licencify add <ID>` generates a licence for the current project; `licencify update <ID>` replaces the existing licence using the same rendering and metadata rules.
-2. Both commands support author, company, email, year, and `txt`/`html` format options. Defaults may come from configuration; author resolution may use Git configuration. Missing required values produce an actionable error.
+1. `licencify add [ID]` generates a licence for the current project; an omitted ID uses the resolved `licence` setting, and absence of both is an error. `licencify update <ID>` requires an explicit replacement ID. Both commands use the same rendering and metadata rules.
+2. Both commands accept explicit author, company, email, year, and `txt`/`html`/`md` format options. An explicitly supplied CLI value overrides every configuration layer.
+   Unset format falls back to `txt`; unset year uses the current year, company defaults to author, email is empty, README updates default to false, and the filename convention defaults to the detected locale. An unresolved author is an actionable error.
 3. Supported template variables are `year`, `author`, `company`, `email`, and `date`. SPDX placeholders used in source text are rendered when recognized; unrecognized placeholders are not silently erased.
-4. Plain-text output is based on SPDX-authoritative text where available. Built-in templates remain available without network access. Custom templates use the configured template paths and the documented `<spdx-id>.tera` / `<spdx-id>.html.tera` naming convention.
+4. Plain-text output uses the template source order specified below. Custom templates use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML. Markdown output converts rendered HTML to Markdown while preserving visible licence wording. If no HTML source exists for requested `md` or `html`, warn and write plain text with a `.txt` extension instead; fail if no plain-text source exists either.
 5. Before replacing an existing licence file, the command follows an explicit confirmation policy. A non-interactive/scripted invocation must not block waiting for input; `--yes` uses defaults and skips prompts.
-6. Output naming respects the configured `LICENCE`/`LICENSE` convention and selected format.
-7. The commands report which file was written, the selected licence, and any manifest/readme updates or skipped operations.
+6. Output naming respects `licence_file_name = "licence"` or `"license"` (case-insensitive), rendered as uppercase `LICENCE` or `LICENSE`, and the actual output format's extension.
+7. The commands report which file was written, the selected licence, and any manifest/readme updates or skipped operations. With `--verbose`, report each resolved setting's source (CLI, config file and matching rule, or fallback) without printing its value.
 
 ### Detection
 
@@ -43,41 +44,28 @@ Licencify is a command-line tool for selecting an open-source licence, rendering
 
 ### Configuration
 
-1. Merge configuration from least to most specific: global user config, all project config files from project root to the current directory, then explicit CLI values. Merge fields across files; a later file overrides only fields it defines, and unspecified fields inherit.
-2. If `PRJ_ROOT` is set, it MUST be an absolute path and MUST override project-root discovery. Otherwise, discovery walks upward from the current directory for the nearest `.config` directory, then falls back to the Git worktree root; if neither exists, the current directory is the project root.
-3. If `PRJ_CONFIG_HOME` is set, use it instead of `$PRJ_ROOT/.config` for the project-root grouped config paths.
-4. Within each directory, merge these files in order: root-level legacy `.licencify.toml` (project root only), `licencify.toml`, `.config/licencify.toml`, `.config/licencify/config.toml`, then `licencify.local.toml`. `.config/licencify/config.toml` is the preferred shared config variant; `licencify.local.toml` is the local override and is intended to remain uncommitted.
-5. Process directories from `$PRJ_ROOT` down to the current working directory. Child directory values override parent values. Subdirectory configuration uses nested config files, not a `[subdirs]` table.
-6. Global configuration at `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform config directory equivalent) remains the least-specific fallback. This preserves existing behavior while supporting project-portable configuration; PRJ_SPEC recommends but does not require avoiding user-level configuration.
-7. Configuration covers licence ID, author, format, year, licence filename convention, template paths, and the optional README-update default.
-8. `config init` creates the intended config without overwriting an existing file. `config show` identifies loaded config files and effective values. `config set` writes to the agreed configuration layer. `schema` writes a JSON schema to the requested path.
-9. Invalid or unreadable configuration must be reported; it must not silently become empty defaults.
+1. Select the project root from an absolute `PRJ_ROOT` when set, otherwise the Git worktree root, otherwise the highest ancestor containing a project config, otherwise the current directory. `PRJ_CONFIG_HOME`, when set, replaces `$PRJ_ROOT/.config` as the project config directory.
+2. Load global defaults from `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform equivalent), then the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml`, then its optional `config.local.toml`. The local file is intended to remain uncommitted. Legacy root-level config filenames are not loaded.
+3. Only root project config files are loaded. When invoked from a child directory containing a Licencify config file on the path from the root to the current directory, warn that it was ignored and recommend merging it into the root shared config. Do not search the whole project tree for child configs.
+4. `[default]` supports optional `author`, `company`, `email`, `year`, `licence`, `format`, `update_readme`, and `licence_file_name`. Project files may additionally contain `[[subdirs]]` entries with a required `path` and optional overrides for any of these fields; global `[[subdirs]]` entries are invalid.
+   Subdir paths are normalized relative to the project root, cannot escape it, and match only complete path components.
+5. Resolve fields in this order, lowest to highest: global defaults; shared project defaults; matching shared subdirs from shallowest to deepest; local project defaults; matching local subdirs from shallowest to deepest; explicit CLI options.
+   Later sources override only fields they specify. Entries for the same normalized path in shared and local files contribute only their explicit fields at their respective precedence positions. A local default therefore overrides a shared subdir value; a local subdir can override it again.
+6. If a required licence or author remains unresolved after CLI and configuration lookup, report an actionable error. Missing optional fields use the fallbacks specified under Add and update; neither a global config file nor every optional field is mandatory. Invalid or unreadable config is an error rather than an empty fallback.
+7. `config init` creates only the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml` without overwriting it; it does not create the global or local file. `config show` identifies loaded files and effective values.
+   `add` retains its existing behavior of writing the selected licence, author, and format back to the root shared config when that file exists; it does not write to a child or local file. `schema` writes a JSON schema to the requested path.
 
-Config loading precedence (lowest to highest):
+Config and template locations:
 
 ```text
-Global
-└── $XDG_CONFIG_HOME/licencify/config.toml
-    (or platform config-directory equivalent)
-    │
-    └── $PRJ_ROOT/
-        ├── .licencify.toml                  # legacy; root only
-        ├── licencify.toml
-        ├── .config/licencify.toml
-        ├── .config/licencify/config.toml    # preferred shared config
-        ├── licencify.local.toml             # local override
-        │
-        └── <child>/                         # same order at each level
-            ├── licencify.toml
-            ├── .config/licencify.toml
-            ├── .config/licencify/config.toml
-            ├── licencify.local.toml
-            └── ... <current directory>
-                │
-                └── CLI options              # highest precedence
+Global:  $XDG_CONFIG_HOME/licencify/config.toml
+         $XDG_CONFIG_HOME/licencify/templates/*.tera
+Project: ${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml
+         ${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.local.toml
+         ${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/templates/*.tera
 ```
 
-At the project root, `PRJ_CONFIG_HOME` replaces `$PRJ_ROOT/.config` for the grouped variants: `$PRJ_CONFIG_HOME/licencify.toml`, then `$PRJ_CONFIG_HOME/licencify/config.toml`. Load every existing file in precedence order; do not stop at the first match.
+For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/api"`; a matching `path = "docs"` provides inherited fields unless a more-specific entry overrides them.
 
 ### Templates, cache, and network
 
@@ -85,11 +73,12 @@ At the project root, `PRJ_CONFIG_HOME` replaces `$PRJ_ROOT/.config` for the grou
 2. Cache location follows PRJ Base Directory Specification v0.1: an absolute `PRJ_CACHE_HOME` environment value takes precedence. Otherwise, use `${XDG_CACHE_HOME:-$HOME/.cache}/prj/$PRJ_ID` when `PRJ_ID` is available; otherwise use `$PRJ_ROOT/.cache`.
 3. `PRJ_ID` is taken from its environment variable when set; otherwise Licencify reads `prj_id` in the effective project config home, if present, and strips trailing whitespace. It must match `^[A-Za-z0-9_-]{0,32}$`; an invalid value is an error. `XDG_CACHE_HOME` defaults to `$HOME/.cache` when unset.
 4. Licencify stores its cache data under `$PRJ_CACHE_HOME/licencify/`, keeping it separate from other tools' project cache data. When no project identifier exists, that path is project-local under `$PRJ_ROOT/.cache/licencify/`.
-5. On an SPDX detail cache hit, use the cached detail without a network request. On a miss, fetch the detail and cache the successful response. Cached detail remains available until `cache clear`; this specification defines no time-based expiry.
+5. On an SPDX detail cache hit, use that detail without a network request; if its HTML field is absent, continue to bundled HTML or the plain-text fallback rather than refetching the same detail. On a cache miss, fetch the detail and cache the successful response. Cached detail remains available until `cache clear`; this specification defines no time-based expiry.
 6. A cache write failure does not discard a successfully fetched response. A network failure may fall back to a built-in template where available; otherwise report an actionable error.
 7. `cache info` reports the resolved Licencify cache directory and size. `cache clear` removes only `$PRJ_CACHE_HOME/licencify/`; clearing the cache must not delete configuration or other project data.
 8. Built-in templates provide an offline generation path for the supported common licences.
-9. Template sources and their precedence must be deterministic. The intended source categories are configured custom templates, embedded templates, cached SPDX detail, and fetched SPDX detail; their exact precedence is a review decision (see Open decisions).
+9. For each requested format, search project templates, global templates, cached SPDX detail, fetched SPDX detail on a cache miss, then bundled templates, in that order. HTML and Markdown use the SPDX detail's `licenseTextHtml` only when present; plain text uses `licenseText`.
+   A custom template wins even when SPDX detail is already cached. A failed fetch may still use a bundled template. Missing HTML follows the warned `.txt` fallback above. A template that exists but cannot be read or rendered fails visibly rather than silently selecting another source.
 
 ### Manifest integration
 
@@ -145,19 +134,15 @@ proposed target behavior, not verified implementation status.
 
 Primary source plans reviewed: `001`–`005`, `2026-06-18_180000-licencify-cli-design.md`, `2026-06-18_182000-spdx-integration-analysis.md`, `2026-06-18_183503-remaining-features.md`, `2026-06-19_0001-global-project-config-plan.md`, `2026-06-19_164138-proprietary-no-licence.md`, `2026-06-19_170000-licence-html-format-research.md`, and `2026-06-30_162000-readme-license-badge.md`.
 
-Project and cache path conventions follow [PRJ Base Directory Specification v0.1](https://github.com/numtide/prj-spec/blob/main/PRJ_SPEC.md), which is marked unstable. Configuration layering follows mise's parent-to-child merge model ([mise configuration docs](https://mise.jdx.dev/configuration.html)): later, more-specific files override values set earlier. Global user configuration is retained as a compatibility fallback; PRJ_SPEC recommends but does not require avoiding user-level config.
+Project and cache path conventions follow [PRJ Base Directory Specification v0.1](https://github.com/numtide/prj-spec/blob/main/PRJ_SPEC.md), which is marked unstable. Configuration uses one root shared file, one optional local override, and project-relative subdir rules rather than nested config files. Global user defaults remain optional.
 
 ## Open decisions for review
 
-1. **Template source precedence:** The README says custom templates are checked before built-ins and SPDX is a fallback. Plans additionally specify a disk cache and disagree on whether built-ins or fetched SPDX content take precedence. Confirm one order, including how offline mode behaves.
-2. **SPDX refresh/versioning:** Confirm whether the embedded index is the only index used for validation, whether an `update-index` command is required, and which SPDX release/tag is authoritative for embedded text.
-3. **Configuration path compatibility:** Confirm whether root-level legacy `.licencify.toml` should remain supported alongside the preferred `.config/licencify/config.toml` path.
-4. **Configuration writes:** Confirm whether `config init` creates project config by default, whether a `--global` option is needed, and whether `config set` should exist and always write globally.
-5. **Manifest update default:** The source plans conflict between opt-in per manifest and automatic updates. Confirm the default and whether a separate flag/config switch is required. Confirm npm `private = true` behavior for `UNLICENSED`.
-6. **HTML output contract:** One proposal uses SPDX `licenseTextHtml`; another builds self-contained HTML documents around plain text in `<pre>`. Confirm output source/structure and whether it must include a document title. Also confirm whether exact plain-text line wrapping to a pinned SPDX release is required.
-7. **Proprietary behavior:** Confirm that `add proprietary` creates the notice by default, whether `--no-file` works for all licences, and whether the optional `remove` command belongs in scope.
-8. **README update CLI semantics:** Confirm explicit enable/disable flag names and precedence. The plan's boolean handling does not clearly represent “unset” versus “explicit false,” which is required to override a true config default.
-9. **Custom templates vs remote registries:** Confirm that custom templates remain local paths only and that GitHub/custom remote registries are out of scope.
+1. **SPDX refresh/versioning:** Confirm whether the embedded index is the only index used for validation, whether an `update-index` command is required, and which SPDX release/tag is authoritative for embedded text.
+2. **Configuration writes:** Confirm whether `config set` should exist and which layer an explicit set command should write.
+3. **Manifest update default:** The source plans conflict between opt-in per manifest and automatic updates. Confirm the default and whether a separate flag/config switch is required. Confirm npm `private = true` behavior for `UNLICENSED`.
+4. **Proprietary behavior:** Confirm that `add proprietary` creates the notice by default, whether `--no-file` works for all licences, and whether the optional `remove` command belongs in scope.
+5. **Custom templates vs remote registries:** Confirm that custom templates remain local paths only and that GitHub/custom remote registries are out of scope.
 
 ## Acceptance criteria for the consolidated product
 
@@ -165,7 +150,7 @@ Project and cache path conventions follow [PRJ Base Directory Specification v0.1
 - An online user can generate licences beyond the embedded set, with fetched data cached and reusable.
 - Add/update use the same source selection, rendering, naming, prompting, and manifest rules.
 - Detection distinguishes supported licences without generic-phrase false positives and recognizes the proprietary notice.
-- Configuration sources merge deterministically from global defaults through project-root and nested-directory files to CLI overrides. A child-directory config overrides its parent without relying on string-prefix path matching.
+- Configuration resolves deterministically from optional global defaults through the root shared file, matching subdir rules, and the root local override to explicit CLI values; child config files are ignored with a warning.
 - Optional README updates do not duplicate existing licence content and link to the output actually produced.
 - Failures affecting files, manifests, configuration, or network lookup are visible and do not produce misleading success output.
 - CLI docs and tests cover the confirmed behavior and its user-visible failure cases.
