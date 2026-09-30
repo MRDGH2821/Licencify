@@ -43,6 +43,7 @@ pub fn main() -> anyhow::Result<()> {
             yes,
             permit_promotion,
             update_readme,
+            no_file,
         } => commands::cmd_add(
             spdx.as_deref(),
             author,
@@ -53,6 +54,7 @@ pub fn main() -> anyhow::Result<()> {
             yes,
             permit_promotion,
             update_readme,
+            no_file,
         ),
         Commands::List {
             osi_only,
@@ -76,6 +78,7 @@ pub fn main() -> anyhow::Result<()> {
             yes,
             permit_promotion,
             update_readme,
+            no_file,
         } => commands::cmd_update(
             &spdx,
             author,
@@ -86,6 +89,7 @@ pub fn main() -> anyhow::Result<()> {
             yes,
             permit_promotion,
             update_readme,
+            no_file,
         ),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),

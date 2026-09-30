@@ -87,6 +87,10 @@ pub enum Commands {
         /// Update README with license badge (if README exists)
         #[arg(long)]
         update_readme: bool,
+
+        /// Skip writing every licence file, including additional licences
+        #[arg(long)]
+        no_file: bool,
     },
 
     /// List available licenses
@@ -163,6 +167,10 @@ pub enum Commands {
         /// Update README with license badge (if README exists)
         #[arg(long)]
         update_readme: bool,
+
+        /// Skip writing every licence file, including additional licences
+        #[arg(long)]
+        no_file: bool,
     },
 
     /// Manage the global SPDX detail cache

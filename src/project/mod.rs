@@ -19,7 +19,18 @@ fn normalize_manifest_spdx(spdx_id: &str) -> &str {
 /// Update the license field in every manifest found in the current directory.
 ///
 /// Returns a list of manifests that were updated (e.g. `["Cargo.toml", "package.json"]`).
-pub fn update_manifest(license_id: &str, _author: &str, _year: &str) -> Result<Vec<String>> {
+pub fn update_manifest(
+    license_id: &str,
+    _author: &str,
+    _year: &str,
+    additional: &[String],
+) -> Result<Vec<String>> {
+    if !additional.is_empty() {
+        eprintln!(
+            "Warning: skipping manifest updates; additional-licences does not specify whether the IDs combine with OR or AND"
+        );
+        return Ok(Vec::new());
+    }
     let normalized = normalize_manifest_spdx(license_id);
     let fs = global_fs();
     let mut updated = Vec::new();

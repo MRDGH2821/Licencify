@@ -10,6 +10,7 @@ pub fn cmd_update(
     yes: bool,
     permit_promotion: bool,
     update_readme: bool,
+    no_file: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
@@ -34,6 +35,11 @@ pub fn cmd_update(
         .unwrap_or_default();
     let plan =
         super::generate::plan_primary(&ctx, &spdx, &info.id, &additional, permit_promotion, true)?;
+    let extra_ids = plan
+        .additional_after
+        .as_deref()
+        .unwrap_or(additional.as_slice());
+    let extras = super::generate::plan_missing_extras(&ctx, &config, &prov, extra_ids, &format)?;
 
     if !super::generate::confirm_proceed(
         yes,
@@ -47,8 +53,11 @@ pub fn cmd_update(
         return Ok(());
     }
 
-    let saved = super::generate::commit_primary(&plan, &info.id, &ctx.author)?;
-    if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
+    let saved =
+        super::generate::publish_licence(no_file, &plan, &extras.missing, &info.id, &ctx.author)?;
+    if no_file {
+        println!("   Skipped licence files (--no-file)");
+    } else if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
         println!("✅ Updated proprietary notice as {}", plan.path.display());
     } else {
         println!(
@@ -62,8 +71,27 @@ pub fn cmd_update(
     if saved {
         println!("   Updated project config defaults");
     }
+    if !no_file {
+        for extra in &extras.missing {
+            println!(
+                "   Added additional {} as {}",
+                extra.id,
+                extra.path.display()
+            );
+        }
+        for path in &extras.skipped {
+            println!("   Skipped existing additional {}", path.display());
+        }
+    }
 
-    match project::update_manifest(&info.id, &ctx.author, &ctx.year) {
+    let manifest_ids = if no_file {
+        additional.as_slice()
+    } else {
+        plan.additional_after
+            .as_deref()
+            .unwrap_or(additional.as_slice())
+    };
+    match project::update_manifest(&info.id, &ctx.author, &ctx.year, manifest_ids) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
         }
@@ -113,6 +141,7 @@ mod tests {
             true,
             permit_promotion,
             false,
+            false,
         )
     }
 
@@ -158,6 +187,7 @@ mod tests {
             None,
             LicenseFormat::Txt,
             true,
+            false,
             false,
             false,
         );
@@ -366,6 +396,35 @@ mod tests {
         let saved = inner.read_to_string(&config).unwrap();
         assert!(saved.contains("Apache-2.0"));
         assert!(saved.contains("MIT"));
+    }
+
+    #[test]
+    fn update_writes_missing_extra_with_primary_year() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(Path::new("LICENCE.txt"), "old primary").unwrap();
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(
+            &config,
+            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+        )
+        .unwrap();
+        fs.write(
+            Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        let result = update("Apache-2.0", "Test Author", LicenseFormat::Txt, false);
+        assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+        let primary = fs.read_to_string(Path::new("LICENCE.txt")).unwrap();
+        assert!(!primary.contains("old primary"));
+        let extra = fs
+            .read_to_string(Path::new("LICENCE-MIT.txt"))
+            .expect("LICENCE-MIT.txt");
+        assert!(extra.contains("Copyright (c) 2024 Test Author"));
+        let cargo = fs.read_to_string(Path::new("Cargo.toml")).unwrap();
+        assert!(!cargo.contains("license"));
     }
 
     struct FailConfigWrite(Arc<MemFs>);

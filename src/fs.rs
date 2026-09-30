@@ -35,6 +35,17 @@ pub trait Fs: Send + Sync {
             "rename is not implemented",
         ))
     }
+
+    /// Create `path` only when it is absent, so an existing extra cannot be overwritten.
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        if self.exists(path) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("file exists: {}", path.display()),
+            ));
+        }
+        self.write(path, contents)
+    }
 }
 
 /// Real filesystem — delegates to `std::fs`.
@@ -73,6 +84,14 @@ impl Fs for RealFs {
 
     fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
         std::fs::rename(from, to)
+    }
+
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)?;
+        std::io::Write::write_all(&mut file, contents.as_bytes())
     }
 }
 
@@ -217,6 +236,18 @@ impl Fs for MemFs {
             .remove(from)
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "file not found"))?;
         files.insert(to.to_path_buf(), contents);
+        Ok(())
+    }
+
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        let mut files = self.files.write().unwrap();
+        if files.contains_key(path) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("file exists: {}", path.display()),
+            ));
+        }
+        files.insert(path.to_path_buf(), contents.to_string());
         Ok(())
     }
 
