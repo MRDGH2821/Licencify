@@ -17,6 +17,18 @@ mod template;
 use clap::Parser;
 use cli::{Cli, Commands};
 
+/// `--update-readme` forces an update and `--no-update-readme` forces a skip.
+/// Neither flag leaves the choice to configuration.
+fn readme_override(enable: bool, disable: bool) -> Option<bool> {
+    if disable {
+        Some(false)
+    } else if enable {
+        Some(true)
+    } else {
+        None
+    }
+}
+
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let yes = match &cli.command {
@@ -44,6 +56,7 @@ pub fn main() -> anyhow::Result<()> {
             permit_promotion,
             update_readme,
             no_file,
+            no_update_readme,
         } => commands::cmd_add(
             spdx.as_deref(),
             author,
@@ -53,7 +66,7 @@ pub fn main() -> anyhow::Result<()> {
             format,
             yes,
             permit_promotion,
-            update_readme,
+            readme_override(update_readme, no_update_readme),
             no_file,
         ),
         Commands::List {
@@ -79,6 +92,7 @@ pub fn main() -> anyhow::Result<()> {
             permit_promotion,
             update_readme,
             no_file,
+            no_update_readme,
         } => commands::cmd_update(
             &spdx,
             author,
@@ -88,7 +102,7 @@ pub fn main() -> anyhow::Result<()> {
             format,
             yes,
             permit_promotion,
-            update_readme,
+            readme_override(update_readme, no_update_readme),
             no_file,
         ),
         Commands::Cache { action } => commands::cmd_cache(action),
