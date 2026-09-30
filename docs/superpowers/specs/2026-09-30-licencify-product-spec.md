@@ -26,14 +26,16 @@ Licencify is a command-line tool for selecting an open-source licence, rendering
 
 ### Add and update
 
-1. `licencify add [ID]` generates a licence for the current project; an omitted ID uses the resolved `licence` setting, and absence of both is an error. `licencify update <ID>` requires an explicit replacement ID. Both commands use the same rendering and metadata rules.
+1. `licencify add [ID]` generates the primary licence in the current directory; an omitted ID uses the effective `licence` setting, and absence of both is an error. `licencify update <ID>` requires an explicit replacement ID. Both commands manage only the primary licence, not files listed in `additional-licences`.
 2. Both commands accept explicit author, company, email, year, and `txt`/`html`/`md` format options. An explicitly supplied CLI value overrides every configuration layer.
    Unset format falls back to `txt`; unset year uses the current year, company defaults to author, email is empty, README updates default to false, and the filename convention defaults to the detected locale. An unresolved author is an actionable error.
 3. Supported template variables are `year`, `author`, `company`, `email`, and `date`. SPDX placeholders used in source text are rendered when recognized; unrecognized placeholders are not silently erased.
 4. Plain-text output uses the template source order specified below. Custom templates use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML. Markdown output converts rendered HTML to Markdown while preserving visible licence wording. If no HTML source exists for requested `md` or `html`, warn and write plain text with a `.txt` extension instead; fail if no plain-text source exists either.
-5. Before replacing an existing licence file, the command follows an explicit confirmation policy. A non-interactive/scripted invocation must not block waiting for input; `--yes` uses defaults and skips prompts.
-6. Output naming respects `licence_file_name = "licence"` or `"license"` (case-insensitive), rendered as uppercase `LICENCE` or `LICENSE`, and the actual output format's extension.
-7. The commands report which file was written, the selected licence, and any manifest/readme updates or skipped operations. With `--verbose`, report each resolved setting's source (CLI, config file and matching rule, or fallback) without printing its value.
+5. `update` locates the single existing primary licence file across the supported basename and format variants, confirms replacement, and removes or renames the old path only after the replacement is ready. It fails without changing files if multiple primary candidates make the target ambiguous. `--yes` skips confirmation prompts; scripted invocations must not wait for input.
+6. Output naming respects `licence_file_name = "licence"` or `"license"` (case-insensitive), rendered as uppercase `LICENCE` or `LICENSE`, and the actual output format's extension. Additional licences are separate, manually maintained files named `<BASENAME>-<SPDX-ID>.<format>`, such as `LICENCE-Apache-2.0.txt`.
+7. If the requested primary ID is in `additional-licences`, reject the command unless `--permit-promotion` is supplied. Promotion moves exactly one existing matching additional file into the primary position, removes the old primary, removes the promoted ID from the effective additional list, and records it as primary.
+   Do not silently relabel a source format, guess among multiple source files, or delete the old primary before the move and config change can succeed. `--permit-promotion` authorizes this transition; `--yes` separately controls prompts.
+8. The commands report which file was written, the selected licence, and any manifest/readme updates or skipped operations. With `--verbose`, report each resolved setting's source (CLI, config file and matching rule, or fallback) without printing its value.
 
 ### Detection
 
@@ -42,18 +44,28 @@ Licencify is a command-line tool for selecting an open-source licence, rendering
 3. The detector recognizes the built-in licence families documented by the CLI, including proprietary notices as `UNLICENSED`.
 4. Missing files, unreadable files, and unrecognized contents are reported as errors or no-match outcomes; they do not terminate the process through an internal process exit.
 
+### Project scan
+
+1. `licencify scan` recursively discovers conventional `LICENCE`, `LICENSE`, and `COPYING` files (including `.txt`, `.md`, and `.html` variants and ID-suffixed additional files) beneath the selected project root. Unlike `detect`, it reports every result rather than stopping at the first.
+   It also examines READMEs for explicit licence declarations, badges, and licence-file links, not incidental mentions in examples.
+2. Skip Git-ignored directories and project-relative directories listed in project configuration under `[scan] exclude = ["vendor"]`. Exclusion paths cannot escape the project root; do not follow directory symlinks outside it. If an exclusion overlaps a configured `[[subdirs]]` path, warn that the configuration is contradictory and scan that subdir anyway.
+3. For each result, show its path and evidence level: identified from distinctive text, claimed by a filename or README declaration, or unidentified. An unrecognized file is reported as unknown, not assigned a guessed SPDX ID. Report every file in a multi-licence directory and conflicts between confidently identified text and explicit file/README claims.
+4. Discovery works without any configuration. If configuration exists, compare findings against effective `licence` and `additional-licences` at the root, configured subdir paths, and directories with discovered evidence. An optional explicit scan ID overrides the expected primary ID, not the additional list. Traversal does not require every visited directory to have a licence file.
+5. A confirmed conflicting ID or unreadable file causes a nonzero result; unknown identity, missing expected licence file or directory, and contradictory exclusions cause warnings. A missing configured path is not silently reported as matching. The scan is read-only and does not run automatically after `add` or `update`.
+
 ### Configuration
 
-1. Select the project root from an absolute `PRJ_ROOT` when set, otherwise the Git worktree root, otherwise the highest ancestor containing a project config, otherwise the current directory. `PRJ_CONFIG_HOME`, when set, replaces `$PRJ_ROOT/.config` as the project config directory.
+1. Select the project root from an absolute `PRJ_ROOT` when set, otherwise the Git worktree root, otherwise the highest ancestor containing a project config, otherwise the current directory. Reject an invocation whose current directory lies outside an explicit `PRJ_ROOT`. `PRJ_CONFIG_HOME`, when set, replaces `$PRJ_ROOT/.config` as the project config directory.
 2. Load global defaults from `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform equivalent), then the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml`, then its optional `config.local.toml`. The local file is intended to remain uncommitted. Legacy root-level config filenames are not loaded.
 3. Only root project config files are loaded. When invoked from a child directory containing a Licencify config file on the path from the root to the current directory, warn that it was ignored and recommend merging it into the root shared config. Do not search the whole project tree for child configs.
-4. `[default]` supports optional `author`, `company`, `email`, `year`, `licence`, `format`, `update_readme`, and `licence_file_name`. Project files may additionally contain `[[subdirs]]` entries with a required `path` and optional overrides for any of these fields; global `[[subdirs]]` entries are invalid.
-   Subdir paths are normalized relative to the project root, cannot escape it, and match only complete path components.
+4. `[default]` supports optional `author`, `company`, `email`, `year`, `licence` (one SPDX ID), `additional-licences` (an array of other SPDX IDs), `format`, `update_readme`, and `licence_file_name`. Project files may additionally contain `[[subdirs]]` entries with a required `path` and optional overrides for any of these fields; global `[[subdirs]]` entries are invalid.
+   Subdir paths are normalized relative to the project root, cannot escape it, and match only complete path components. A later `additional-licences` array replaces an earlier one; `[]` clears inherited additional IDs.
 5. Resolve fields in this order, lowest to highest: global defaults; shared project defaults; matching shared subdirs from shallowest to deepest; local project defaults; matching local subdirs from shallowest to deepest; explicit CLI options.
    Later sources override only fields they specify. Entries for the same normalized path in shared and local files contribute only their explicit fields at their respective precedence positions. A local default therefore overrides a shared subdir value; a local subdir can override it again.
-6. If a required licence or author remains unresolved after CLI and configuration lookup, report an actionable error. Missing optional fields use the fallbacks specified under Add and update; neither a global config file nor every optional field is mandatory. Invalid or unreadable config is an error rather than an empty fallback.
-7. `config init` creates only the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml` without overwriting it; it does not create the global or local file. `config show` identifies loaded files and effective values.
-   `add` retains its existing behavior of writing the selected licence, author, and format back to the root shared config when that file exists; it does not write to a child or local file. `schema` writes a JSON schema to the requested path.
+6. If a required licence or author remains unresolved after CLI and configuration lookup, report an actionable error. Missing optional fields use the fallbacks specified under Add and update; neither a global config file nor every optional field is mandatory. Invalid TOML and invalid values of known fields are errors. Warn with file and key for unknown config options and ignore those options.
+7. `config init` creates only the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml` without overwriting it; it does not create the global or local file. `config show` identifies loaded files and effective values. `schema` writes a JSON schema for the supported keys to the requested path.
+8. `add` and `update` record the chosen primary ID, author, and actual format in configuration, preserving unrelated values and comments. From the root, write the shared defaults. From a subdirectory, prompt interactively for shared defaults or an exact-path `[[subdirs]]` entry; an explicit config-target CLI option decides without prompting. With `--yes` or no terminal, default to the subdir entry.
+   Create the root shared config if the chosen subdir target needs one and none exists. If a local override masks the fields being saved, alert the user and update the winning local entry so future resolutions see the new values. Do not write child config files.
 
 Config and template locations:
 
@@ -66,6 +78,8 @@ Project: ${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml
 ```
 
 For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/api"`; a matching `path = "docs"` provides inherited fields unless a more-specific entry overrides them.
+
+The `[scan]` exclusion list belongs in project config; the local list adds to the shared list. Configured `[[subdirs]]` paths still take priority for scan coverage when they overlap an exclusion.
 
 ### Templates, cache, and network
 
@@ -82,7 +96,7 @@ For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/a
 
 ### Manifest integration
 
-1. When manifest updates are enabled, Licencify detects supported manifests and writes the selected SPDX identifier using the ecosystem's supported representation.
+1. When manifest updates are enabled, Licencify detects supported manifests and writes the selected SPDX identifier using the ecosystem's supported representation. If the effective `additional-licences` array is nonempty, skip writing a single-ID manifest declaration and warn rather than misrepresent a multi-licence project.
 2. Initial target manifests are `Cargo.toml`, `package.json`, and `pyproject.toml`. Existing formatting/comments should be preserved where the file format permits.
 3. An unsupported or malformed manifest is reported with its path. Failure to update one manifest must not be reported as success for that manifest.
 4. Proprietary declarations map to `UNLICENSED` in manifests. For npm, whether the tool also sets `private = true` requires maintainer confirmation.
@@ -98,9 +112,9 @@ For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/a
 ### README update
 
 1. README modification is opt-in by CLI or configuration; the default is no change.
-2. When enabled, Licencify locates a supported Markdown README, adds a licence badge and licence section only when an equivalent one is not already present, and leaves non-Markdown README formats unchanged.
-3. A README update must link to the actual generated licence filename rather than assume a fixed `LICENCE.txt` path.
-4. A README that is absent or already contains a licence section is a successful no-op. A write failure is reported distinctly from the licence-file result.
+2. When enabled, Licencify locates a supported Markdown README, adds a licence badge and licence section only when an equivalent one is not already present, and leaves non-Markdown README formats unchanged. On a licence change, replace only recognizable tool-managed badge/section content; leave handwritten content intact and warn about references the user may need to update.
+3. A README update must link to the actual generated licence filename rather than assume a fixed `LICENCE.txt` path. `add` and `update` do not run `scan` automatically.
+4. A README that is absent or already contains an equivalent licence section is a successful no-op. A write failure is reported distinctly from the licence-file result.
 5. The CLI override must support both enabling and disabling the config default, so configuration can be overridden in either direction.
 
 ## Operational and quality requirements
@@ -108,6 +122,7 @@ For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/a
 - Release artifacts and executable names use `licencify` consistently across supported targets.
 - CI runs `cargo audit` as a security check and exposes a local `just audit` recipe.
 - Automated tests cover user-visible command outcomes and important boundaries: no false-positive detection, no accidental overwrite, manifest/file state changes, configuration precedence and path matching, cache/network fallback, proprietary behavior, and README idempotency.
+  Include ambiguous primary filenames, dual licences, README/file conflicts, scan exclusions, local overrides, and failed promotion that leaves the old primary intact.
 - Tests for stateful filesystem behavior are isolated; no test may leak global filesystem state into another test.
 - The README and CLI help describe actual supported behavior and examples.
 
@@ -115,7 +130,7 @@ For example, `[[subdirs]]` entries use TOML string paths such as `path = "docs/a
 
 - Adding SPDX headers to source files.
 - Generating or validating full proprietary EULAs.
-- Supporting compound SPDX expressions such as `MIT OR Apache-2.0` as a generated licence.
+- Generating compound SPDX expressions such as `MIT OR Apache-2.0` or generating additional licence files automatically. `additional-licences` describes scan expectations, not how the licences combine legally.
 - Adding arbitrary remote/custom registry protocols. Custom local template paths are covered; remote registry configuration appeared only in an early design proposal.
 - Implementing features merely because an old plan lists them. This document defines target behavior; implementation status must be checked against the current code separately.
 
@@ -148,9 +163,10 @@ Project and cache path conventions follow [PRJ Base Directory Specification v0.1
 
 - A user can discover valid SPDX IDs and metadata offline, then generate a supported common licence offline.
 - An online user can generate licences beyond the embedded set, with fetched data cached and reusable.
-- Add/update use the same source selection, rendering, naming, prompting, and manifest rules.
-- Detection distinguishes supported licences without generic-phrase false positives and recognizes the proprietary notice.
-- Configuration resolves deterministically from optional global defaults through the root shared file, matching subdir rules, and the root local override to explicit CLI values; child config files are ignored with a warning.
+- Add/update use the same source selection, rendering, primary-file targeting, config-write, prompting, and manifest rules. A format change never strands an old primary licence file, and promotion never deletes it on failure.
+- Detection distinguishes supported licences without generic-phrase false positives and recognizes the proprietary notice; `scan` reports all conventional files and explicit README claims without reporting unknown text as an identified licence.
+- Configuration resolves deterministically from optional global defaults through the root shared file, matching subdir rules, and the root local override to explicit CLI values; child config files are ignored with a warning. Subdirectory writes update an exact-path override by default, not project-wide defaults.
+- `scan` compares identifiable evidence to effective primary and additional licence IDs, reports missing and unknown files as warnings, and fails on confirmed conflicts without modifying files.
 - Optional README updates do not duplicate existing licence content and link to the output actually produced.
 - Failures affecting files, manifests, configuration, or network lookup are visible and do not produce misleading success output.
 - CLI docs and tests cover the confirmed behavior and its user-visible failure cases.
