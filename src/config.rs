@@ -200,7 +200,7 @@ impl Config {
             .join("licencify"))
     }
 
-    fn project_root() -> Result<PathBuf> {
+    pub(crate) fn project_root() -> Result<PathBuf> {
         let cwd = std::env::current_dir().context("Could not determine current directory")?;
         let explicit_root = std::env::var_os("PRJ_ROOT")
             .map(PathBuf::from)

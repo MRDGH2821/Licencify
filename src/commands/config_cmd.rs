@@ -1,6 +1,6 @@
 use crate::{
     cli::ConfigAction,
-    config::{self, Config},
+    config::Config,
     fs::global_fs,
 };
 use anyhow::Result;

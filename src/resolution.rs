@@ -187,10 +187,10 @@ fn find_custom_template(
         format!("{spdx_id}.tera")
     };
     let fs = global_fs();
-    let project_dir = project_template_dir();
-    let global_dir = dirs::config_dir()
+    let project_dir = project_template_dir()?;
+    let global_dir = Config::global_path()?
+        .parent()
         .context("Could not determine global template directory")?
-        .join("licencify")
         .join("templates");
     for (dir, source) in [(project_dir, "project"), (global_dir, "global")] {
         let path = dir.join(&filename);
@@ -224,27 +224,12 @@ fn find_custom_template(
     Ok(None)
 }
 
-fn project_template_dir() -> std::path::PathBuf {
-    use std::path::PathBuf;
-
-    let root = std::env::var_os("PRJ_ROOT")
-        .map(PathBuf::from)
-        .or_else(|| {
-            let cwd = std::env::current_dir().ok()?;
-            cwd.ancestors()
-                .find(|dir| {
-                    dir.join(".config/licencify/config.toml").exists()
-                        || dir.join(".licencify.toml").exists()
-                        || dir.join("licencify.toml").exists()
-                })
-                .map(PathBuf::from)
-        })
-        .or_else(|| std::env::current_dir().ok())
-        .unwrap_or_default();
+fn project_template_dir() -> anyhow::Result<std::path::PathBuf> {
+    let root = Config::project_root()?;
     let config_home = std::env::var_os("PRJ_CONFIG_HOME")
-        .map(PathBuf::from)
+        .map(std::path::PathBuf::from)
         .unwrap_or_else(|| root.join(".config"));
-    config_home.join("licencify").join("templates")
+    Ok(config_home.join("licencify").join("templates"))
 }
 
 fn bundled_template(spdx_id: &str, format: &str) -> Option<String> {
@@ -334,7 +319,7 @@ mod tests {
     fn project_then_global_templates_precede_cached_detail() {
         let _guard = FsGuard::new();
         let fs = Arc::new(MemFs::new());
-        let project_dir = project_template_dir();
+        let project_dir = project_template_dir().unwrap();
         let global_dir = dirs::config_dir()
             .unwrap()
             .join("licencify")

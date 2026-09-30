@@ -113,7 +113,7 @@ mod tests {
         let fs = Arc::new(MemFs::new());
         let dir = provider::spdx_cache_dir().unwrap();
         let parent = dir.parent().unwrap();
-        fs.create_dir_all(&dir);
+        fs.create_dir_all(&dir).unwrap();
         fs.write_file(dir.join("MIT.json"), "{}");
         fs.write_file(parent.join("settings.json"), "{}");
         assert_eq!(cache_size(fs.as_ref(), &dir), 2);
