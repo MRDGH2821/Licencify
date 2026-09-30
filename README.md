@@ -199,6 +199,15 @@ Updating requires an explicit replacement ID. A format change stages the new
 primary before removing the old file; ambiguous existing primaries are left
 untouched. Promotion also needs `--permit-promotion`, even with `--yes`.
 
+`licencify add proprietary --author "Acme Corp" --yes` writes an
+all-rights-reserved notice and records `proprietary` in project configuration.
+Cargo, npm, and Python manifests reference the notice without treating
+`proprietary` or `UNLICENSED` as SPDX identifiers; Cargo publishing and npm
+publishing are disabled. Switching to an SPDX licence does not re-enable
+publishing. Proprietary cannot be combined with additional open-source
+licences. `--no-file` requires an existing primary notice before updating
+private manifest metadata.
+
 ## Licence detection
 
 The `detect` command reads your project's `LICENCE` or `LICENSE` file and identifies the licence using keyword matching. It recognises MIT, Apache-2.0, GPL-3.0-only, GPL-2.0-only, LGPL-3.0-only, MPL-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Unlicense, and proprietary (`UNLICENSED`).

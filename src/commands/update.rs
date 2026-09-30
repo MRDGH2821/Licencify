@@ -19,6 +19,7 @@ pub fn cmd_update(
     resolution::resolve_author(author.clone(), Some(&config))?;
     let spdx = super::generate::selected_licence_id(Some(spdx), None, true)?;
     let info = prov.info(&spdx)?;
+    let recorded = resolution::canonical_licence_id(&spdx, &info.id);
     let ctx = resolution::resolve_context(
         &spdx,
         author,
@@ -46,7 +47,7 @@ pub fn cmd_update(
         yes,
         &format!(
             "About to replace the primary licence with {} ({}). Continue? [Y/n] ",
-            info.name, info.id
+            info.name, recorded
         ),
         true,
     )? {
@@ -54,17 +55,20 @@ pub fn cmd_update(
         return Ok(());
     }
 
+    if no_file && recorded == "proprietary" {
+        project::require_primary_notice(&*crate::fs::global_fs())?;
+    }
     let saved =
-        super::generate::publish_licence(no_file, &plan, &extras.missing, &info.id, &ctx.author)?;
+        super::generate::publish_licence(no_file, &plan, &extras.missing, &recorded, &ctx.author)?;
     if no_file {
         println!("   Skipped licence files (--no-file)");
-    } else if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
+    } else if recorded == "proprietary" {
         println!("✅ Updated proprietary notice as {}", plan.path.display());
     } else {
         println!(
             "✅ Updated {} ({}) [from {}] as {}",
             info.name,
-            info.id,
+            recorded,
             plan.template_source,
             plan.path.display()
         );
@@ -92,7 +96,7 @@ pub fn cmd_update(
             .as_deref()
             .unwrap_or(additional.as_slice())
     };
-    match project::update_manifest(&info.id, &ctx.author, &ctx.year, manifest_ids) {
+    match project::update_manifest(&recorded, &ctx.author, &ctx.year, manifest_ids) {
         Ok(files) if !files.is_empty() => {
             println!("   Updated: {}", files.join(", "));
         }
