@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution, template};
+use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution};
 use std::io::Write;
 
 pub fn cmd_add(
@@ -47,26 +47,11 @@ pub fn cmd_add(
         }
     }
 
-    let render_ctx = template::render_context(
-        &ctx.year,
-        &ctx.author,
-        ctx.company.as_deref(),
-        ctx.email.as_deref(),
-    );
-
-    let ext = ctx.resolved.format.to_string();
-    let content = match &ctx.resolved.format {
-        LicenseFormat::Md => {
-            template::render_markdown_with_context(&ctx.resolved.text, &render_ctx)?
-        }
-        _ => template::render_with_context(&ctx.resolved.text, &render_ctx)?,
-    };
-
-    let filename = ctx.licence_name.file_path(&ext);
+    let rendered = super::generate::render_primary(&ctx)?;
     let fs = global_fs();
 
-    if fs.exists(&filename) && !yes {
-        println!("{} exists. Overwrite? [y/N] ", filename.display());
+    if fs.exists(&rendered.path) && !yes {
+        println!("{} exists. Overwrite? [y/N] ", rendered.path.display());
         std::io::stdout().flush()?;
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -76,16 +61,16 @@ pub fn cmd_add(
         }
     }
 
-    fs.write(&filename, &content)?;
+    super::generate::write_primary(&rendered)?;
     if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
-        println!("✅ Added proprietary notice as {}", filename.display());
+        println!("✅ Added proprietary notice as {}", rendered.path.display());
     } else {
         println!(
             "✅ Added {} ({}) [from {}] as {}",
             info.name,
             info.id,
             ctx.resolved.source,
-            filename.display()
+            rendered.path.display()
         );
     }
 
@@ -184,5 +169,33 @@ mod tests {
             "cmd_add proprietary failed: {:?}",
             result.err()
         );
+    }
+
+    #[test]
+    fn cmd_add_writes_expected_mit_text() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        let result = cmd_add(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            true,
+            false,
+        );
+        assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
+        let text = fs
+            .read_to_string(std::path::Path::new("LICENCE.txt"))
+            .expect("LICENCE.txt");
+        assert!(text.contains("MIT License"));
+        assert!(text.contains("Copyright (c) 2024 Test Author"));
     }
 }
