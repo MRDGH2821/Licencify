@@ -291,6 +291,11 @@ url = "https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-windows-x
 checksum = "sha256:78c221c2376f79731ccf4e4af0b3bb46d81fefa3296c5abee09ad8a1b21e68c6"
 url = "https://github.com/oven-sh/bun/releases/download/bun-v1.4.2/bun-windows-x64-baseline.zip"
 
+[[tools."cargo:cargo-audit"]]
+version = "0.22.2"
+backend = "cargo:cargo-audit"
+specifiers = ["latest"]
+
 [[tools.cocogitto]]
 version = "7.0.0"
 backend = "aqua:cocogitto/cocogitto"
@@ -784,6 +789,56 @@ checksum = "sha256:94e5cfb9468e597cb513fb7a8bf26499c9315ebd505d960c74e2d4849167b
 url = "https://github.com/loeffel-io/ls-lint/releases/download/v2.3.1/ls-lint-windows-amd64.exe"
 url_api = "https://api.github.com/repos/loeffel-io/ls-lint/releases/assets/260857557"
 
+[[tools.mr-boxington]]
+version = "1.20.0"
+backend = "packslip:github.com/jdx/mr-boxington"
+specifiers = ["latest"]
+
+[tools.mr-boxington."platforms.linux-arm64"]
+checksum = "sha256:ce9f353547ea3e71642b44726a6d7ee503fabb93380176ada644a6e5eb8e6809"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-aarch64-unknown-linux-gnu.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.linux-arm64-musl"]
+checksum = "sha256:2d91c8c06d912a53a3f56512326a65eadbad5e70b34c28ceed8ec0e923bdfdc1"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-aarch64-unknown-linux-musl.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.linux-x64"]
+checksum = "sha256:f3537f6a2a7d3eaef5840fcd0bfccb108941f7a7ab395ec82914fd99c91ff357"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-unknown-linux-gnu.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.linux-x64-baseline"]
+checksum = "sha256:f3537f6a2a7d3eaef5840fcd0bfccb108941f7a7ab395ec82914fd99c91ff357"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-unknown-linux-gnu.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.linux-x64-musl"]
+checksum = "sha256:c9dbbde6105aa852bcf3b8df616243225b14099ccdafd0923f6d7d181d55c93f"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-unknown-linux-musl.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:c9dbbde6105aa852bcf3b8df616243225b14099ccdafd0923f6d7d181d55c93f"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-unknown-linux-musl.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.macos-arm64"]
+checksum = "sha256:0b4b12d09dd4cc4571a53472823dd04a987d0105e162ed2d383d73e22f17a602"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-aarch64-apple-darwin.tar.gz"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.windows-x64"]
+checksum = "sha256:b31c4995a2293eedb3fdc4a67eb17d2df39a4d5e5928d774dbe90146ee6d799f"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-pc-windows-msvc.zip"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
+[tools.mr-boxington."platforms.windows-x64-baseline"]
+checksum = "sha256:b31c4995a2293eedb3fdc4a67eb17d2df39a4d5e5928d774dbe90146ee6d799f"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.20.0/mbx-x86_64-pc-windows-msvc.zip"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
 [[tools.oxfmt]]
 version = "0.70.0"
 aube = { path = ".mise/locks/oxfmt/0.70.0", digest = "sha256:6f43444e29a288a4c8eaae0fd4842397419f6bde12beb04d2be2216a275f96e2" }
@@ -1007,6 +1062,11 @@ checksum = "sha256:8b4d0f45e67c5b17aecfe992335d285019095d3f2994befc9ea44ee4cde98
 url = "https://github.com/rvben/rumdl/releases/download/v0.2.77/rumdl-v0.2.77-x86_64-pc-windows-msvc.zip"
 url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/583859183"
 provenance = "github-attestations"
+
+[[tools.rust]]
+version = "1.98.1"
+backend = "core:rust"
+specifiers = ["1.98.1"]
 
 [[tools.tombi]]
 version = "1.5.5"
