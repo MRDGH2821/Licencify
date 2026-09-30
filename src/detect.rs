@@ -110,6 +110,11 @@ mod tests {
     }
 
     #[test]
+    fn version_phrase_alone_is_not_apache() {
+        assert_eq!(detect_license("version 2.0"), None);
+    }
+
+    #[test]
     fn detect_unknown() {
         assert_eq!(
             detect_license("Some random text with no license keywords"),

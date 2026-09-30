@@ -60,6 +60,7 @@ pub fn main() -> anyhow::Result<()> {
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
         Commands::Detect => commands::cmd_detect(),
+        Commands::Scan { id } => commands::cmd_scan(id.as_deref()),
         Commands::Update {
             spdx,
             author,

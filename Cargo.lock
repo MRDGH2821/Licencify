@@ -566,6 +566,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "ignore",
  "regex",
  "schemars",
  "serde",

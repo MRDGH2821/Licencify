@@ -3,6 +3,7 @@ mod cache_cmd;
 mod config_cmd;
 mod detect_cmd;
 mod list;
+mod scan;
 mod search;
 mod update;
 
@@ -11,5 +12,6 @@ pub use cache_cmd::cmd_cache;
 pub use config_cmd::{cmd_config, cmd_schema};
 pub use detect_cmd::cmd_detect;
 pub use list::cmd_list;
+pub use scan::cmd_scan;
 pub use search::cmd_search;
 pub use update::cmd_update;
