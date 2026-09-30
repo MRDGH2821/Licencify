@@ -53,6 +53,29 @@ impl LicenceName {
         PathBuf::from(format!("{}.{}", self.as_str(), ext))
     }
 
+    /// Primary filenames across both spellings and every supported format.
+    pub fn primary_variants() -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        for base in ["LICENCE", "LICENSE"] {
+            paths.push(PathBuf::from(base));
+            for ext in ["txt", "html", "md"] {
+                paths.push(PathBuf::from(format!("{base}.{ext}")));
+            }
+        }
+        paths
+    }
+
+    /// Additional-file names for one SPDX id, across basename and format.
+    pub fn extra_variants(id: &str) -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        for base in ["LICENCE", "LICENSE"] {
+            for ext in ["txt", "html", "md"] {
+                paths.push(PathBuf::from(format!("{base}-{id}.{ext}")));
+            }
+        }
+        paths
+    }
+
     /// All candidate filenames to check for existing licence files.
     pub fn candidates() -> &'static [&'static str] {
         &[
@@ -113,6 +136,18 @@ mod tests {
             LicenceName::License.file_path("html"),
             PathBuf::from("LICENSE.html")
         );
+    }
+
+    #[test]
+    fn primary_and_extra_variants_cover_formats() {
+        let primary = LicenceName::primary_variants();
+        assert!(primary.contains(&PathBuf::from("LICENCE.txt")));
+        assert!(primary.contains(&PathBuf::from("LICENSE.html")));
+        assert!(primary.contains(&PathBuf::from("LICENCE")));
+        let extras = LicenceName::extra_variants("Apache-2.0");
+        assert!(extras.contains(&PathBuf::from("LICENCE-Apache-2.0.md")));
+        assert!(extras.contains(&PathBuf::from("LICENSE-Apache-2.0.txt")));
+        assert!(!extras.iter().any(|path| primary.contains(path)));
     }
 
     #[test]
