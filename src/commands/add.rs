@@ -10,11 +10,12 @@ pub fn cmd_add(
     format: LicenseFormat,
     yes: bool,
     permit_promotion: bool,
-    update_readme: bool,
+    update_readme: Option<bool>,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
-    let update_readme = update_readme || config.default.update_readme.unwrap_or(false);
+    let update_readme =
+        crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
     resolution::resolve_author(author.clone(), Some(&config))?;
     let spdx =
         super::generate::selected_licence_id(spdx, config.default.license.as_deref(), false)?;
@@ -92,17 +93,7 @@ pub fn cmd_add(
     }
 
     if update_readme {
-        match crate::readme::update_readme(&info.id) {
-            Ok(true) => {}
-            Ok(false) => {
-                if !yes {
-                    println!("   README: not found or already has license section");
-                }
-            }
-            Err(e) => {
-                eprintln!("   Warning: could not update README: {}", e);
-            }
-        }
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
 
     Ok(())
@@ -112,7 +103,8 @@ pub fn cmd_add(
 mod tests {
     use super::*;
     use crate::cli::LicenseFormat;
-    use crate::fs::{FsGuard, MemFs};
+    use crate::fs::{Fs, FsGuard, MemFs};
+    use std::path::{Path, PathBuf};
     use std::sync::Arc;
 
     fn add_mit(fs_author: &str) -> anyhow::Result<()> {
@@ -125,7 +117,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         )
     }
 
@@ -164,7 +156,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(
             result.is_ok(),
@@ -192,7 +184,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
         let text = fs
@@ -222,7 +214,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
         let text = fs
@@ -248,7 +240,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(result.is_err());
         assert_eq!(
@@ -274,7 +266,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(result.is_err());
         assert_eq!(
@@ -283,5 +275,165 @@ mod tests {
             Some("keep")
         );
         assert!(!fs.exists(std::path::Path::new("LICENCE.txt.licencify-new")));
+    }
+
+    fn add_mit_readme(format: LicenseFormat, update_readme: Option<bool>) -> anyhow::Result<()> {
+        cmd_add(
+            Some("MIT"),
+            Some("Test Author".into()),
+            None,
+            None,
+            Some("2024".into()),
+            format,
+            true,
+            false,
+            update_readme,
+        )
+    }
+
+    #[test]
+    fn cmd_add_update_readme_links_generated_file_and_is_idempotent() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(&config, "[default]\nlicence_file_name = \"LICENSE\"\n")
+            .unwrap();
+        fs.write(Path::new("README.md"), "# Project\n").unwrap();
+        let result = add_mit_readme(LicenseFormat::Html, Some(true));
+        assert!(result.is_ok(), "cmd_add failed: {:?}", result.err());
+        assert!(fs.exists(Path::new("LICENSE.html")));
+        let readme = fs.read_to_string(Path::new("README.md")).unwrap();
+        assert!(readme.contains("](LICENSE.html)"));
+        assert!(readme.contains("# Project"));
+        assert!(!readme.contains("LICENCE.txt"));
+        let again = add_mit_readme(LicenseFormat::Html, Some(true));
+        assert!(again.is_ok(), "second add failed: {:?}", again.err());
+        assert_eq!(
+            fs.read_to_string(Path::new("README.md")).as_deref(),
+            Some(readme.as_str())
+        );
+    }
+
+    #[test]
+    fn config_enables_readme_and_cli_can_disable_it() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(
+            &config,
+            "[default]\nupdate_readme = true\nlicence_file_name = \"LICENCE\"\n",
+        )
+        .unwrap();
+        fs.write(Path::new("README.md"), "# From config\n").unwrap();
+        let enabled = add_mit_readme(LicenseFormat::Txt, None);
+        assert!(enabled.is_ok(), "config enable failed: {:?}", enabled.err());
+        let readme = fs.read_to_string(Path::new("README.md")).unwrap();
+        assert!(readme.contains("](LICENCE.txt)"));
+
+        fs.write(Path::new("README.md"), "# Keep\n").unwrap();
+        let disabled = add_mit_readme(LicenseFormat::Txt, Some(false));
+        assert!(disabled.is_ok(), "cli disable failed: {:?}", disabled.err());
+        assert_eq!(
+            fs.read_to_string(Path::new("README.md")).as_deref(),
+            Some("# Keep\n")
+        );
+        assert!(fs.exists(Path::new("LICENCE.txt")));
+    }
+
+    #[test]
+    fn missing_or_non_markdown_readme_is_success() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(&config, "[default]\nlicence_file_name = \"LICENCE\"\n")
+            .unwrap();
+        let missing = add_mit_readme(LicenseFormat::Txt, Some(true));
+        assert!(
+            missing.is_ok(),
+            "missing readme failed: {:?}",
+            missing.err()
+        );
+        assert!(fs.exists(Path::new("LICENCE.txt")));
+
+        fs.write(Path::new("README.rst"), "Hello\n").unwrap();
+        let skipped = add_mit_readme(LicenseFormat::Txt, Some(true));
+        assert!(skipped.is_ok(), "rst readme failed: {:?}", skipped.err());
+        assert_eq!(
+            fs.read_to_string(Path::new("README.rst")).as_deref(),
+            Some("Hello\n")
+        );
+    }
+
+    #[test]
+    fn readme_write_error_stays_visible_without_losing_the_licence() {
+        let _guard = FsGuard::new();
+        let inner = Arc::new(MemFs::new());
+        let config = crate::config::Config::project_path().unwrap();
+        inner
+            .write(&config, "[default]\nlicence_file_name = \"LICENCE\"\n")
+            .unwrap();
+        inner.write(Path::new("README.md"), "# Keep\n").unwrap();
+        crate::fs::set_global_fs(Arc::new(ReadmeWriteFail {
+            inner: Arc::clone(&inner),
+        }));
+        let result = add_mit_readme(LicenseFormat::Txt, Some(true));
+        assert!(
+            result.is_ok(),
+            "licence write should still succeed: {:?}",
+            result.err()
+        );
+        let licence = inner.read_to_string(Path::new("LICENCE.txt")).unwrap();
+        assert!(licence.contains("MIT License"));
+        assert_eq!(
+            inner.read_to_string(Path::new("README.md")).as_deref(),
+            Some("# Keep\n")
+        );
+    }
+
+    struct ReadmeWriteFail {
+        inner: Arc<MemFs>,
+    }
+
+    impl Fs for ReadmeWriteFail {
+        fn read_to_string(&self, path: &Path) -> Option<String> {
+            self.inner.read_to_string(path)
+        }
+
+        fn write(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+            if path.ends_with("README.md") {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    "readme write failed",
+                ));
+            }
+            Fs::write(&*self.inner, path, contents)
+        }
+
+        fn exists(&self, path: &Path) -> bool {
+            self.inner.exists(path)
+        }
+
+        fn create_dir_all(&self, path: &Path) -> std::io::Result<()> {
+            self.inner.create_dir_all(path)
+        }
+
+        fn read_dir(&self, path: &Path) -> Vec<PathBuf> {
+            self.inner.read_dir(path)
+        }
+
+        fn remove_dir_all(&self, path: &Path) -> std::io::Result<()> {
+            self.inner.remove_dir_all(path)
+        }
+
+        fn remove_file(&self, path: &Path) -> std::io::Result<()> {
+            self.inner.remove_file(path)
+        }
+
+        fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+            self.inner.rename(from, to)
+        }
     }
 }

@@ -9,11 +9,12 @@ pub fn cmd_update(
     format: LicenseFormat,
     yes: bool,
     permit_promotion: bool,
-    update_readme: bool,
+    update_readme: Option<bool>,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
     let config = crate::config::Config::load_effective(None)?;
-    let update_readme = update_readme || config.default.update_readme.unwrap_or(false);
+    let update_readme =
+        crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
     resolution::resolve_author(author.clone(), Some(&config))?;
     let spdx = super::generate::selected_licence_id(Some(spdx), None, true)?;
     let info = prov.info(&spdx)?;
@@ -74,15 +75,7 @@ pub fn cmd_update(
     }
 
     if update_readme {
-        match crate::readme::update_readme(&info.id) {
-            Ok(true) => {}
-            Ok(false) => {
-                println!("   README: not found or already has license section");
-            }
-            Err(e) => {
-                eprintln!("   Warning: could not update README: {}", e);
-            }
-        }
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
 
     Ok(())
@@ -112,7 +105,7 @@ mod tests {
             format,
             true,
             permit_promotion,
-            false,
+            None,
         )
     }
 
@@ -159,7 +152,7 @@ mod tests {
             LicenseFormat::Txt,
             true,
             false,
-            false,
+            None,
         );
         assert!(add_result.is_ok());
         let result = update("Apache-2.0", "Author", LicenseFormat::Txt, false);
@@ -366,6 +359,79 @@ mod tests {
         let saved = inner.read_to_string(&config).unwrap();
         assert!(saved.contains("Apache-2.0"));
         assert!(saved.contains("MIT"));
+    }
+
+    #[test]
+    fn cmd_update_refreshes_tool_managed_readme_and_keeps_handwritten_text() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(&config, "[default]\nlicence_file_name = \"licence\"\n")
+            .unwrap();
+        fs.write(Path::new("LICENCE.txt"), "old primary").unwrap();
+        fs.write(
+            Path::new("README.md"),
+            "# Project\n\nHandwritten note stays.\n\n[![License](https://img.shields.io/badge/License-Apache-2.0-blue.svg)](LICENCE.txt)\n\n## License\n\nThis project is licensed under the [Apache-2.0](LICENCE.txt) licence.\n\nSee [the old file](LICENCE.txt).\n",
+        )
+        .unwrap();
+        let result = cmd_update(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Html,
+            true,
+            false,
+            Some(true),
+        );
+        assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+        assert!(fs.exists(Path::new("LICENCE.html")));
+        assert!(!fs.exists(Path::new("LICENCE.txt")));
+        let readme = fs.read_to_string(Path::new("README.md")).unwrap();
+        assert!(readme.contains("Handwritten note stays."));
+        assert!(readme.contains("See [the old file](LICENCE.txt)."));
+        assert!(readme.contains("](LICENCE.html)"));
+        assert!(readme.contains("[MIT](LICENCE.html)"));
+        assert!(!readme.contains("Apache-2.0"));
+        assert_eq!(readme.matches("## License").count(), 1);
+    }
+
+    #[test]
+    fn cmd_update_no_update_readme_leaves_handwritten_readme() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        let config = crate::config::Config::project_path().unwrap();
+        fs.write(
+            &config,
+            "[default]\nupdate_readme = true\nlicence_file_name = \"licence\"\n",
+        )
+        .unwrap();
+        fs.write(Path::new("LICENCE.txt"), "old primary").unwrap();
+        fs.write(Path::new("README.md"), "# Keep\n").unwrap();
+        let result = cmd_update(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            true,
+            false,
+            Some(false),
+        );
+        assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+        assert_eq!(
+            fs.read_to_string(Path::new("README.md")).as_deref(),
+            Some("# Keep\n")
+        );
+        assert!(
+            fs.read_to_string(Path::new("LICENCE.txt"))
+                .unwrap()
+                .contains("MIT")
+        );
     }
 
     struct FailConfigWrite(Arc<MemFs>);
