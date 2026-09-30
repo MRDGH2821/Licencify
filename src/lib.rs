@@ -30,14 +30,16 @@ pub fn main() -> anyhow::Result<()> {
             format,
             yes,
             update_readme,
-        } => {
-            let do_update = update_readme
-                || crate::config::Config::load_effective(None)
-                    .ok()
-                    .and_then(|c| c.default.update_readme)
-                    .unwrap_or(false);
-            commands::cmd_add(&spdx, author, company, email, year, format, yes, do_update)
-        }
+        } => commands::cmd_add(
+            &spdx,
+            author,
+            company,
+            email,
+            year,
+            format,
+            yes,
+            update_readme,
+        ),
         Commands::List {
             osi_only,
             fsf_only,
@@ -57,14 +59,7 @@ pub fn main() -> anyhow::Result<()> {
             year,
             format,
             update_readme,
-        } => {
-            let do_update = update_readme
-                || crate::config::Config::load_effective(None)
-                    .ok()
-                    .and_then(|c| c.default.update_readme)
-                    .unwrap_or(false);
-            commands::cmd_update(&spdx, author, company, email, year, format, do_update)
-        }
+        } => commands::cmd_update(&spdx, author, company, email, year, format, update_readme),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
         Commands::Schema { output } => commands::cmd_schema(&output),

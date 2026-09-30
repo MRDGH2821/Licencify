@@ -10,7 +10,8 @@ pub fn cmd_update(
     update_readme: bool,
 ) -> anyhow::Result<()> {
     let prov = provider::LicenseProvider::load()?;
-    let config = crate::config::Config::load_effective(None).ok();
+    let config = crate::config::Config::load_effective(None)?;
+    let update_readme = update_readme || config.default.update_readme.unwrap_or(false);
     let info = prov.info(spdx)?;
     let ctx = resolution::resolve_context(
         spdx,
@@ -18,7 +19,7 @@ pub fn cmd_update(
         year,
         company,
         email,
-        config.as_ref(),
+        Some(&config),
         &prov,
         &format,
     )?;

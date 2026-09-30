@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
 
-use crate::fs::{global_fs, Fs};
+use crate::fs::{Fs, global_fs};
 
 /// README filenames to detect, ordered by preference.
 const README_CANDIDATES: &[&str] = &[
