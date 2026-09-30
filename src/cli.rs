@@ -53,8 +53,8 @@ impl fmt::Display for LicenseFormat {
 pub enum Commands {
     /// Add a license to the current project
     Add {
-        /// SPDX license identifier (e.g., MIT, Apache-2.0, proprietary)
-        spdx: String,
+        /// SPDX license identifier. Omit to use the configured licence.
+        spdx: Option<String>,
 
         /// Copyright holder name (default: git config user.name)
         #[arg(short, long)]
@@ -79,6 +79,10 @@ pub enum Commands {
         /// Skip all prompts and use defaults
         #[arg(short = 'Y', long)]
         yes: bool,
+
+        /// Promote one matching additional licence to primary
+        #[arg(long)]
+        permit_promotion: bool,
 
         /// Update README with license badge (if README exists)
         #[arg(long)]
@@ -147,6 +151,14 @@ pub enum Commands {
         /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
+
+        /// Skip confirmation prompts
+        #[arg(short = 'Y', long)]
+        yes: bool,
+
+        /// Promote one matching additional licence to primary
+        #[arg(long)]
+        permit_promotion: bool,
 
         /// Update README with license badge (if README exists)
         #[arg(long)]
