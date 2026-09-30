@@ -2,6 +2,7 @@ mod add;
 mod cache_cmd;
 mod config_cmd;
 mod detect_cmd;
+mod generate;
 mod list;
 mod search;
 mod update;

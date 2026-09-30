@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution, template};
+use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution};
 
 pub fn cmd_update(
     spdx: &str,
@@ -24,42 +24,30 @@ pub fn cmd_update(
         &format,
     )?;
 
-    let render_ctx = template::render_context(
-        &ctx.year,
-        &ctx.author,
-        ctx.company.as_deref(),
-        ctx.email.as_deref(),
-    );
-
-    let ext = ctx.resolved.format.to_string();
-    let content = match &ctx.resolved.format {
-        LicenseFormat::Md => {
-            template::render_markdown_with_context(&ctx.resolved.text, &render_ctx)?
-        }
-        _ => template::render_with_context(&ctx.resolved.text, &render_ctx)?,
-    };
-
-    let filename = ctx.licence_name.file_path(&ext);
+    let rendered = super::generate::render_primary(&ctx)?;
     let fs = global_fs();
 
-    if !fs.exists(&filename) {
+    if !fs.exists(&rendered.path) {
         anyhow::bail!(
             "{} not found. Use `licencify add {}` to create it first.",
-            filename.display(),
+            rendered.path.display(),
             spdx
         );
     }
 
-    fs.write(&filename, &content)?;
+    super::generate::write_primary(&rendered)?;
     if spdx.eq_ignore_ascii_case("proprietary") || info.id == "UNLICENSED" {
-        println!("✅ Updated proprietary notice as {}", filename.display());
+        println!(
+            "✅ Updated proprietary notice as {}",
+            rendered.path.display()
+        );
     } else {
         println!(
             "✅ Updated {} ({}) [from {}] as {}",
             info.name,
             info.id,
             ctx.resolved.source,
-            filename.display()
+            rendered.path.display()
         );
     }
 
@@ -155,5 +143,35 @@ mod tests {
             false,
         );
         assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn cmd_update_writes_expected_mit_text() {
+        let _guard = FsGuard::new();
+        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        crate::fs::set_global_fs(fs.clone());
+        fs.write(
+            std::path::Path::new("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        fs.write(std::path::Path::new("LICENCE.txt"), "previous licence text")
+            .unwrap();
+        let result = cmd_update(
+            "MIT",
+            Some("Test Author".into()),
+            None,
+            None,
+            Some("2024".into()),
+            LicenseFormat::Txt,
+            false,
+        );
+        assert!(result.is_ok(), "cmd_update failed: {:?}", result.err());
+        let text = fs
+            .read_to_string(std::path::Path::new("LICENCE.txt"))
+            .expect("LICENCE.txt");
+        assert!(text.contains("MIT License"));
+        assert!(text.contains("Copyright (c) 2024 Test Author"));
+        assert!(!text.contains("previous licence text"));
     }
 }
