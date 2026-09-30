@@ -95,11 +95,12 @@ Options:
           Copyright year (default: current year)
 
   -f, --format <FORMAT>
-          Output format: txt (default) or html
+          Output format: txt (default), html, or md
 
           Possible values:
           - txt:  Plain text (licenseText)
           - html: HTML (licenseTextHtml)
+          - md:   Markdown converted from licenseTextHtml
 
           [default: txt]
 
@@ -167,11 +168,12 @@ Options:
           Copyright year
 
   -f, --format <FORMAT>
-          Output format: txt (default) or html
+          Output format: txt (default), html, or md
 
           Possible values:
           - txt:  Plain text (licenseText)
           - html: HTML (licenseTextHtml)
+          - md:   Markdown converted from licenseTextHtml
 
           [default: txt]
 
@@ -245,7 +247,7 @@ license = "CC0-1.0"
 
 ## Licence templates
 
-Licencify ships with 14 built-in template pairs (plain text + HTML):
+Licencify ships with 14 built-in template pairs (plain text + HTML); Markdown is converted from HTML:
 
 | SPDX ID         | Licence                      |
 | --------------- | ---------------------------- |
@@ -283,21 +285,21 @@ Add custom template paths in your config:
 paths = ["/path/to/my/templates"]
 ```
 
-Custom templates are checked before built-in ones. Name your files `<spdx-id>.tera` (plain text) and `<spdx-id>.html.tera` (HTML).
+Project templates in `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/templates/` take precedence over global templates in `$XDG_CONFIG_HOME/licencify/templates/`, followed by cached/fetched SPDX details and bundled templates. Use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML or Markdown.
 
 ### SPDX API fallback
 
-For licences without a built-in template, licencify fetches the full licence text from `https://spdx.org/licenses/<id>.json`. Responses are cached locally in the XDG cache directory.
+When no higher-priority custom template exists, Licencify uses cached SPDX detail or fetches it on a cache miss, then falls back to a bundled template. Responses use the global `${XDG_CACHE_HOME:-$HOME/.cache}/licencify/SPDX-Cache/` directory. Cached detail avoids a network request. If no HTML source is available for `html` or `md`, Licencify warns and writes text with a `.txt` extension instead.
 
 ### Template cache
 
 ```text
-Manage local template cache
+Manage global SPDX detail cache
 
 Usage: licencify cache <COMMAND>
 
 Commands:
-  clear      Clear all cached templates
+  clear      Clear all cached SPDX details
   info       Show cache directory location and size
   fetch-all  Pre-fetch and cache all license templates from SPDX
   help       Print this message or the help of the given subcommand(s)
