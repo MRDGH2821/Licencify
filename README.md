@@ -24,6 +24,7 @@ cargo install --git https://github.com/MRDGH2821/Licencify
 ## Development
 
 Install [mise](https://mise.jdx.dev/), then run `mise install` in the repository to install the pinned Rust toolchain, `cargo-audit`, and `mr-boxington`.
+Use `mise run audit` from the repository root to run `cargo audit`; CI continues to run the configured audit job.
 Use `mise exec -- cargo build` or `mise exec -- cargo test` to build or test with project-scoped `mbx` wrapping; its optional `scheduler.tests` setting remains disabled.
 To undo this setup, remove the Rust, `cargo:cargo-audit`, and `mr-boxington` entries from `mise.toml` and the corresponding entries from `mise.lock` if generated; removing the Rust entry also removes its `mr_boxington` option.
 
