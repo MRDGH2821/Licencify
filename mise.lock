@@ -296,6 +296,11 @@ version = "0.22.2"
 backend = "cargo:cargo-audit"
 specifiers = ["latest"]
 
+[[tools."cargo:cargo-edit"]]
+version = "0.13.13"
+backend = "cargo:cargo-edit"
+specifiers = ["latest"]
+
 [[tools.cocogitto]]
 version = "7.0.0"
 backend = "aqua:cocogitto/cocogitto"
