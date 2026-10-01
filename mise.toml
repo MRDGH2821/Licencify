@@ -34,7 +34,7 @@ run_windows = "echo 'Treefmt not supported on Windows'"
 betterleaks = "latest"
 bun = { postinstall = "bun install", version = "latest" }
 "cargo:cargo-audit" = "latest"
-"cargo:cargo-edit" = "latest"
+"cargo:cargo-bump" = "latest"
 cocogitto = "latest"
 cspell = "latest"
 editorconfig-checker = "latest"
