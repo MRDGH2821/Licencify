@@ -8,8 +8,25 @@ use std::fmt;
     version
 )]
 pub struct Cli {
+    /// Report each resolved setting's source without printing its value
+    #[arg(long, global = true)]
+    pub verbose: bool,
+
+    /// Where add and update record the selected licence, author, and format
+    #[arg(long, global = true, value_enum)]
+    pub config_target: Option<ConfigTargetChoice>,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+/// Root entry that should receive a saved licence selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum ConfigTargetChoice {
+    /// Shared project defaults
+    Shared,
+    /// Exact-path subdirectory entry
+    Subdir,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -18,6 +35,8 @@ pub enum LicenseFormat {
     Txt,
     /// HTML (licenseTextHtml)
     Html,
+    /// Markdown (converted from licenseTextHtml)
+    Md,
 }
 
 impl fmt::Display for LicenseFormat {
@@ -25,6 +44,7 @@ impl fmt::Display for LicenseFormat {
         match self {
             LicenseFormat::Txt => write!(f, "txt"),
             LicenseFormat::Html => write!(f, "html"),
+            LicenseFormat::Md => write!(f, "md"),
         }
     }
 }
@@ -33,8 +53,8 @@ impl fmt::Display for LicenseFormat {
 pub enum Commands {
     /// Add a license to the current project
     Add {
-        /// SPDX license identifier (e.g., MIT, Apache-2.0, proprietary)
-        spdx: String,
+        /// SPDX license identifier. Omit to use the configured licence.
+        spdx: Option<String>,
 
         /// Copyright holder name (default: git config user.name)
         #[arg(short, long)]
@@ -52,7 +72,7 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
@@ -60,9 +80,20 @@ pub enum Commands {
         #[arg(short = 'Y', long)]
         yes: bool,
 
-        /// Update README with license badge (if README exists)
+        /// Promote one matching additional licence to primary
         #[arg(long)]
+        permit_promotion: bool,
+
+        /// Add or refresh the README licence badge and section
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
+
+        /// Skip writing every licence file, including additional licences
+        #[arg(long)]
+        no_file: bool,
+        /// Leave the README unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_readme")]
+        no_update_readme: bool,
     },
 
     /// List available licenses
@@ -97,6 +128,12 @@ pub enum Commands {
     /// Detect the current project's license
     Detect,
 
+    /// Report licence files and README claims without changing files
+    Scan {
+        /// Expected primary licence ID; does not replace additional licences
+        id: Option<String>,
+    },
+
     /// Change the project's license
     Update {
         /// SPDX license identifier to change to
@@ -118,16 +155,31 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
-        /// Update README with license badge (if README exists)
+        /// Skip confirmation prompts
+        #[arg(short = 'Y', long)]
+        yes: bool,
+
+        /// Promote one matching additional licence to primary
         #[arg(long)]
+        permit_promotion: bool,
+
+        /// Add or refresh the README licence badge and section
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
+
+        /// Skip writing every licence file, including additional licences
+        #[arg(long)]
+        no_file: bool,
+        /// Leave the README unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_readme")]
+        no_update_readme: bool,
     },
 
-    /// Manage local template cache
+    /// Manage the global SPDX detail cache
     Cache {
         #[command(subcommand)]
         action: CacheAction,
@@ -149,7 +201,7 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum CacheAction {
-    /// Clear all cached templates
+    /// Clear all cached SPDX details
     Clear,
 
     /// Show cache directory location and size
@@ -166,4 +218,55 @@ pub enum ConfigAction {
 
     /// Show current configuration
     Show,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Cli, Commands};
+    use clap::Parser;
+
+    #[test]
+    fn readme_flags_enable_disable_and_conflict() {
+        let enabled = Cli::try_parse_from(["licencify", "add", "MIT", "--update-readme"]).unwrap();
+        assert!(matches!(
+            enabled.command,
+            Commands::Add {
+                update_readme: true,
+                no_update_readme: false,
+                ..
+            }
+        ));
+
+        let disabled =
+            Cli::try_parse_from(["licencify", "update", "MIT", "--no-update-readme"]).unwrap();
+        assert!(matches!(
+            disabled.command,
+            Commands::Update {
+                update_readme: false,
+                no_update_readme: true,
+                ..
+            }
+        ));
+
+        let unset = Cli::try_parse_from(["licencify", "add", "MIT"]).unwrap();
+        assert!(matches!(
+            unset.command,
+            Commands::Add {
+                update_readme: false,
+                no_update_readme: false,
+                ..
+            }
+        ));
+
+        assert!(
+            Cli::try_parse_from([
+                "licencify",
+                "add",
+                "MIT",
+                "--update-readme",
+                "--no-update-readme",
+            ])
+            .is_err()
+        );
+    }
 }

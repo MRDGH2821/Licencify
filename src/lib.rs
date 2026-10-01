@@ -17,8 +17,32 @@ mod template;
 use clap::Parser;
 use cli::{Cli, Commands};
 
+/// `--update-readme` forces an update and `--no-update-readme` forces a skip.
+/// Neither flag leaves the choice to configuration.
+fn readme_override(enable: bool, disable: bool) -> Option<bool> {
+    if disable {
+        Some(false)
+    } else if enable {
+        Some(true)
+    } else {
+        None
+    }
+}
+
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    let yes = match &cli.command {
+        Commands::Add { yes, .. } | Commands::Update { yes, .. } => *yes,
+        _ => false,
+    };
+    config::set_cli_context(config::CliContext {
+        verbose: cli.verbose,
+        yes,
+        config_target: cli.config_target.map(|target| match target {
+            cli::ConfigTargetChoice::Shared => config::ConfigWriteTarget::SharedDefaults,
+            cli::ConfigTargetChoice::Subdir => config::ConfigWriteTarget::ExactSubdir,
+        }),
+    });
 
     match cli.command {
         Commands::Add {
@@ -29,15 +53,22 @@ pub fn main() -> anyhow::Result<()> {
             year,
             format,
             yes,
+            permit_promotion,
             update_readme,
-        } => {
-            let do_update = update_readme
-                || crate::config::Config::load_effective(None)
-                    .ok()
-                    .and_then(|c| c.default.update_readme)
-                    .unwrap_or(false);
-            commands::cmd_add(&spdx, author, company, email, year, format, yes, do_update)
-        }
+            no_file,
+            no_update_readme,
+        } => commands::cmd_add(
+            spdx.as_deref(),
+            author,
+            company,
+            email,
+            year,
+            format,
+            yes,
+            permit_promotion,
+            readme_override(update_readme, no_update_readme),
+            no_file,
+        ),
         Commands::List {
             osi_only,
             fsf_only,
@@ -49,6 +80,7 @@ pub fn main() -> anyhow::Result<()> {
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
         Commands::Detect => commands::cmd_detect(),
+        Commands::Scan { id } => commands::cmd_scan(id.as_deref()),
         Commands::Update {
             spdx,
             author,
@@ -56,15 +88,23 @@ pub fn main() -> anyhow::Result<()> {
             email,
             year,
             format,
+            yes,
+            permit_promotion,
             update_readme,
-        } => {
-            let do_update = update_readme
-                || crate::config::Config::load_effective(None)
-                    .ok()
-                    .and_then(|c| c.default.update_readme)
-                    .unwrap_or(false);
-            commands::cmd_update(&spdx, author, company, email, year, format, do_update)
-        }
+            no_file,
+            no_update_readme,
+        } => commands::cmd_update(
+            &spdx,
+            author,
+            company,
+            email,
+            year,
+            format,
+            yes,
+            permit_promotion,
+            readme_override(update_readme, no_update_readme),
+            no_file,
+        ),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
         Commands::Schema { output } => commands::cmd_schema(&output),

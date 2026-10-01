@@ -19,6 +19,33 @@ pub trait Fs: Send + Sync {
     fn read_dir(&self, path: &Path) -> Vec<PathBuf>;
     /// Remove a directory and all its contents recursively.
     fn remove_dir_all(&self, path: &Path) -> std::io::Result<()>;
+    /// Remove one file. Default fails so partial test filesystems stay explicit.
+    fn remove_file(&self, path: &Path) -> std::io::Result<()> {
+        let _ = path;
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "remove_file is not implemented",
+        ))
+    }
+    /// Rename `from` to `to`, replacing `to` when the implementation allows it.
+    fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        let _ = (from, to);
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "rename is not implemented",
+        ))
+    }
+
+    /// Create `path` only when it is absent, so an existing extra cannot be overwritten.
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        if self.exists(path) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("file exists: {}", path.display()),
+            ));
+        }
+        self.write(path, contents)
+    }
 }
 
 /// Real filesystem — delegates to `std::fs`.
@@ -49,6 +76,22 @@ impl Fs for RealFs {
 
     fn remove_dir_all(&self, path: &Path) -> std::io::Result<()> {
         std::fs::remove_dir_all(path)
+    }
+
+    fn remove_file(&self, path: &Path) -> std::io::Result<()> {
+        std::fs::remove_file(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        std::fs::rename(from, to)
+    }
+
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)?;
+        std::io::Write::write_all(&mut file, contents.as_bytes())
     }
 }
 
@@ -164,6 +207,48 @@ impl Fs for MemFs {
         }
 
         entries
+    }
+
+    fn remove_file(&self, path: &Path) -> std::io::Result<()> {
+        if self.files.write().unwrap().remove(path).is_some() {
+            Ok(())
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "file not found",
+            ))
+        }
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        if from == to {
+            return if self.exists(from) {
+                Ok(())
+            } else {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "file not found",
+                ))
+            };
+        }
+        let mut files = self.files.write().unwrap();
+        let contents = files
+            .remove(from)
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "file not found"))?;
+        files.insert(to.to_path_buf(), contents);
+        Ok(())
+    }
+
+    fn create_new(&self, path: &Path, contents: &str) -> std::io::Result<()> {
+        let mut files = self.files.write().unwrap();
+        if files.contains_key(path) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("file exists: {}", path.display()),
+            ));
+        }
+        files.insert(path.to_path_buf(), contents.to_string());
+        Ok(())
     }
 
     fn remove_dir_all(&self, path: &Path) -> std::io::Result<()> {
@@ -305,5 +390,21 @@ mod tests {
         assert!(!fs.exists(Path::new("/project/sub/b.txt")));
         assert!(!fs.exists(Path::new("/project/sub")));
         assert!(!fs.exists(Path::new("/project")));
+    }
+
+    #[test]
+    fn memfs_rename_replaces_destination_and_removes_source() {
+        let fs = MemFs::new();
+        fs.write(Path::new("old.txt"), "old").unwrap();
+        fs.write(Path::new("new.txt"), "new").unwrap();
+        fs.rename(Path::new("old.txt"), Path::new("new.txt"))
+            .unwrap();
+        assert!(!fs.exists(Path::new("old.txt")));
+        assert_eq!(
+            fs.read_to_string(Path::new("new.txt")).as_deref(),
+            Some("old")
+        );
+        fs.remove_file(Path::new("new.txt")).unwrap();
+        assert!(!fs.exists(Path::new("new.txt")));
     }
 }
