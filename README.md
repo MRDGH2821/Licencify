@@ -220,30 +220,37 @@ Options:
 
 ### Config locations
 
-- **Global config**: `~/.config/licencify/config.toml` (Linux) or equivalent per `dirs::config_dir()`
-- **Project config**: `.licencify.toml` or `licencify.toml` in the project root (walked up from CWD)
-- **Subdirectory overrides**: defined inside the config under `[subdirs]`
+- **Global defaults**: `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform config directory)
+- **Shared project config**: `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml`
+- **Local project overrides**: the adjacent `config.local.toml`
 
-Global defaults are overridden by project config, which is overridden by CLI flags.
+`PRJ_ROOT` may select an absolute root containing the current directory. Otherwise Licencify uses the Git worktree root, the highest ancestor with a shared config, or the current directory. Root-level `.licencify.toml` and `licencify.toml` are not loaded. `config init` creates only the shared project config without overwriting it.
+
+Global defaults are overridden, field by field, by shared project defaults, matching shared `[[subdirs]]` entries (shallow to deep), local defaults, matching local entries (shallow to deep), then CLI options. An empty `additional-licences` array clears inherited additional IDs.
 
 ### Subdirectory overrides
 
-You can set different licence values for specific subdirectories:
+Define rules in either root project config, not in child config files:
 
 ```toml
 [default]
 author = "Jane Doe"
-license = "MIT"
-
-[[subdirs]]
-path = "vendor"
-author = "Third Party"
-license = "BSD-3-Clause"
+licence = "MIT"
 
 [[subdirs]]
 path = "docs"
-license = "CC0-1.0"
+licence = "CC0-1.0"
+
+[[subdirs]]
+path = "docs/api"
+additional-licences = []
 ```
+
+Paths are relative to the project root; paths that escape it are rejected. Child config files on the path to the current directory are ignored with a warning.
+
+`add` and `update` preserve comments and unrelated settings when recording the selected licence, author, and format. From a subdirectory, interactive use asks whether to update shared defaults or the exact subdirectory rule; `--yes` and noninteractive use select the exact rule.
+
+Set `--config-target shared` or `--config-target subdir` explicitly. If a local override masks the chosen fields, the winning local entry is updated instead. `--verbose` reports setting sources without printing their values.
 
 ## Licence templates
 

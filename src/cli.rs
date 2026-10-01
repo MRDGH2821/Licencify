@@ -8,8 +8,25 @@ use std::fmt;
     version
 )]
 pub struct Cli {
+    /// Report each resolved setting's source without printing its value
+    #[arg(long, global = true)]
+    pub verbose: bool,
+
+    /// Where add and update record the selected licence, author, and format
+    #[arg(long, global = true, value_enum)]
+    pub config_target: Option<ConfigTargetChoice>,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+/// Root entry that should receive a saved licence selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum ConfigTargetChoice {
+    /// Shared project defaults
+    Shared,
+    /// Exact-path subdirectory entry
+    Subdir,
 }
 
 #[derive(Clone, ValueEnum)]
