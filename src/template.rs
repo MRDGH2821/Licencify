@@ -3,6 +3,39 @@ use regex::Regex;
 use std::sync::LazyLock;
 use tera::{Context as TeraContext, Tera};
 
+static RE_HTML_BLOCK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)</?(?:p|div|br|li|h[1-6]|pre|blockquote|tr|ul|ol)\b[^>]*>").unwrap()
+});
+static RE_HTML_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]*>").unwrap());
+
+pub(crate) fn html_to_markdown(html: &str) -> String {
+    let html = RE_YEAR.replace_all(html, "&lt;year&gt;");
+    let html = RE_AUTHOR.replace_all(&html, "&lt;author&gt;");
+    let html = RE_HOLDERS.replace_all(&html, "&lt;copyright holder&gt;");
+    let blocks = RE_HTML_BLOCK.replace_all(&html, "\n\n");
+    let text = RE_HTML_TAG.replace_all(&blocks, "");
+    let text = text
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lsquo;", "‘")
+        .replace("&rsquo;", "’")
+        .replace("&ldquo;", "“")
+        .replace("&rdquo;", "”")
+        .replace("&nbsp;", " ")
+        .replace("&copy;", "©")
+        .replace("&mdash;", "—")
+        .replace("&ndash;", "–");
+    text.split("\n\n")
+        .map(|paragraph| paragraph.split_whitespace().collect::<Vec<_>>().join(" "))
+        .filter(|paragraph| !paragraph.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 static RE_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)<year>|&lt;year&gt;").unwrap());
 static RE_AUTHOR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)<author>|&lt;author&gt;").unwrap());
@@ -24,6 +57,11 @@ pub fn render_with_context(template: &str, ctx: &RenderContext) -> Result<String
     // Step 2: Post-replace SPDX-style <year>, <author>, <copyright holders> placeholders
     let result = replace_spdx_placeholders(&rendered, &ctx.year, &ctx.author);
     Ok(result)
+}
+
+/// Render an HTML template and convert its visible text to Markdown.
+pub fn render_markdown_with_context(template: &str, ctx: &RenderContext) -> Result<String> {
+    Ok(html_to_markdown(&render_with_context(template, ctx)?))
 }
 
 /// Full render context for template placeholders.
@@ -205,5 +243,27 @@ mod tests {
         assert!(!result.contains("<pre>"));
         assert!(result.starts_with("MIT License"));
         assert!(result.contains("Permission is hereby granted"));
+    }
+}
+
+#[cfg(test)]
+mod markdown_tests {
+    use super::*;
+
+    #[test]
+    fn markdown_conversion_preserves_visible_html_wording() {
+        assert_eq!(
+            html_to_markdown("<p>Terms &amp; conditions</p><p>All rights reserved.</p>"),
+            "Terms & conditions\n\nAll rights reserved."
+        );
+    }
+
+    #[test]
+    fn markdown_conversion_runs_after_template_rendering() {
+        let ctx = render_context("2026", "Alice", None, None);
+
+        let rendered = render_markdown_with_context("<p>Terms for {{ author }}</p>", &ctx).unwrap();
+
+        assert_eq!(rendered, "Terms for Alice");
     }
 }

@@ -1,29 +1,34 @@
-use crate::{cli::CacheAction, fs::global_fs, provider, spdx};
-use std::io::Write;
+use crate::{
+    cli::CacheAction,
+    fs::{Fs, global_fs},
+    provider, spdx,
+};
+use std::{io::Write, path::Path};
 
-fn api_dir() -> anyhow::Result<std::path::PathBuf> {
-    Ok(dirs::cache_dir()
-        .ok_or_else(|| anyhow::anyhow!("unable to determine XDG cache directory"))?
-        .join("licencify")
-        .join("api"))
+fn cache_size(fs: &dyn Fs, dir: &Path) -> u64 {
+    // SPDX details are stored as flat JSON files directly in this directory.
+    fs.read_dir(dir)
+        .iter()
+        .filter_map(|path| fs.read_to_string(path))
+        .map(|contents| contents.len() as u64)
+        .sum()
 }
 
 pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
-    let dir = api_dir()?;
+    let dir = provider::spdx_cache_dir()?;
     let fs = global_fs();
 
     match action {
         CacheAction::Clear => {
-            // Cache dir is flat (only .json files), so len() counts entries correctly
             let count = if fs.exists(&dir) {
                 let n = fs.read_dir(&dir).len();
-                fs.remove_dir_all(&dir).ok();
+                fs.remove_dir_all(&dir)?;
                 n
             } else {
                 0
             };
             println!(
-                "Cleared {} cached API responses from {}",
+                "Cleared {} cached SPDX responses from {}",
                 count,
                 dir.display()
             );
@@ -37,6 +42,7 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
             };
             println!("Cache directory: {}", dir.display());
             println!("Cached responses: {}", count);
+            println!("Cache size: {} bytes", cache_size(fs.as_ref(), &dir));
             Ok(())
         }
         CacheAction::FetchAll => cmd_cache_fetch_all(),
@@ -45,8 +51,8 @@ pub fn cmd_cache(action: CacheAction) -> anyhow::Result<()> {
 
 fn cmd_cache_fetch_all() -> anyhow::Result<()> {
     let index = spdx::SpdxIndex::load()?;
-    let dir = api_dir()?;
-    let prov = provider::LicenseProvider::with_api_cache(&dir)?;
+    let dir = provider::spdx_cache_dir()?;
+    let prov = provider::LicenseProvider::with_spdx_cache(&dir)?;
 
     let total = index.licenses.len();
     let mut fetched = 0usize;
@@ -102,11 +108,20 @@ mod tests {
     }
 
     #[test]
-    fn cmd_cache_clear_with_empty_cache() {
+    fn cmd_cache_clear_removes_only_spdx_cache() {
         let _guard = FsGuard::new();
-        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
+        let fs = Arc::new(MemFs::new());
+        let dir = provider::spdx_cache_dir().unwrap();
+        let parent = dir.parent().unwrap();
+        fs.create_dir_all(&dir).unwrap();
+        fs.write_file(dir.join("MIT.json"), "{}");
+        fs.write_file(parent.join("settings.json"), "{}");
+        assert_eq!(cache_size(fs.as_ref(), &dir), 2);
         crate::fs::set_global_fs(fs.clone());
-        let result = cmd_cache(CacheAction::Clear);
-        assert!(result.is_ok());
+
+        cmd_cache(CacheAction::Clear).unwrap();
+
+        assert!(!fs.exists(&dir.join("MIT.json")));
+        assert!(fs.exists(&parent.join("settings.json")));
     }
 }

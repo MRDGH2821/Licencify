@@ -8,8 +8,25 @@ use std::fmt;
     version
 )]
 pub struct Cli {
+    /// Report each resolved setting's source without printing its value
+    #[arg(long, global = true)]
+    pub verbose: bool,
+
+    /// Where add and update record the selected licence, author, and format
+    #[arg(long, global = true, value_enum)]
+    pub config_target: Option<ConfigTargetChoice>,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+/// Root entry that should receive a saved licence selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum ConfigTargetChoice {
+    /// Shared project defaults
+    Shared,
+    /// Exact-path subdirectory entry
+    Subdir,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -18,6 +35,8 @@ pub enum LicenseFormat {
     Txt,
     /// HTML (licenseTextHtml)
     Html,
+    /// Markdown (converted from licenseTextHtml)
+    Md,
 }
 
 impl fmt::Display for LicenseFormat {
@@ -25,6 +44,7 @@ impl fmt::Display for LicenseFormat {
         match self {
             LicenseFormat::Txt => write!(f, "txt"),
             LicenseFormat::Html => write!(f, "html"),
+            LicenseFormat::Md => write!(f, "md"),
         }
     }
 }
@@ -52,7 +72,7 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
@@ -118,7 +138,7 @@ pub enum Commands {
         #[arg(short, long)]
         year: Option<String>,
 
-        /// Output format: txt (default) or html
+        /// Output format: txt (default), html, or md
         #[arg(short, long, default_value = "txt")]
         format: LicenseFormat,
 
@@ -127,7 +147,7 @@ pub enum Commands {
         update_readme: bool,
     },
 
-    /// Manage local template cache
+    /// Manage the global SPDX detail cache
     Cache {
         #[command(subcommand)]
         action: CacheAction,
@@ -149,7 +169,7 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum CacheAction {
-    /// Clear all cached templates
+    /// Clear all cached SPDX details
     Clear,
 
     /// Show cache directory location and size

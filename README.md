@@ -95,11 +95,12 @@ Options:
           Copyright year (default: current year)
 
   -f, --format <FORMAT>
-          Output format: txt (default) or html
+          Output format: txt (default), html, or md
 
           Possible values:
           - txt:  Plain text (licenseText)
           - html: HTML (licenseTextHtml)
+          - md:   Markdown converted from licenseTextHtml
 
           [default: txt]
 
@@ -167,11 +168,12 @@ Options:
           Copyright year
 
   -f, --format <FORMAT>
-          Output format: txt (default) or html
+          Output format: txt (default), html, or md
 
           Possible values:
           - txt:  Plain text (licenseText)
           - html: HTML (licenseTextHtml)
+          - md:   Markdown converted from licenseTextHtml
 
           [default: txt]
 
@@ -218,34 +220,41 @@ Options:
 
 ### Config locations
 
-- **Global config**: `~/.config/licencify/config.toml` (Linux) or equivalent per `dirs::config_dir()`
-- **Project config**: `.licencify.toml` or `licencify.toml` in the project root (walked up from CWD)
-- **Subdirectory overrides**: defined inside the config under `[subdirs]`
+- **Global defaults**: `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform config directory)
+- **Shared project config**: `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml`
+- **Local project overrides**: the adjacent `config.local.toml`
 
-Global defaults are overridden by project config, which is overridden by CLI flags.
+`PRJ_ROOT` may select an absolute root containing the current directory. Otherwise Licencify uses the Git worktree root, the highest ancestor with a shared config, or the current directory. Root-level `.licencify.toml` and `licencify.toml` are not loaded. `config init` creates only the shared project config without overwriting it.
+
+Global defaults are overridden, field by field, by shared project defaults, matching shared `[[subdirs]]` entries (shallow to deep), local defaults, matching local entries (shallow to deep), then CLI options. An empty `additional-licences` array clears inherited additional IDs.
 
 ### Subdirectory overrides
 
-You can set different licence values for specific subdirectories:
+Define rules in either root project config, not in child config files:
 
 ```toml
 [default]
 author = "Jane Doe"
-license = "MIT"
-
-[[subdirs]]
-path = "vendor"
-author = "Third Party"
-license = "BSD-3-Clause"
+licence = "MIT"
 
 [[subdirs]]
 path = "docs"
-license = "CC0-1.0"
+licence = "CC0-1.0"
+
+[[subdirs]]
+path = "docs/api"
+additional-licences = []
 ```
+
+Paths are relative to the project root; paths that escape it are rejected. Child config files on the path to the current directory are ignored with a warning.
+
+`add` and `update` preserve comments and unrelated settings when recording the selected licence, author, and format. From a subdirectory, interactive use asks whether to update shared defaults or the exact subdirectory rule; `--yes` and noninteractive use select the exact rule.
+
+Set `--config-target shared` or `--config-target subdir` explicitly. If a local override masks the chosen fields, the winning local entry is updated instead. `--verbose` reports setting sources without printing their values.
 
 ## Licence templates
 
-Licencify ships with 14 built-in template pairs (plain text + HTML):
+Licencify ships with 14 built-in template pairs (plain text + HTML); Markdown is converted from HTML:
 
 | SPDX ID         | Licence                      |
 | --------------- | ---------------------------- |
@@ -283,21 +292,21 @@ Add custom template paths in your config:
 paths = ["/path/to/my/templates"]
 ```
 
-Custom templates are checked before built-in ones. Name your files `<spdx-id>.tera` (plain text) and `<spdx-id>.html.tera` (HTML).
+Project templates in `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/templates/` take precedence over global templates in `$XDG_CONFIG_HOME/licencify/templates/`, followed by cached/fetched SPDX details and bundled templates. Use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML or Markdown.
 
 ### SPDX API fallback
 
-For licences without a built-in template, licencify fetches the full licence text from `https://spdx.org/licenses/<id>.json`. Responses are cached locally in the XDG cache directory.
+When no higher-priority custom template exists, Licencify uses cached SPDX detail or fetches it on a cache miss, then falls back to a bundled template. Responses use the global `${XDG_CACHE_HOME:-$HOME/.cache}/licencify/SPDX-Cache/` directory. Cached detail avoids a network request. If no HTML source is available for `html` or `md`, Licencify warns and writes text with a `.txt` extension instead.
 
 ### Template cache
 
 ```text
-Manage local template cache
+Manage global SPDX detail cache
 
 Usage: licencify cache <COMMAND>
 
 Commands:
-  clear      Clear all cached templates
+  clear      Clear all cached SPDX details
   info       Show cache directory location and size
   fetch-all  Pre-fetch and cache all license templates from SPDX
   help       Print this message or the help of the given subcommand(s)

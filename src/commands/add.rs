@@ -35,8 +35,7 @@ pub fn cmd_add(
         if let Some(ref e) = ctx.email {
             println!("  Email:   {}", e);
         }
-        println!("  Year:    {}", ctx.year);
-        println!("  Format:  {}", format);
+        println!("  Format:  {}", ctx.resolved.format);
         println!();
         print!("Continue? [Y/n] ");
         std::io::stdout().flush()?;
@@ -55,8 +54,13 @@ pub fn cmd_add(
         ctx.email.as_deref(),
     );
 
-    let ext = format.to_string();
-    let content = template::render_with_context(&ctx.resolved.text, &render_ctx)?;
+    let ext = ctx.resolved.format.to_string();
+    let content = match &ctx.resolved.format {
+        LicenseFormat::Md => {
+            template::render_markdown_with_context(&ctx.resolved.text, &render_ctx)?
+        }
+        _ => template::render_with_context(&ctx.resolved.text, &render_ctx)?,
+    };
 
     let filename = ctx.licence_name.file_path(&ext);
     let fs = global_fs();
@@ -86,7 +90,7 @@ pub fn cmd_add(
     }
 
     // Update project config defaults if a project config exists
-    let fmt_str = format.to_string();
+    let fmt_str = ctx.resolved.format.to_string();
     match crate::config::Config::update_project_defaults(&info.id, &ctx.author, &fmt_str) {
         Ok(true) => println!("   Updated project config defaults"),
         Ok(false) => {}
