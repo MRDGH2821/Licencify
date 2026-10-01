@@ -21,6 +21,26 @@ cargo build --release
 cargo install --git https://github.com/MRDGH2821/Licencify
 ```
 
+### Verify a GitHub release
+
+Tag releases publish `packslip.sigstore.json` alongside the platform binaries
+and checksums. Install [packslip](https://packslip.dev/docs/getting-started/)
+with `mise use -g github:jdx/packslip`, then download the bundle and the
+binary you intend to run from the same release:
+
+```bash
+packslip verify packslip.sigstore.json \
+  --identity-prefix https://github.com/MRDGH2821/Licencify/ \
+  --issuer https://token.actions.githubusercontent.com \
+  --artifact licencify-x86_64-unknown-linux-gnu
+```
+
+Replace the artifact filename for your platform. Verification checks the
+workflow identity and the downloaded binary's signed digest; inspecting a
+bundle with `packslip show` alone does not verify it. Windows GNU, GNU LLVM,
+ARM hard-float, and NEON binaries are selectable variants; their default
+counterparts remain unqualified.
+
 ## Development
 
 Install [mise](https://mise.jdx.dev/), then run `mise install` in the repository to install the pinned Rust toolchain, `cargo-audit`, and `mr-boxington`.
