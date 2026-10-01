@@ -139,14 +139,6 @@ struct GlobalConfig {
     template: Option<TemplateConfig>,
 }
 
-/// Detect whether the system locale uses en-GB or en-US spelling.
-/// Returns "LICENCE" for en-GB and "LICENSE" for en-US/other.
-pub fn detect_licence_name() -> String {
-    crate::licence_name::LicenceName::detect()
-        .as_str()
-        .to_string()
-}
-
 /// Local `[scan] exclude` entries are appended to the shared list.
 fn union_scan(base: Option<ScanConfig>, overriding: Option<ScanConfig>) -> Option<ScanConfig> {
     match (base, overriding) {
@@ -748,6 +740,7 @@ fn edit_config_text(
     Ok(doc.to_string())
 }
 
+#[cfg(test)]
 fn write_project_selection(
     shared_path: &Path,
     local_path: &Path,
@@ -1184,14 +1177,7 @@ impl Config {
         Ok(())
     }
 
-    pub fn load_project_with_root(root: &std::path::Path) -> Result<(Self, PathBuf)> {
-        let dir = std::env::var_os("PRJ_CONFIG_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| root.join(".config"))
-            .join("licencify");
-        Self::load_project_with_paths(root, &Self::global_path()?, &dir)
-    }
-
+    #[cfg(test)]
     fn load_project_with_paths(
         root: &std::path::Path,
         global_path: &Path,
@@ -1281,10 +1267,6 @@ impl Config {
             .with_context(|| format!("Failed to write config file: {}", path.display()))
     }
 
-    pub fn update_project_defaults(license: &str, author: &str, format: &str) -> Result<bool> {
-        Self::update_saved_selection(license, author, format, None)
-    }
-
     /// Record the primary selection. `additional`, when set, replaces the additional-licence list.
     pub fn update_saved_selection(
         license: &str,
@@ -1316,24 +1298,8 @@ impl Config {
         )
     }
 
-    pub fn save(&self) -> Result<()> {
-        self.save_to_path(&Self::global_path()?)
-    }
-
     pub fn licence_name_setting(&self) -> Option<&str> {
         self.default.licence_name.as_deref()
-    }
-
-    pub fn find_custom_template(&self, spdx_id: &str, format: &str) -> Option<(String, String)> {
-        let fs = global_fs();
-        let paths = self.template.as_ref()?.paths.as_ref()?;
-        let filename = format!("{}.{}", spdx_id, format);
-        for dir in paths {
-            if let Some(text) = fs.read_to_string(&std::path::Path::new(dir).join(&filename)) {
-                return Some((text, format!("custom ({dir})")));
-            }
-        }
-        None
     }
 
     pub fn schema_json() -> Result<String> {

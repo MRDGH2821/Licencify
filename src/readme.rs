@@ -19,8 +19,6 @@ const README_CANDIDATES: &[&str] = &[
 /// Result of an opt-in README update.
 #[derive(Debug)]
 pub struct ReadmeUpdate {
-    /// True when the README bytes changed.
-    pub changed: bool,
     /// Handwritten references that still name a different primary file.
     pub warnings: Vec<String>,
 }
@@ -59,14 +57,12 @@ pub fn update_readme(spdx_id: &str, licence_path: &Path) -> Result<ReadmeUpdate>
     let fs = global_fs();
     let Some(readme_name) = find_readme(&*fs) else {
         return Ok(ReadmeUpdate {
-            changed: false,
             warnings: Vec::new(),
         });
     };
     // Only handle markdown-style READMEs in v1
     if !readme_name.ends_with(".md") && !readme_name.ends_with(".markdown") {
         return Ok(ReadmeUpdate {
-            changed: false,
             warnings: Vec::new(),
         });
     }
@@ -85,7 +81,7 @@ pub fn update_readme(spdx_id: &str, licence_path: &Path) -> Result<ReadmeUpdate>
             .map_err(|error| anyhow!("could not write {readme_name}: {error}"))?;
         println!("   Updated {readme_name} with license badge");
     }
-    Ok(ReadmeUpdate { changed, warnings })
+    Ok(ReadmeUpdate { warnings })
 }
 
 /// Print README warnings without hiding a successful licence-file write.
@@ -326,7 +322,6 @@ mod tests {
         let (_guard, fs) = install_fs();
         fs.write(Path::new("README.md"), "# My Project").unwrap();
         let result = update_readme("MIT", Path::new("LICENSE.md")).unwrap();
-        assert!(result.changed);
         assert!(result.warnings.is_empty());
         let content = fs.read_to_string(Path::new("README.md")).unwrap();
         assert!(content.contains("# My Project"));
@@ -339,14 +334,10 @@ mod tests {
     fn generated_readme_content_is_idempotent() {
         let (_guard, fs) = install_fs();
         fs.write(Path::new("README.md"), "# My Project").unwrap();
-        assert!(
-            update_readme("MIT", Path::new("LICENCE.txt"))
-                .unwrap()
-                .changed
-        );
+        update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
         let once = fs.read_to_string(Path::new("README.md")).unwrap();
-        let again = update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
-        assert!(!again.changed);
+        assert!(once.contains("](LICENCE.txt)"));
+        update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
         assert_eq!(fs.read_to_string(Path::new("README.md")).unwrap(), once);
     }
 
@@ -358,8 +349,7 @@ mod tests {
             "# Project\n\nHandwritten note stays.\n\n[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENCE.txt)\n\n## License\n\nThis project is licensed under the [MIT](LICENCE.txt) licence.\n",
         )
         .unwrap();
-        let result = update_readme("Apache-2.0", Path::new("LICENSE.html")).unwrap();
-        assert!(result.changed);
+        update_readme("Apache-2.0", Path::new("LICENSE.html")).unwrap();
         let content = fs.read_to_string(Path::new("README.md")).unwrap();
         assert!(content.contains("Handwritten note stays."));
         assert!(content.contains("License-Apache-2.0-blue.svg"));
@@ -377,7 +367,6 @@ mod tests {
         )
         .unwrap();
         let result = update_readme("MIT", Path::new("LICENSE.md")).unwrap();
-        assert!(result.changed);
         let content = fs.read_to_string(Path::new("README.md")).unwrap();
         assert!(content.contains("Kept by hand. See [the old file](LICENCE.txt)."));
         assert_eq!(content.matches("## License").count(), 1);
@@ -395,7 +384,6 @@ mod tests {
         let body = "# Project\n\n[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENCE.txt)\n\n## License\n\nThis project is licensed under the [MIT](LICENCE.txt) licence.\n";
         fs.write(Path::new("README.md"), body).unwrap();
         let result = update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
-        assert!(!result.changed);
         assert!(result.warnings.is_empty());
         assert_eq!(
             fs.read_to_string(Path::new("README.md")).as_deref(),
@@ -422,7 +410,6 @@ mod tests {
     fn update_readme_skips_if_no_readme() {
         let (_guard, _fs) = install_fs();
         let result = update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
-        assert!(!result.changed);
         assert!(result.warnings.is_empty());
     }
 
@@ -430,8 +417,7 @@ mod tests {
     fn update_readme_skips_non_markdown() {
         let (_guard, fs) = install_fs();
         fs.write(Path::new("README.rst"), "Hello\n").unwrap();
-        let result = update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
-        assert!(!result.changed);
+        update_readme("MIT", Path::new("LICENCE.txt")).unwrap();
         assert_eq!(
             fs.read_to_string(Path::new("README.rst")).as_deref(),
             Some("Hello\n")
