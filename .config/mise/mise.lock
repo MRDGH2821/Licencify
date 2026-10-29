@@ -255,12 +255,12 @@ url = "https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x
 [[tools."cargo:cargo-audit"]]
 version = "0.22.2"
 backend = "cargo:cargo-audit"
-specifiers = ["latest"]
+specifiers = ["0.22.2"]
 
 [[tools."cargo:cargo-bump"]]
 version = "1.1.0"
 backend = "cargo:cargo-bump"
-specifiers = ["latest"]
+specifiers = ["1.1.0"]
 
 [[tools.cocogitto]]
 version = "7.0.0"
@@ -827,7 +827,7 @@ url_api = "https://api.github.com/repos/loeffel-io/ls-lint/releases/assets/64980
 [[tools.mr-boxington]]
 version = "1.28.0"
 backend = "packslip:github.com/jdx/mr-boxington"
-specifiers = ["latest"]
+specifiers = ["1.28.0"]
 
 [tools.mr-boxington."platforms.linux-arm64"]
 checksum = "sha256:9056d34520991f80c9f708d36008fcc732e500d735591a8649029d476cb566bd"
@@ -1114,9 +1114,9 @@ url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/685449367"
 provenance = "github-attestations"
 
 [[tools.rust]]
-version = "1.98.1"
+version = "1.99.1"
 backend = "core:rust"
-specifiers = ["1.98.1"]
+specifiers = ["1.99.1"]
 
 [[tools.tombi]]
 version = "1.9.7"

@@ -52,8 +52,8 @@ run = ["bun install", { task = "ai-setup" }]
 "aqua:owenlamont/ryl" = "0.26.1"
 betterleaks = "1.9.0"
 bun = "1.4.4"
-"cargo:cargo-audit" = "latest"
-"cargo:cargo-bump" = "latest"
+"cargo:cargo-audit" = "0.22.2"
+"cargo:cargo-bump" = "1.1.0"
 cocogitto = "7.0.0"
 cspell = "10.4.0"
 editorconfig-checker = "4.0.2"
@@ -63,14 +63,14 @@ git-cliff = "2.14.2"
 "github:infragate/capa" = "2.4.0"
 hk = { version = "2.9.0", workflow = "release.yml" }
 ls-lint = "2.3.2"
-mr-boxington = "latest"
+mr-boxington = { version = "1.28.0", workflow = "release.yml@refs/heads/main" }
 oxfmt = "0.75.0"
 "pipx:lorenzwalthert/gitignore-tidy" = "latest"
 "pipx:toml-sort" = "0.25.0"
 pkl = "0.32.2"
 ruff = "0.17.3"
 rumdl = "0.3.2"
-rust = { mr_boxington = true, version = "1.98.1" }
+rust = { mr_boxington = true, version = "1.99.1" }
 tombi = "1.9.7"
 typos = "1.51.1"
 uv = "0.13.6"
