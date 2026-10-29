@@ -1,3 +1,10 @@
+[package]
+name = "licencify"
+version = "0.2.0"
+edition = "2024"
+description = "A CLI tool to add open-source licenses to projects"
+license = "MIT"
+
 [[bin]]
 name = "licencify"
 path = "src/main.rs"
@@ -5,21 +12,14 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.104"
 chrono = "0.4.45"
-clap = { features = ["derive"], version = "4.6.7" }
+clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
 ignore = "=0.4.34"
 regex = "1.13.1"
 schemars = "=1.2.3"
-serde = { features = ["derive"], version = "1.0.229" }
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 tera = "2.4.0"
 toml = "=1.1.8+spec-1.1.0"
 toml_edit = "=0.25.17+spec-1.1.0"
 ureq = "=3.5.0"
-
-[package]
-description = "A CLI tool to add open-source licenses to projects"
-edition = "2024"
-license = "MIT"
-name = "licencify"
-version = "0.2.0"
