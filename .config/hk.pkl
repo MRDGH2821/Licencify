@@ -91,7 +91,7 @@ local linters = new Mapping<String, Step> {
   ["ruff_format"] = Builtins.ruff_format
 
   // Text
-  ["fix_smart_quotes"] = Builtins.fix_smart_quotes
+  ["fix_smart_quotes"] = (Builtins.fix_smart_quotes) { exclude = "src/template.rs" }
   ["rumdl"] = (Builtins.rumdl) { depends = List("rumdl_format") }
   ["rumdl_format"] = Builtins.rumdl_format
   ["ryl"] = Builtins.ryl
