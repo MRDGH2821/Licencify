@@ -1,7 +1,15 @@
 version: 1
-generator: capa@2.2.4
-generatedAt: '2026-09-29T23:43:11.150Z'
+generator: capa@2.4.0
+generatedAt: '2026-10-29T22:32:16.687Z'
 skills:
+  - id: atomic-commits
+    source: github
+    repo: nullswan/atomic-commits
+    skillName: atomic-commits
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: b1428499726d0efd3b2c914e58a7279c707538e0
+    resolvedVersion: null
   - id: bootstrap
     source: github
     repo: infragate/capa
@@ -34,50 +42,18 @@ skills:
     requestedRef: null
     resolvedRef: 997e95a6e42869c350f8ca6ec4c066287697c9f0
     resolvedVersion: null
-  - id: grill-me
-    source: github
-    repo: mattpocock/skills
-    skillName: grill-me
-    requestedVersion: null
-    requestedRef: null
-    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-    resolvedVersion: v1.2.3
-  - id: grill-with-docs
-    source: github
-    repo: mattpocock/skills
-    skillName: grill-with-docs
-    requestedVersion: null
-    requestedRef: null
-    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-    resolvedVersion: v1.2.3
-  - id: grilling
-    source: github
-    repo: mattpocock/skills
-    skillName: grilling
-    requestedVersion: null
-    requestedRef: null
-    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-    resolvedVersion: v1.2.3
-  - id: to-tickets
-    source: github
-    repo: mattpocock/skills
-    skillName: to-tickets
-    requestedVersion: null
-    requestedRef: null
-    resolvedRef: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-    resolvedVersion: v1.2.3
 plugins:
-  - id: improve
+  - id: mattpocock-skills
     source: github
-    repo: shadcn/improve
+    repo: mattpocock/skills
     subpath: null
     requestedSearchName: null
     requestedVersion: null
     requestedRef: null
-    resolvedRef: cac56e1ebd3c279aa9153616cfeac7b174ab90f9
-    resolvedVersion: null
-    manifestName: improve
-    manifestVersion: 1.0.0
+    resolvedRef: d1478fcb140db0b93c0c8df17bcfd311844749d0
+    resolvedVersion: v1.3.2
+    manifestName: mattpocock-skills
+    manifestVersion: 1.3.2
   - id: megalinter
     source: github
     repo: oxsecurity/megalinter
