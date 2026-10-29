@@ -1,5 +1,5 @@
 # tombi: format.rules.array-values-order = "ascending"
-ignore = [
+exclude = [
   "**/*.lock",
   "**/.mise/**",
   "**/go.sum",
@@ -8,11 +8,18 @@ ignore = [
   "**/package-lock.json",
   "**/pnpm-lock.yaml"
 ]
+line-length = 800
 
 [files]
 yaml = ["*.yaml", "*.yml"]
 
-[rules]
+[format]
+comment-spacing = 1
+mapping-style = "block"
+quote-style = "preserve"
+sequence-style = "block"
+
+[lint.rules]
 anchors = "enable"
 brackets = "enable"
 colons = "enable"
@@ -29,30 +36,30 @@ new-line-at-end-of-file = "enable"
 octal-values = "disable"
 trailing-spaces = "enable"
 
-[rules.braces]
+[lint.rules.braces]
 max-spaces-inside = 1
 
-[rules.comments]
+[lint.rules.comments]
 level = "warning"
 min-spaces-from-content = 1
 
-[rules.comments-indentation]
+[lint.rules.comments-indentation]
 level = "warning"
 
-[rules.document-start]
+[lint.rules.document-start]
 level = "warning"
 
-[rules.line-length]
+[lint.rules.line-length]
 max = 500
 
-[rules.new-lines]
+[lint.rules.new-lines]
 level = "warning"
 type = "unix"
 
-[rules.quoted-strings]
+[lint.rules.quoted-strings]
 allow-quoted-quotes = true
 quote-type = "double"
 required = false
 
-[rules.truthy]
+[lint.rules.truthy]
 level = "warning"

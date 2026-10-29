@@ -10,10 +10,17 @@
 # ── Ignored paths ─────────────────────────────────────────────────────────
 ignore:
   # keep-sorted start
+  - "**/.agents/**"
+  - "**/.claude/**"
+  - "**/.codex/**"
+  - "**/.cursor/**"
+  - "**/.opencode/**"
+  - "**/.worktrees/**"
   - .git
   - .gradle
   - .pytest_cache
   - .venv
+  - .worktrees
   - __pycache__
   - apm_modules
   - build

@@ -1,9 +1,13 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
+resolution-markers = [
+    "python_full_version >= '3.11'",
+    "python_full_version < '3.11'",
+]
 
 [options]
-exclude-newer = "2026-09-28T11:31:08.610320934Z"
+exclude-newer = "2026-10-28T22:19:48.896290753Z"
 
 [[package]]
 name = "mise-pypi-tool-environment"
@@ -21,7 +25,8 @@ name = "toml-sort"
 version = "0.25.0"
 source = { registry = "https://pypi.org/simple/" }
 dependencies = [
-    { name = "tomlrt" },
+    { name = "tomlrt", version = "2.2.14", source = { registry = "https://pypi.org/simple/" }, marker = "python_full_version < '3.11'" },
+    { name = "tomlrt", version = "2.3.2", source = { registry = "https://pypi.org/simple/" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/f4/7221164c2984af53c18dd9f1d267ca7da660b40bc6b9a436b67ae17fc3ff/toml_sort-0.25.0.tar.gz", hash = "sha256:08ffe893feba7dc1773c61046b76f63561a6204e0162cd067c4a0d681d9198c7", size = 13197, upload-time = "2026-09-12T21:58:05.097Z" }
 wheels = [
@@ -32,12 +37,30 @@ wheels = [
 name = "tomlrt"
 version = "2.2.14"
 source = { registry = "https://pypi.org/simple/" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+]
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/af/e5/0e9af14bd292ffdb6eb7b4ba790cb4a27975579a67457792140778713786/tomlrt-2.2.14.tar.gz", hash = "sha256:5544d9bf229eba6dc8737c18de28b06b222c6f0992f0e5cd042c8b2e9e397ec2", size = 471832, upload-time = "2026-09-25T20:14:57.797Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/e035b90fbdf445aedbd6b7353b57de96c8f813ebf0756d1b80dc1b2a085f/tomlrt-2.2.14-py3-none-any.whl", hash = "sha256:6e4c521cf47ea0e0329b96e6f8de8c02f23bbc67d8490ea344b087f8e912cc17", size = 152409, upload-time = "2026-09-25T20:14:56.313Z" },
+]
+
+[[package]]
+name = "tomlrt"
+version = "2.3.2"
+source = { registry = "https://pypi.org/simple/" }
+resolution-markers = [
+    "python_full_version >= '3.11'",
+]
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2b/5a/b01046f70b8710f917b1356c4eac3226be39acfb741e967946c7dd3b168c/tomlrt-2.3.2.tar.gz", hash = "sha256:9dfc540e68693c24077e3f64dc1f738fc4e819ced42de0376a07000b3fdbf4c8", size = 135493, upload-time = "2026-10-23T17:17:32.031Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/e8/2d230a7ed9db2544fbd1adfb460b10fa0b77503ac8f829738a592dae5d94/tomlrt-2.3.2-py3-none-any.whl", hash = "sha256:fb00cde5c3422770c171f4768cefe6e48c6d4f6260d82e2b869213ca87c326e9", size = 149334, upload-time = "2026-10-23T17:17:30.704Z" },
 ]
 
 [[package]]

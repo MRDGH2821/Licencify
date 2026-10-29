@@ -1,4 +1,3 @@
-# :schema https://docs.cocogitto.io/cog-schema.json
 branch_whitelist = []
 disable_bump_commit = false
 disable_changelog = true
@@ -7,7 +6,7 @@ generate_mono_repository_global_tag = true
 generate_mono_repository_package_tags = true
 ignore_fixup_commits = false
 ignore_merge_commits = true
-post_bump_hooks = []
+post_bump_hooks = ["git tag {{version_tag}} {{version_tag}}^{} --force --sign"]
 post_package_bump_hooks = []
 pre = "alpha.*"
 pre_bump_hooks = [
@@ -39,8 +38,6 @@ skip_ci = "[skip ci]"
 skip_untracked = false
 tag_prefix = "v"
 
-[bump_profiles]
-
 [changelog]
 authors = [{ signature = "ask.mrdgh2821@outlook.com", username = "MRDGH2821" }]
 owner = "MRDGH2821"
@@ -48,9 +45,3 @@ path = "CHANGELOG.md"
 remote = "github.com"
 repository = "Licencify"
 template = "remote"
-
-[commit_types]
-
-[git_hooks]
-
-[monorepo.packages]

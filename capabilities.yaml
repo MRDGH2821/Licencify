@@ -1,9 +1,23 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/infragate/capa/main/schema/capabilities.schema.json
+agents:
+  additional:
+    - id: template-context
+      path: .config/capabilities/instructions/template.md
+      type: local
+  base:
+    path: .config/capabilities/instructions/project.md
+    type: local
 options:
   agentActivity: true
   requiresCommands: []
   toolExposure: search
 plugins:
+  - def:
+      description: Matt Pocock's agent skills for real engineering (grilling, spec/ticket flows, TDD, code review, domain modelling and more).
+      repo: mattpocock/skills
+    id: mattpocock-skills
+    type: github
   - def:
       description: "Core skills library: TDD, debugging, collaboration patterns, and proven techniques"
       repo: obra/superpowers
@@ -19,10 +33,11 @@ plugins:
       repo: oxsecurity/megalinter
     id: megalinter
     type: github
-  - def:
-      repo: shadcn/improve
-    id: improve
-    type: github
+
+
+
+
+
 providers:
   # keep-sorted start
   - antigravity
@@ -31,6 +46,26 @@ providers:
   - cursor
   - opencode
   # keep-sorted end
+rules:
+  - def:
+      repo: multica-ai/andrej-karpathy-skills::.cursor/rules/karpathy-guidelines.mdc
+    description: Andrej Karpathy's Guidelines
+    id: karpathy-guidelines
+    type: github
+  - description: Engineering workflow and change discipline
+    id: engineering
+    path: .config/capabilities/rules/engineering.md
+    type: local
+  - alwaysApply: true
+    description: Branch naming and atomic Conventional Commits
+    id: commits
+    path: .config/capabilities/rules/commits.md
+    type: local
+  - alwaysApply: true
+    description: Where to save AI-generated artifacts
+    id: ai-artifacts
+    path: .config/capabilities/rules/ai-artifacts.md
+    type: local
 servers:
   - def:
       args:
@@ -55,7 +90,8 @@ skills:
     id: capabilities-manager
     type: github
   - def:
-      description: "Capify an existing project: discover skills/rules/hooks/MCP servers across all providers and synthesize capabilities.yaml"
+      description: "Capify an existing project: discover skills/rules/hooks/MCP
+        servers across all providers and synthesize capabilities.yaml"
       repo: infragate/capa@bootstrap
     id: bootstrap
     type: github
@@ -63,24 +99,14 @@ skills:
       repo: github/awesome-copilot@git-commit
     id: git-commit
     type: github
-  - def:
-      repo: mattpocock/skills@grill-me
-    id: grill-me
-    type: github
-  - def:
-      repo: mattpocock/skills@grill-with-docs
-    id: grill-with-docs
-    type: github
-  - def:
-      repo: mattpocock/skills@grilling
-    id: grilling
-    type: github
-  - def:
-      repo: mattpocock/skills@to-tickets
-    id: to-tickets
-    type: github
+
   - def:
       repo: cli/cli@gh
     id: gh
+    type: github
+
+  - def:
+      repo: nullswan/atomic-commits@atomic-commits
+    id: atomic-commits
     type: github
 tools: []
