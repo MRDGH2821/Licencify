@@ -657,9 +657,9 @@ dirs = "6.0"
 chrono = "0.4"
 
 # New
-once_cell = "1"    # Task 1: lazy static for built-in templates
+once_cell = "1" # Task 1: lazy static for built-in templates
 toml_edit = "0.22" # Task 4: Cargo.toml/pyproject.toml editing
-toml = "0.8"       # Task 5: config file parsing
+toml = "0.8" # Task 5: config file parsing
 ```
 
 ---

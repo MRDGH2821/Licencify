@@ -41,7 +41,7 @@ Licencify is a command-line tool for selecting an open-source licence or a propr
 ### Detection
 
 1. `licencify detect` checks recognized licence filenames in the current project and attempts to identify supported licence text using distinctive signatures.
-2. A single generic phrase such as “version 2.0” is insufficient to identify a licence. Apache-2.0 detection requires both an Apache-specific and version-specific signature.
+2. A single generic phrase such as "version 2.0" is insufficient to identify a licence. Apache-2.0 detection requires both an Apache-specific and version-specific signature.
 3. The detector recognizes the built-in licence families documented by the CLI, including proprietary notices as `UNLICENSED`.
 4. Missing files, unreadable files, and unrecognized contents are reported as errors or no-match outcomes; they do not terminate the process through an internal process exit.
 
@@ -107,7 +107,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 ### Proprietary declaration
 
 1. `proprietary` is a Licencify configuration and CLI special value, not an SPDX licence-list entry. Do not use `UNLICENSED` as its Licencify config value or write `proprietary` to SPDX manifest fields.
-2. `licencify add proprietary` generates a short copyright / “All rights reserved” notice by default, not a full EULA or legal document.
+2. `licencify add proprietary` generates a short copyright / "All rights reserved" notice by default, not a full EULA or legal document.
 3. For a proprietary notice, resolve project `proprietary.tera` or `proprietary.html.tera`, then the global equivalent, then the bundled equivalent. Do not fetch SPDX detail or consult the SPDX cache for proprietary.
 4. A `remove` command that deletes a licence file and sets manifests to `UNLICENSED` is an optional proposal, not an accepted requirement in the source plans.
 

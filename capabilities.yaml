@@ -34,10 +34,6 @@ plugins:
     id: megalinter
     type: github
 
-
-
-
-
 providers:
   # keep-sorted start
   - antigravity

@@ -56,7 +56,7 @@ slice. Extend `ResolvedTemplate` with actual output format and source; all filen
 - [ ] **Step 4: Implement source and format resolution.** Validate SPDX ID before inserting it in a path or URL. For text/HTML/Markdown, try project custom `<id>.tera`/`<id>.html.tera`, global equivalent, cached detail, fetched detail, then bundled template. Proprietary goes project/global/bundled
       only; never touch the SPDX network/cache. Preserve `licenseTextHtml` versus `licenseText` and convert rendered HTML to Markdown without losing visible words; if no HTML source, warn and choose text plus actual `txt` extension. Render Tera/SPDX placeholders exactly once.
 - [ ] **Step 5: Wire formats and audit.** Add `md` to clap `LicenseFormat`, propagate resolved actual extension through `add`/`update`, and add `[tasks.audit]` running `cargo audit` to `mise.toml` (and the managed tool only if absent). Exercise `licencify cache info`, offline `add MIT --format
-html`, `add MIT --format md` in a throwaway project; run focused tests and `mise run audit`, then commit with docs/help changes.
+  html`, `add MIT --format md` in a throwaway project; run focused tests and `mise run audit`, then commit with docs/help changes.
 
 ### Task 3: Safe Add/Update, Extra Files, and Proprietary Manifests
 
@@ -87,7 +87,7 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 
 - [ ] **Step 1: Write failing scan tests.** In isolated temporary Git projects create root and nested `LICENSE`, `LICENCE-MIT.txt`, `COPYING.md`, README declaration, ignored `vendor`, configured `[[subdirs]]`, a missing configured directory, a mismatched filename/content pair, and an unreadable
       file. Assert all findings have path and evidence level; unknown text is not assigned an ID; confirmed conflicts/unreadable files return nonzero; unknown/missing expected items warn; overlapping exclusion/subdir warns and still scans the configured subdir; scan changes no files. Assert Apache
-      generic “version 2.0” alone does not identify Apache.
+      generic "version 2.0" alone does not identify Apache.
 - [ ] **Step 2: Confirm failure.** Run `cargo test --test scan_cli`; expect missing command and failed classifications.
 - [ ] **Step 3: Implement scan.** Traverse from selected project root, honoring Git ignore and normalized project-relative `[scan] exclude`; do not follow symlink escapes. Identify conventional primary/ID-suffixed extra filenames, call `detect::detect_license` for distinctive text, parse only
       explicit README declarations, badges, and licence links. Keep claims distinct from confidently identified text; compare with effective root/subdir expectations and optional primary override. Return nonzero on confirmed contradiction/read error, warnings otherwise; keep `detect` independent.
