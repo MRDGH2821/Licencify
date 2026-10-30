@@ -432,14 +432,14 @@ git commit -m "feat: add 'licencify search' with OSI/FSF filters"
 
 **Files:**
 
-- Modify: `.hermes/plans/2026-06-18_180000-licencify-cli-design.md`
+- Modify: `docs/plans/2026-06-18_180000-licencify-cli-design.md`
 
 **Step 1:** Update the architecture section and tier chain in the existing plan to reference SPDX instead of GitHub as Tier 2.
 
 **Step 2:** Commit
 
 ```bash
-git add .hermes/plans/
+git add docs/plans/
 git commit -m "docs: update plan for SPDX-first architecture"
 ```
 
