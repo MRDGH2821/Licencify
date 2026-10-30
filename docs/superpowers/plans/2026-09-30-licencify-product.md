@@ -96,4 +96,4 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 
 ## Recorded command names
 
-Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. Do not add a schema subcommand. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.
+Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. `schema/config.json` is written by a cargo example and checked by `cargo test` (ADR 0015). Do not add a schema subcommand and do not write that file from `build.rs`. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.

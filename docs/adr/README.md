@@ -18,5 +18,6 @@ Decisions live here. Each file says what was chosen and why. The open task list 
 | [0012](0012-three-audit-findings-were-rejected.md)         | Three audit findings were rejected.                                   |
 | [0013](0013-config-get-list-set.md)                        | `init` is a root command. `config` is `get`, `list`, and `set`.       |
 | [0014](0014-cache-update-and-fetch.md)                     | `cache update` refreshes the index. `cache fetch` downloads bodies.   |
+| [0015](0015-config-schema-is-a-cargo-example.md)           | A cargo example writes `schema/config.json`. `cargo test` checks it.  |
 
 0001 records the proprietary plan. 0007 records the first CLI design and the SPDX analysis. 0008 records the remaining-features plan.
