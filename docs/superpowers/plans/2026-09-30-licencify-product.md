@@ -96,5 +96,4 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 
 ## Open decisions (do not silently implement)
 
-The spec leaves SPDX index refresh/versioning, a `config set` command, the manifest-update default, a proprietary `remove` command, and remote registries open. Keep the current manifest-update default until the maintainer chooses otherwise; do not add the other commands/protocols in these tasks. If
-a task requires a choice (for example a new manifest-update flag), get that decision before implementing that step.
+Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. Do not add a schema subcommand. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.
