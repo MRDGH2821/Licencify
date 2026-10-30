@@ -42,7 +42,7 @@ Licencify is a command-line tool for selecting an open-source licence or a propr
 
 1. `licencify detect` checks recognized licence filenames in the current project and attempts to identify supported licence text using distinctive signatures.
 2. A single generic phrase such as "version 2.0" is insufficient to identify a licence. Apache-2.0 detection requires both an Apache-specific and version-specific signature.
-3. The detector recognizes the built-in licence families documented by the CLI, including proprietary notices as `UNLICENSED`.
+3. The detector recognizes the built-in licence families documented by the CLI, including proprietary notices as `proprietary`.
 4. Missing files, unreadable files, and unrecognized contents are reported as errors or no-match outcomes; they do not terminate the process through an internal process exit.
 
 ### Project scan
@@ -109,7 +109,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 1. `proprietary` is a Licencify configuration and CLI special value, not an SPDX licence-list entry. Do not use `UNLICENSED` as its Licencify config value or write `proprietary` to SPDX manifest fields.
 2. `licencify add proprietary` generates a short copyright / "All rights reserved" notice by default, not a full EULA or legal document.
 3. For a proprietary notice, resolve project `proprietary.tera` or `proprietary.html.tera`, then the global equivalent, then the bundled equivalent. Do not fetch SPDX detail or consult the SPDX cache for proprietary.
-4. A `remove` command that deletes a licence file and sets manifests to `UNLICENSED` is an optional proposal, not an accepted requirement in the source plans.
+4. Deleting a licence file is out of scope. There is no `remove` command.
 
 ### README update
 
@@ -138,28 +138,26 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 
 ## Status and source notes
 
-The plans index (`.hermes/plans/README.md`) records plans 001–005 as done:
-release binary naming, Apache detection, `cargo audit`, command integration
-tests, and the project README. The current README also documents SPDX-backed
-list/search, text/HTML generation, layered configuration, templates, cache
-commands, and schema generation.
-
-The index does not record completion status for the older feature proposals on
-global/project configuration, proprietary/no-file behavior, template alignment,
-or README badge updating. Their presence in this specification reflects
-proposed target behavior, not verified implementation status.
-
-Primary source plans reviewed: `001`–`005`, `2026-06-18_180000-licencify-cli-design.md`, `2026-06-18_182000-spdx-integration-analysis.md`, `2026-06-18_183503-remaining-features.md`, `2026-06-19_0001-global-project-config-plan.md`, `2026-06-19_164138-proprietary-no-licence.md`, `2026-06-19_170000-licence-html-format-research.md`, and `2026-06-30_162000-readme-license-badge.md`.
+Those plans are now ADRs in `docs/adr/`. This specification remains the target behavior. Implementation status still has to be checked against the current code.
 
 Project configuration paths follow [PRJ Base Directory Specification v0.1](https://github.com/numtide/prj-spec/blob/main/PRJ_SPEC.md), which is marked unstable; the SPDX cache instead uses a single user-level directory. Configuration uses one root shared file, one optional local override, and project-relative subdir rules rather than nested config files. Global user defaults remain optional.
 
-## Open decisions for review
+## Decided
 
-1. **SPDX refresh/versioning:** Confirm whether the embedded index is the only index used for validation, whether an `update-index` command is required, and which SPDX release/tag is authoritative for embedded text.
-2. **Configuration writes:** Confirm whether `config set` should exist and which layer an explicit set command should write.
-3. **Manifest update default:** The source plans conflict between opt-in per manifest and automatic updates. Confirm the default and whether a separate flag/config switch is required.
-4. **Proprietary removal:** Confirm whether the optional `remove` command belongs in scope.
-5. **Custom templates vs remote registries:** Confirm that custom templates remain local paths only and that GitHub/custom remote registries are out of scope.
+1. **SPDX index:** `update-spdx-index` caches `licenses.json`. That cached file is the validation, list, and search index when it exists. The embedded 3.28.0 list is the fallback. The command does not download licence bodies.
+2. **Licence wording:** Each `{id}.json` from `fetch_detail` or `cache fetch-all` is the template body. A local custom template overrides it. A bundled template is used only when that JSON is missing or the fetch fails.
+3. **Config writes:** `config set <key> <value>` sets any `[default]` field, including the manifest-update switch. It writes shared defaults from the project root, or an exact-path `[[subdirs]]` entry from a subdirectory.
+4. **Manifest updates:** Off unless one switch turns them on for Cargo, npm, and Python together.
+5. **Templates:** Custom templates are local files only. Remote registries are out of scope.
+6. **Removal:** Deleting a licence file is out of scope.
+7. **Proprietary manifests:** A proprietary manifest update keeps today's rules: npm `private` plus `SEE LICENSE IN <file>`, Cargo `publish = false`, and no `UNLICENSED` string. It does not use the Unlicense text.
+8. **Mixing:** `proprietary` cannot be combined with `Unlicense` or any other open licence. `Unlicense` may be primary or additional, like any other SPDX id.
+9. **Unlicense spelling:** `unlicence`, `unlicense`, and `Unlicense` select the same licence, in any case. Config and manifests store `Unlicense`.
+10. **Detection labels:** Unlicense text is reported as `Unlicense`. A proprietary notice is reported as `proprietary`.
+11. **`UNLICENSED` input:** `UNLICENSED` is an unknown id. Only `proprietary` selects the proprietary notice. Removing the current code alias is deferred.
+12. **Manifest-update switch:** Config key `update_manifest` defaults off. CLI flags are `--update-manifest` and `--no-update-manifest`, on both `add` and `update`, and they conflict with each other.
+
+The naming split in items 7–11 is recorded in [ADR 0001](../../adr/0001-unlicense-and-proprietary.md).
 
 ## Acceptance criteria for the consolidated product
 
