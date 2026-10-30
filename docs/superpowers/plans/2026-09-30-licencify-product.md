@@ -94,6 +94,6 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 - [ ] **Step 4: Fix README updates.** Pass actual output filename to badge/section rendering. Recognize and replace only tool-managed badge/section, preserve handwritten content and warn about stale manual references; accept both `--update-readme` and `--no-update-readme` to override configuration. Keep absent/unchanged README a successful no-op and report write failure distinctly.
 - [ ] **Step 5: Smoke and release checks.** Run real `licencify scan` on a temporary multi-licence project and check its exit code and output; run `cargo test --test scan_cli`, full `cargo test`, `cargo fmt --check`, scoped `hk run pre-commit` after inspecting planned effects, and `git diff --check`. Update CLI help/README, append the dated AI log, and commit.
 
-## Open decisions (do not silently implement)
+## Recorded command names
 
 Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. Do not add a schema subcommand. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.
