@@ -94,7 +94,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 3. On an SPDX detail cache hit, use that detail without a network request; if its HTML field is absent, continue to bundled HTML or the plain-text fallback rather than refetching the same detail. On a cache miss, fetch the detail and cache the successful response. Cached detail remains available until `cache clear`; this specification defines no time-based expiry.
 4. A cache write failure does not discard a successfully fetched response. A network failure may fall back to a built-in template where available; otherwise report an actionable error.
 5. `licencify cache` with no subcommand reports the resolved SPDX cache directory, the number of cached files, and the size in bytes. `cache clear` removes only the Licencify `SPDX-Cache/` directory; clearing the cache must not delete configuration or other user data.
-   `cache fetch` downloads detail JSON into that directory. `cache update` refreshes `licenses.json` only and does not download bodies.
+   `cache fetch` with no id downloads every uncached detail JSON. `cache fetch <id>` downloads that one id and leaves a cached copy in place. `cache update` refreshes `licenses.json` only and does not download bodies.
 6. Built-in templates provide an offline generation path for the supported common licences.
 7. For each requested format, search project templates, global templates, cached SPDX detail, fetched SPDX detail on a cache miss, then bundled templates, in that order. HTML and Markdown use the SPDX detail's `licenseTextHtml` only when present; plain text uses `licenseText`.
    A custom template wins even when SPDX detail is already cached. A failed fetch may still use a bundled template. Missing HTML follows the warned `.txt` fallback above. A template that exists but cannot be read or rendered fails visibly rather than silently selecting another source.
@@ -150,7 +150,7 @@ Project configuration paths follow [PRJ Base Directory Specification v0.1](https
 ## Decided
 
 1. **SPDX index:** `cache update` caches `licenses.json`. That cached file is the validation, list, and search index when it exists. The embedded 3.28.0 list is the fallback. The command does not download licence bodies.
-2. **Licence wording:** Each `{id}.json` from `fetch_detail` or `cache fetch` is the template body. A local custom template overrides it. A bundled template is used only when that JSON is missing or the fetch fails.
+2. **Licence wording:** Each `{id}.json` from `fetch_detail` or `cache fetch` is the template body. `cache fetch` with no id downloads every uncached detail. `cache fetch <id>` downloads that one id and does not refetch a cached copy. A local custom template overrides the detail JSON. A bundled template is used only when that JSON is missing or the fetch fails.
 3. **Config writes:** `init` is a root command. `config get <key>` prints one field. `config list` prints the effective config. `config set <key> <value>` sets any `[default]` field, including the manifest-update switch. It writes shared defaults from the project root, or an exact-path `[[subdirs]]` entry from a subdirectory.
    A cargo example writes `schema/config.json`. `cargo test` fails if that file drifts. The binary has no schema command.
    The verb survey is in [`.agents/research/cli-subcommand-verbs.md`](../../../.agents/research/cli-subcommand-verbs.md). Schema generation is in [`.agents/research/config-schema-generation.md`](../../../.agents/research/config-schema-generation.md).
