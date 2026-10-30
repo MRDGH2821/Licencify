@@ -1,6 +1,8 @@
 # Cache uses update, fetch, and a bare command
 
-`cache update` refreshes `licenses.json` only. `cache fetch` with no id downloads every uncached detail JSON. `cache fetch <id>` downloads that one id and does not refetch a copy already in the cache. Neither form refreshes `licenses.json`. `licencify cache` with no subcommand prints the cache directory, the file count, and the size.
+`cache update` refreshes `licenses.json` only. `cache fetch` with no id downloads every uncached detail JSON. `cache fetch <id>` downloads that one id and does not refetch a copy already in the cache. Neither form refreshes `licenses.json`.
+
+`licencify cache` with no subcommand prints the cache directory, the file count, and the size. Changing the project's licence is `licencify apply` ([ADR 0016](0016-project-licences-are-applied.md)).
 
 ## Considered options
 
