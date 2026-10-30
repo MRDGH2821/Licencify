@@ -1,3 +1,3 @@
 # Moved
 
-Plans are indexed in [docs/plans/README.md](../../docs/plans/README.md).
+Plan decisions are ADRs. The index is [docs/adr/README.md](../../docs/adr/README.md).

@@ -138,18 +138,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 
 ## Status and source notes
 
-The plans index (`docs/plans/README.md`) records plans 001–005 as done:
-release binary naming, Apache detection, `cargo audit`, command integration
-tests, and the project README. The current README also documents SPDX-backed
-list/search, text/HTML generation, layered configuration, templates, cache
-commands, and schema generation.
-
-The index does not record completion status for the older feature proposals on
-global/project configuration, proprietary/no-file behavior, template alignment,
-or README badge updating. Their presence in this specification reflects
-proposed target behavior, not verified implementation status.
-
-Primary source plans reviewed: `001`–`005`, `2026-06-18_180000-licencify-cli-design.md`, `2026-06-18_182000-spdx-integration-analysis.md`, `2026-06-18_183503-remaining-features.md`, `2026-06-19_0001-global-project-config-plan.md`, `2026-06-19_164138-proprietary-no-licence.md`, `2026-06-19_170000-licence-html-format-research.md`, and `2026-06-30_162000-readme-license-badge.md`.
+Those plans are now ADRs in `docs/adr/`. This specification remains the target behavior. Implementation status still has to be checked against the current code.
 
 Project configuration paths follow [PRJ Base Directory Specification v0.1](https://github.com/numtide/prj-spec/blob/main/PRJ_SPEC.md), which is marked unstable; the SPDX cache instead uses a single user-level directory. Configuration uses one root shared file, one optional local override, and project-relative subdir rules rather than nested config files. Global user defaults remain optional.
 
