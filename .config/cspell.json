@@ -114,6 +114,7 @@
     "regexpr",
     "remenants",
     "rfind",
+    "rignore",
     "riscv",
     "rqmt",
     "rsplit",
