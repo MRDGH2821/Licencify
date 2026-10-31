@@ -113,6 +113,10 @@ pub enum Commands {
         #[arg(short = 'Y', long)]
         yes: bool,
 
+        /// Promote one matching additional licence to primary
+        #[arg(long)]
+        permit_promotion: bool,
+
         /// Add or refresh the README licence badge and section
         #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
