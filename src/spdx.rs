@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::path::Path;
 
 const SPDX_INDEX: &str = include_str!("../data/licenses.json");
 
@@ -35,6 +36,24 @@ pub struct SpdxLicenseDetail {
 
 impl SpdxIndex {
     pub fn load() -> anyhow::Result<Self> {
+        let dir = crate::provider::spdx_cache_dir().ok();
+        Self::load_with_optional_cache(dir.as_deref())
+    }
+
+    pub fn load_with_cache(cache_dir: &Path) -> anyhow::Result<Self> {
+        Self::load_with_optional_cache(Some(cache_dir))
+    }
+
+    fn load_with_optional_cache(cache_dir: Option<&Path>) -> anyhow::Result<Self> {
+        let fs = crate::fs::global_fs();
+        if let Some(dir) = cache_dir {
+            let index_path = dir.join("licenses.json");
+            if let Some(content) = fs.read_to_string(&index_path) {
+                if let Ok(index) = serde_json::from_str::<SpdxIndex>(&content) {
+                    return Ok(index);
+                }
+            }
+        }
         let index: SpdxIndex = serde_json::from_str(SPDX_INDEX)?;
         Ok(index)
     }
