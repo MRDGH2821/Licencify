@@ -55,8 +55,13 @@ impl Project {
     }
 
     fn apply(&self, locale: &str) -> Output {
+        self.apply_with_args(locale, &[])
+    }
+
+    fn apply_with_args(&self, locale: &str, args: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_licencify"))
             .arg("apply")
+            .args(args)
             .current_dir(&self.root)
             .env("XDG_CONFIG_HOME", self.parent.join("xdg"))
             .env("GIT_CONFIG_GLOBAL", self.parent.join("gitconfig"))
@@ -76,6 +81,157 @@ impl Project {
     fn config_path(&self) -> PathBuf {
         self.root.join(".config/licencify/config.toml")
     }
+}
+
+#[test]
+fn apply_keeps_readme_unchanged_by_default() {
+    let project = Project::new();
+    let readme =
+        "# Project\n\nLicensed under GPL-3.0-only. Handwritten [licence](LICENCE.txt) reference.\n";
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+    project.write("README.md", readme);
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Applied"));
+    assert!(!text(&output.stderr).contains("conflict"));
+    assert!(!text(&output.stderr).contains("Warning"));
+    assert_eq!(
+        fs::read_to_string(project.root.join("README.md")).unwrap(),
+        readme
+    );
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_updates_readme_only_when_enabled_and_warns_about_old_references() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+    project.write(
+        "README.md",
+        "# Project\n\nHandwritten note stays.\n\nSee [the old file](LICENCE.txt).\n",
+    );
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--update-readme"]);
+
+    assert_success(&output);
+    let stdout = text(&output.stdout);
+    let stderr = text(&output.stderr);
+    let readme = fs::read_to_string(project.root.join("README.md")).unwrap();
+    assert!(stdout.contains("Applied"));
+    assert!(stdout.contains("Updated README.md"));
+    assert!(stderr.contains("LICENCE.txt"), "{stderr}");
+    assert!(stderr.contains("LICENSE.txt"), "{stderr}");
+    assert!(readme.contains("Handwritten note stays."));
+    assert!(readme.contains("](LICENSE.txt)"));
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_uses_enabled_readme_configuration_when_no_flag_is_given() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-readme = true\n",
+    );
+    project.write("README.md", "# Project\n\nHandwritten note stays.\n");
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Updated README.md"));
+    let readme = fs::read_to_string(project.root.join("README.md")).unwrap();
+    assert!(readme.contains("Handwritten note stays."));
+    assert!(readme.contains("](LICENSE.txt)"));
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_no_update_readme_overrides_enabled_configuration() {
+    let project = Project::new();
+    let readme = "# Project\n\nHandwritten note stays.\n";
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-readme = true\n",
+    );
+    project.write("README.md", readme);
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--no-update-readme"]);
+
+    assert_success(&output);
+    assert!(!text(&output.stdout).contains("Updated README.md"));
+    assert_eq!(
+        fs::read_to_string(project.root.join("README.md")).unwrap(),
+        readme
+    );
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_rejects_conflicting_readme_flags_without_writing_files() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+    project.write("README.md", "# Project\n");
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--update-readme", "--no-update-readme"]);
+
+    assert!(!output.status.success());
+    assert!(text(&output.stderr).contains("cannot be used with"));
+    assert_eq!(
+        fs::read_to_string(project.root.join("README.md")).unwrap(),
+        "# Project\n"
+    );
+    assert!(!project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_with_readme_updates_enabled_succeeds_when_readme_is_missing() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--update-readme"]);
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Applied"));
+    assert!(!text(&output.stdout).contains("Updated README"));
+    assert!(!text(&output.stderr).contains("Warning"));
+    assert!(!project.root.join("README.md").exists());
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_with_readme_updates_enabled_keeps_equivalent_readme_section() {
+    let project = Project::new();
+    let readme = "# Project\n\n[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)\n\n## License\n\nThis project is licensed under the [MIT](LICENSE.txt) licence.\n";
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+    project.write("README.md", readme);
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--update-readme"]);
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Applied"));
+    assert!(!text(&output.stdout).contains("Updated README.md"));
+    assert_eq!(
+        fs::read_to_string(project.root.join("README.md")).unwrap(),
+        readme
+    );
+    assert!(project.root.join("LICENSE.txt").exists());
 }
 
 impl Drop for Project {
