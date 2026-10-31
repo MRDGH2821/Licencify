@@ -99,8 +99,16 @@ pub enum Commands {
     /// Create the shared project config
     Init,
 
-    /// Write licence files from the effective configuration without changing it
-    Apply,
+    /// Apply selected licence ids and record them in project configuration
+    Apply {
+        /// SPDX licence identifiers
+        #[arg(value_name = "ID")]
+        ids: Vec<String>,
+
+        /// Save the selection to shared project defaults
+        #[arg(long)]
+        root: bool,
+    },
 
     /// List available licenses
     List {

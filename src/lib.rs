@@ -80,7 +80,7 @@ pub fn main() -> anyhow::Result<()> {
             osi_only,
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
-        Commands::Apply => commands::cmd_apply(),
+        Commands::Apply { ids, root } => commands::cmd_apply(&ids, root),
         Commands::Detect => commands::cmd_detect(),
         Commands::Scan { id } => commands::cmd_scan(id.as_deref()),
         Commands::Update {

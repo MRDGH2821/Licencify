@@ -7,10 +7,8 @@ pub mod handler;
 mod npm;
 mod python;
 
-/// `proprietary` is Licencify's config value. `UNLICENSED` is only an incoming
-/// alias from older callers and is never written into an SPDX licence field.
 fn is_proprietary_selection(license_id: &str) -> bool {
-    license_id.eq_ignore_ascii_case("proprietary") || license_id.eq_ignore_ascii_case("UNLICENSED")
+    license_id.eq_ignore_ascii_case("proprietary")
 }
 
 /// The single existing primary notice filename. A proprietary manifest must not
@@ -164,7 +162,7 @@ mod tests {
             "Cargo.toml",
             "[package]\nname = \"demo\"\nversion = \"0.1.0\"\nlicense = \"MIT\"\n",
         )]);
-        let error = update_manifest("UNLICENSED", "Author", "2024", &[]).unwrap_err();
+        let error = update_manifest("proprietary", "Author", "2024", &[]).unwrap_err();
         assert!(
             error.to_string().contains("existing primary notice"),
             "{error}"

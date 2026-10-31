@@ -93,10 +93,7 @@ impl LicenseProvider {
 
     /// Get structured license info by ID.
     pub fn info(&self, license_id: &str) -> Result<LicenseInfo> {
-        // "proprietary" is Licencify's config value, not an SPDX licence-list entry.
-        if license_id.eq_ignore_ascii_case("proprietary")
-            || license_id.eq_ignore_ascii_case("UNLICENSED")
-        {
+        if license_id.eq_ignore_ascii_case("proprietary") {
             return Ok(LicenseInfo {
                 id: "proprietary".to_string(),
                 name: "Proprietary (No Licence)".to_string(),

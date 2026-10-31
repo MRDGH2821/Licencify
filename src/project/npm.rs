@@ -72,7 +72,7 @@ mod tests {
             Path::new(PACKAGE_JSON),
             "{\n  \"name\": \"demo\",\n  \"license\": \"MIT\"\n}\n",
         );
-        let error = NpmHandler.update(&fs, "UNLICENSED").unwrap_err();
+        let error = NpmHandler.update(&fs, "proprietary").unwrap_err();
         assert!(
             error.to_string().contains("existing primary notice"),
             "{error}"
