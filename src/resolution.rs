@@ -56,9 +56,6 @@ pub fn resolve_context(
 }
 
 /// Stored licence id for configuration and manifests.
-///
-/// `proprietary` stays `proprietary`. A provider label of `UNLICENSED` is the
-/// older display alias and is not written back into configuration.
 pub fn canonical_licence_id(requested: &str, provider_id: &str) -> String {
     if is_proprietary_id(requested) || is_proprietary_id(provider_id) {
         "proprietary".to_string()
@@ -68,7 +65,7 @@ pub fn canonical_licence_id(requested: &str, provider_id: &str) -> String {
 }
 
 fn is_proprietary_id(spdx_id: &str) -> bool {
-    spdx_id.eq_ignore_ascii_case("proprietary") || spdx_id.eq_ignore_ascii_case("UNLICENSED")
+    spdx_id.eq_ignore_ascii_case("proprietary")
 }
 
 /// Resolve custom, SPDX detail, and bundled templates in source and format order.
@@ -430,7 +427,7 @@ mod tests {
     #[test]
     fn canonical_licence_id_keeps_proprietary() {
         assert_eq!(
-            canonical_licence_id("proprietary", "UNLICENSED"),
+            canonical_licence_id("proprietary", "proprietary"),
             "proprietary"
         );
         assert_eq!(canonical_licence_id("MIT", "MIT"), "MIT");

@@ -55,14 +55,19 @@ impl Project {
     }
 
     fn apply(&self, locale: &str) -> Output {
-        self.apply_with_args(locale, &[])
+        self.apply_from(".", locale, &["apply"])
     }
 
     fn apply_with_args(&self, locale: &str, args: &[&str]) -> Output {
+        let mut command = vec!["apply"];
+        command.extend_from_slice(args);
+        self.apply_from(".", locale, &command)
+    }
+
+    fn apply_from(&self, relative: &str, locale: &str, args: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_licencify"))
-            .arg("apply")
             .args(args)
-            .current_dir(&self.root)
+            .current_dir(self.root.join(relative))
             .env("XDG_CONFIG_HOME", self.parent.join("xdg"))
             .env("GIT_CONFIG_GLOBAL", self.parent.join("gitconfig"))
             .env("GIT_CONFIG_NOSYSTEM", "1")
@@ -656,4 +661,155 @@ fn apply_with_readme_updates_enabled_leaves_handwritten_equivalent_section_uncha
         readme
     );
     assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_one_id_sets_primary_and_preserves_additional_licences() {
+    let project = Project::new();
+    let config = "[default]\nlicence = \"ISC\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n# keep this comment\nupdate-readme = false\n";
+    project.write(".config/licencify/config.toml", config);
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "MIT"]);
+
+    assert_success(&output);
+    assert!(
+        text(&output.stdout).contains("(MIT)"),
+        "{}",
+        text(&output.stdout)
+    );
+    assert!(!text(&output.stdout).contains("Save licence settings"));
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"MIT\""), "{saved}");
+    assert!(
+        saved.contains("additional-licences = [\"Apache-2.0\"]"),
+        "{saved}"
+    );
+    assert!(saved.contains("# keep this comment"), "{saved}");
+    assert!(saved.contains("update-readme = false"), "{saved}");
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_multiple_ids_replaces_additional_licences() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"BSD-3-Clause\"]\n",
+    );
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "MIT", "Apache-2.0", "ISC"]);
+
+    assert_success(&output);
+    assert!(
+        text(&output.stdout).contains("(MIT)"),
+        "{}",
+        text(&output.stdout)
+    );
+    assert!(text(&output.stdout).contains("Added additional Apache-2.0"));
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"MIT\""), "{saved}");
+    assert!(
+        saved.contains("additional-licences = [\"Apache-2.0\", \"ISC\"]"),
+        "{saved}"
+    );
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
+#[test]
+fn apply_rejects_repeated_and_mixed_proprietary_ids() {
+    for ids in [
+        &["MIT", "MIT"][..],
+        &["proprietary", "MIT"][..],
+        &["MIT", "proprietary"][..],
+    ] {
+        let project = Project::new();
+        project.write(
+            ".config/licencify/config.toml",
+            "[default]\nauthor = \"Author\"\nyear = \"2024\"\n",
+        );
+
+        let mut args = vec!["apply"];
+        args.extend_from_slice(ids);
+        let output = project.apply_from(".", "en_US.UTF-8", &args);
+
+        assert!(!output.status.success(), "{}", text(&output.stdout));
+        assert!(!project.root.join("LICENSE.txt").exists());
+        assert!(!text(&output.stdout).contains("Save licence settings"));
+    }
+}
+
+#[test]
+fn apply_writes_exact_subdir_and_root_target_without_path() {
+    let project = Project::new();
+    fs::create_dir_all(project.root.join("docs/api")).unwrap();
+    fs::create_dir_all(project.root.join("docs/other")).unwrap();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"ISC\"]\n# retain\n",
+    );
+    let local = "[default]\nlicence = \"BSD-3-Clause\"\n";
+    project.write(".config/licencify/config.local.toml", local);
+
+    let output = project.apply_from("docs/api", "en_US.UTF-8", &["apply", "MIT"]);
+
+    assert_success(&output);
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("[default]"), "{saved}");
+    assert!(saved.contains("additional-licences = [\"ISC\"]"), "{saved}");
+    assert!(saved.contains("# retain"), "{saved}");
+    assert!(saved.contains("[[subdirs]]"), "{saved}");
+    assert!(saved.contains("path = \"docs/api\""), "{saved}");
+    assert!(saved.contains("licence = \"MIT\""), "{saved}");
+    assert!(project.root.join("docs/api/LICENSE.txt").exists());
+    assert_eq!(
+        fs::read_to_string(project.root.join(".config/licencify/config.local.toml")).unwrap(),
+        local
+    );
+    assert!(!text(&output.stdout).contains("Save licence settings"));
+
+    let root_output = project.apply_from(
+        "docs/other",
+        "en_US.UTF-8",
+        &["apply", "--root", "Apache-2.0"],
+    );
+    assert_success(&root_output);
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("[default]"), "{saved}");
+    assert!(saved.contains("licence = \"Apache-2.0\""), "{saved}");
+    assert_eq!(
+        fs::read_to_string(project.root.join(".config/licencify/config.local.toml")).unwrap(),
+        local
+    );
+    assert!(!text(&root_output.stdout).contains("Save licence settings"));
+}
+
+#[test]
+fn apply_rejects_unlicensed_as_unknown_id() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nauthor = \"Author\"\nyear = \"2024\"\n",
+    );
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "UNLICENSED"]);
+
+    assert!(!output.status.success());
+    assert!(
+        text(&output.stderr).contains("Unknown license ID"),
+        "{}",
+        text(&output.stderr)
+    );
+    assert!(!project.root.join("LICENSE.txt").exists());
+}
+#[test]
+fn apply_creates_shared_config_when_selecting_id_without_config_file() {
+    let project = Project::new();
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "MIT"]);
+
+    assert_success(&output);
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("[default]"), "{saved}");
+    assert!(saved.contains("licence = \"MIT\""), "{saved}");
+    assert!(saved.contains("author = \"Git Author\""), "{saved}");
 }
