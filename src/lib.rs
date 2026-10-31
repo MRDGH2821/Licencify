@@ -32,7 +32,9 @@ fn readme_override(enable: bool, disable: bool) -> Option<bool> {
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let yes = match &cli.command {
-        Commands::Add { yes, .. } | Commands::Update { yes, .. } => *yes,
+        Commands::Add { yes, .. } | Commands::Update { yes, .. } | Commands::Apply { yes, .. } => {
+            *yes
+        }
         _ => false,
     };
     config::set_cli_context(config::CliContext {
@@ -80,7 +82,7 @@ pub fn main() -> anyhow::Result<()> {
             osi_only,
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
-        Commands::Apply => commands::cmd_apply(),
+        Commands::Apply { yes } => commands::cmd_apply(yes),
         Commands::Detect => commands::cmd_detect(),
         Commands::Scan { id } => commands::cmd_scan(id.as_deref()),
         Commands::Update {

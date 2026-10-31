@@ -100,7 +100,11 @@ pub enum Commands {
     Init,
 
     /// Write licence files from the effective configuration without changing it
-    Apply,
+    Apply {
+        /// Skip confirmation prompts
+        #[arg(short = 'Y', long)]
+        yes: bool,
+    },
 
     /// List available licenses
     List {
