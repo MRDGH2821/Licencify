@@ -185,7 +185,7 @@ pub enum Commands {
     /// Manage the global SPDX detail cache
     Cache {
         #[command(subcommand)]
-        action: CacheAction,
+        action: Option<CacheAction>,
     },
 
     /// Manage configuration
@@ -202,7 +202,7 @@ pub enum Commands {
     },
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug, Clone, PartialEq, Eq)]
 pub enum CacheAction {
     /// Clear all cached SPDX details
     Clear,
@@ -210,8 +210,17 @@ pub enum CacheAction {
     /// Show cache directory location and size
     Info,
 
-    /// Pre-fetch and cache all license templates from SPDX
+    /// Pre-fetch and cache all licence templates from SPDX
     FetchAll,
+
+    /// Refresh licenses.json only without downloading licence bodies
+    Update,
+
+    /// Download uncached detail JSON from SPDX
+    Fetch {
+        /// SPDX licence identifier. If omitted, downloads every uncached detail.
+        id: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -277,5 +286,47 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    #[test]
+    fn cache_commands_parse_expected_variants() {
+        use super::CacheAction;
+
+        let bare = Cli::try_parse_from(["licencify", "cache"]).unwrap();
+        assert!(matches!(bare.command, Commands::Cache { action: None }));
+
+        let clear = Cli::try_parse_from(["licencify", "cache", "clear"]).unwrap();
+        assert!(matches!(
+            clear.command,
+            Commands::Cache {
+                action: Some(CacheAction::Clear)
+            }
+        ));
+
+        let update = Cli::try_parse_from(["licencify", "cache", "update"]).unwrap();
+        assert!(matches!(
+            update.command,
+            Commands::Cache {
+                action: Some(CacheAction::Update)
+            }
+        ));
+
+        let fetch_all = Cli::try_parse_from(["licencify", "cache", "fetch"]).unwrap();
+        assert!(matches!(
+            fetch_all.command,
+            Commands::Cache {
+                action: Some(CacheAction::Fetch { id: None })
+            }
+        ));
+
+        let fetch_one = Cli::try_parse_from(["licencify", "cache", "fetch", "MIT"]).unwrap();
+        assert!(matches!(
+            fetch_one.command,
+            Commands::Cache {
+                action: Some(CacheAction::Fetch {
+                    id: Some(ref id)
+                })
+            } if id == "MIT"
+        ));
     }
 }

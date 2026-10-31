@@ -25,6 +25,13 @@ pub fn spdx_cache_dir() -> Result<PathBuf> {
         .join("SPDX-Cache"))
 }
 
+/// Return the base URL for fetching SPDX data.
+pub fn spdx_base_url() -> String {
+    let base = std::env::var("LICENCIFY_SPDX_URL")
+        .unwrap_or_else(|_| "https://spdx.org/licenses".to_string());
+    base.trim_end_matches('/').to_string()
+}
+
 fn validate_spdx_id(license_id: &str) -> Result<()> {
     anyhow::ensure!(
         !license_id.is_empty()
@@ -68,16 +75,16 @@ fn parse_and_cache_detail(
 impl LicenseProvider {
     /// Create a provider with the default SPDX detail cache directory.
     pub fn load() -> Result<Self> {
-        let index = SpdxIndex::load().context("Failed to load SPDX license index")?;
-        Ok(Self {
-            index,
-            cache_dir: spdx_cache_dir()?,
-        })
+        let cache_dir = spdx_cache_dir()?;
+        let index =
+            SpdxIndex::load_with_cache(&cache_dir).context("Failed to load SPDX license index")?;
+        Ok(Self { index, cache_dir })
     }
 
     /// Create a provider with a custom cache directory for tests and callers.
     pub fn with_spdx_cache(cache_dir: &Path) -> Result<Self> {
-        let index = SpdxIndex::load().context("Failed to load SPDX license index")?;
+        let index =
+            SpdxIndex::load_with_cache(cache_dir).context("Failed to load SPDX license index")?;
         Ok(Self {
             index,
             cache_dir: cache_dir.to_path_buf(),
@@ -123,7 +130,7 @@ impl LicenseProvider {
         let fs = global_fs();
         let cache_path = self.cache_dir.join(format!("{license_id}.json"));
 
-        let url = format!("https://spdx.org/licenses/{license_id}.json");
+        let url = format!("{}/{license_id}.json", spdx_base_url());
         let mut resp = ureq::get(&url)
             .call()
             .context(format!("Failed to fetch license detail for '{license_id}'"))?;
