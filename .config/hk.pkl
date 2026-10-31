@@ -42,7 +42,7 @@ local sorters = new Group {
     }
     ["toml-sort"] {
       check = "toml-sort --check --sort-table-keys --sort-inline-tables {{files}}"
-      exclude = List("**/tombi.toml")
+      exclude = List("**/tombi.toml", "Cargo.toml", ".typos.toml")
       fix = "toml-sort --in-place --sort-table-keys --sort-inline-tables {{files}}"
       types = List("toml")
     }
