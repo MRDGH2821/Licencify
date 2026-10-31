@@ -814,6 +814,246 @@ fn apply_creates_shared_config_when_selecting_id_without_config_file() {
     assert!(saved.contains("author = \"Git Author\""), "{saved}");
 }
 
+fn write_manifests(project: &Project) {
+    project.write(
+        "Cargo.toml",
+        "[package]\nname = \"demo\"\nversion = \"0.1.0\"\nlicense = \"Apache-2.0\"\n",
+    );
+    project.write(
+        "package.json",
+        "{\n  \"name\": \"demo\",\n  \"license\": \"Apache-2.0\"\n}\n",
+    );
+    project.write(
+        "pyproject.toml",
+        "[project]\nname = \"demo\"\nversion = \"0.1.0\"\nlicense = { text = \"Apache-2.0\" }\n",
+    );
+}
+
+#[test]
+fn apply_leaves_manifests_unchanged_by_default() {
+    let project = Project::new();
+    write_manifests(&project);
+    let manifests = ["Cargo.toml", "package.json", "pyproject.toml"]
+        .map(|path| fs::read_to_string(project.root.join(path)).unwrap());
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Applied"));
+    assert!(!text(&output.stderr).contains("Warning"));
+    assert!(project.root.join("LICENSE.txt").exists());
+    for (path, expected) in ["Cargo.toml", "package.json", "pyproject.toml"]
+        .into_iter()
+        .zip(manifests)
+    {
+        assert_eq!(
+            fs::read_to_string(project.root.join(path)).unwrap(),
+            expected
+        );
+    }
+}
+
+#[test]
+fn apply_updates_all_manifests_when_enabled() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-manifest = true\n",
+    );
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Updated: Cargo.toml, package.json, pyproject.toml"));
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("license = \"MIT\""));
+    assert!(fs::read_to_string(project.root.join("package.json"))
+        .unwrap()
+        .contains("\"license\": \"MIT\""));
+    assert!(fs::read_to_string(project.root.join("pyproject.toml"))
+        .unwrap()
+        .contains("MIT"));
+}
+
+#[test]
+fn apply_manifest_flags_override_config_and_conflict() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-manifest = true\n",
+    );
+
+    let disabled = project.apply_with_args("en_US.UTF-8", &["--no-update-manifest"]);
+
+    assert_success(&disabled);
+    assert!(!text(&disabled.stdout).contains("Updated:"));
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("Apache-2.0"));
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-manifest = false\n",
+    );
+
+    let enabled = project.apply_with_args("en_US.UTF-8", &["--update-manifest", "--yes"]);
+
+    assert_success(&enabled);
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("license = \"MIT\""));
+
+    let conflict = project.apply_with_args(
+        "en_US.UTF-8",
+        &["--update-manifest", "--no-update-manifest"],
+    );
+
+    assert!(!conflict.status.success());
+    assert!(text(&conflict.stderr).contains("cannot be used with"));
+}
+
+#[test]
+fn apply_no_file_skips_additional_licence_files() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nadditional-licences = [\"BSD-3-Clause\"]\n",
+    );
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--no-file"]);
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Skipped licence files"));
+    assert!(!project.root.join("LICENSE.txt").exists());
+    assert!(!project.root.join("LICENSE-BSD-3-Clause.md").exists());
+}
+
+#[test]
+fn apply_skips_manifest_update_when_additional_licences_are_configured() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nadditional-licences = [\"BSD-3-Clause\"]\nupdate-manifest = true\n",
+    );
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    assert!(text(&output.stderr).contains("skipping manifest updates"));
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("Apache-2.0"));
+}
+
+#[test]
+fn apply_updates_proprietary_manifests_from_the_written_notice() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"proprietary\"\nauthor = \"Author\"\nupdate-manifest = true\n",
+    );
+
+    let output = project.apply("en_US.UTF-8");
+
+    assert_success(&output);
+    let cargo = fs::read_to_string(project.root.join("Cargo.toml")).unwrap();
+    assert!(cargo.contains("license-file = \"LICENSE.txt\""), "{cargo}");
+    assert!(cargo.contains("publish = false"), "{cargo}");
+    let npm = fs::read_to_string(project.root.join("package.json")).unwrap();
+    assert!(npm.contains("\"private\": true"), "{npm}");
+    assert!(npm.contains("SEE LICENSE IN LICENSE.txt"), "{npm}");
+    let python = fs::read_to_string(project.root.join("pyproject.toml")).unwrap();
+    assert!(python.contains("license-files"), "{python}");
+    assert!(python.contains("LICENSE.txt"), "{python}");
+    for manifest in ["Cargo.toml", "package.json", "pyproject.toml"] {
+        let contents = fs::read_to_string(project.root.join(manifest)).unwrap();
+        assert!(!contents.contains("proprietary"), "{manifest}: {contents}");
+        assert!(!contents.contains("UNLICENSED"), "{manifest}: {contents}");
+    }
+}
+
+#[test]
+fn apply_no_file_still_updates_manifests() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+
+    let output = project.apply_with_args(
+        "en_US.UTF-8",
+        &["--no-file", "--update-manifest"],
+    );
+
+    assert_success(&output);
+    assert!(!project.root.join("LICENSE.txt").exists());
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("license = \"MIT\""));
+}
+
+#[test]
+fn apply_proprietary_no_file_fails_without_existing_notice() {
+    let project = Project::new();
+    write_manifests(&project);
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"proprietary\"\nauthor = \"Author\"\n",
+    );
+
+    let output = project.apply_with_args(
+        "en_US.UTF-8",
+        &["--no-file", "--update-manifest"],
+    );
+
+    assert!(!output.status.success());
+    assert!(text(&output.stderr).contains("existing primary notice"));
+    assert!(fs::read_to_string(project.root.join("Cargo.toml"))
+        .unwrap()
+        .contains("Apache-2.0"));
+    assert!(!project.root.join("LICENCE.txt").exists());
+}
+
+#[test]
+fn apply_spdx_switch_keeps_private_flags_and_warns() {
+    let project = Project::new();
+    project.write(
+        "Cargo.toml",
+        "[package]\nname = \"demo\"\nversion = \"0.1.0\"\npublish = false\nlicense-file = \"LICENCE.txt\"\n",
+    );
+    project.write(
+        "package.json",
+        "{\n  \"name\": \"demo\",\n  \"private\": true,\n  \"license\": \"SEE LICENSE IN LICENCE.txt\"\n}\n",
+    );
+    project.write("LICENCE.txt", "notice\n");
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nupdate-manifest = true\n",
+    );
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--yes"]);
+
+    assert_success(&output);
+    assert!(text(&output.stderr).contains("publish = false remains set"));
+    assert!(text(&output.stderr).contains("private = true remains set"));
+    let cargo = fs::read_to_string(project.root.join("Cargo.toml")).unwrap();
+    assert!(cargo.contains("publish = false"), "{cargo}");
+    assert!(cargo.contains("license = \"MIT\""), "{cargo}");
+    let npm = fs::read_to_string(project.root.join("package.json")).unwrap();
+    assert!(npm.contains("\"private\": true"), "{npm}");
+    assert!(npm.contains("\"license\": \"MIT\""), "{npm}");
+}
+
+
 #[test]
 fn apply_refuses_when_requested_primary_is_currently_additional_without_permit_promotion() {
     let project = Project::new();

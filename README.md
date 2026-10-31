@@ -64,6 +64,9 @@ licencify add Apache-2.0 --author "Jane Doe" --year 2025 -Y
 # Write the configured licence without changing configuration
 licencify apply
 
+# Update package manifests only for this invocation
+licencify apply --update-manifest
+
 # Also add or refresh the README licence section
 licencify apply --update-readme
 
@@ -294,6 +297,10 @@ licencify config set additional-licences=[]
 `PRJ_ROOT` may select an absolute root containing the current directory. Otherwise Licencify uses the Git worktree root, the highest ancestor with a shared config, or the current directory. Root-level `.licencify.toml` and `licencify.toml` are not loaded. `config init` creates only the shared project config without overwriting it.
 
 Global defaults are overridden, field by field, by shared project defaults, matching shared `[[subdirs]]` entries (shallow to deep), local defaults, matching local entries (shallow to deep), then CLI options. An empty `additional-licences` array clears inherited additional IDs.
+
+`apply` leaves package manifests unchanged by default. Set `update-manifest = true`
+to enable updates in configuration; `--update-manifest` and
+`--no-update-manifest` override that setting for one invocation.
 
 `config get` prints one effective field; `config list` identifies loaded files and prints effective values.
 

@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, fs::global_fs, provider, resolution};
+use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution};
 use anyhow::Context;
 use std::io::{IsTerminal, Write};
 
@@ -8,10 +8,14 @@ pub fn cmd_apply(
     yes: bool,
     permit_promotion: bool,
     update_readme: Option<bool>,
+    update_manifest: Option<bool>,
+    no_file: bool,
 ) -> anyhow::Result<()> {
     let config = crate::config::Config::load_effective(None)?;
     let update_readme =
         crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
+    let update_manifest =
+        update_manifest.unwrap_or(config.default.update_manifest.unwrap_or(false));
     let provider = provider::LicenseProvider::load()?;
     let selected = ids
         .iter()
@@ -89,27 +93,30 @@ pub fn cmd_apply(
         false,
     )?;
 
-    if let Some(existing) = &plan.previous {
-        if !yes {
-            if !std::io::stdin().is_terminal() {
-                anyhow::bail!(
-                    "Refusing to replace existing primary licence file {}: run interactively or pass --yes",
-                    existing.display()
+    if !no_file {
+        if let Some(existing) = &plan.previous {
+            if !yes {
+                if !std::io::stdin().is_terminal() {
+                    anyhow::bail!(
+                        "Refusing to replace existing primary licence file {}: run interactively or pass --yes",
+                        existing.display()
+                    );
+                }
+                let prompt = format!(
+                    "About to replace the primary licence with {} ({}). Continue? [y/N] ",
+                    info.name, info.id
                 );
-            }
-            let prompt = format!(
-                "About to replace the primary licence with {} ({}). Continue? [y/N] ",
-                info.name, info.id
-            );
-            print!("{prompt}");
-            std::io::stdout().flush()?;
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            let answer = input.trim();
-            let confirmed = answer.eq_ignore_ascii_case("y") || answer.eq_ignore_ascii_case("yes");
-            if !confirmed {
-                println!("Aborted.");
-                return Ok(());
+                print!("{prompt}");
+                std::io::stdout().flush()?;
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                let answer = input.trim();
+                let confirmed =
+                    answer.eq_ignore_ascii_case("y") || answer.eq_ignore_ascii_case("yes");
+                if !confirmed {
+                    println!("Aborted.");
+                    return Ok(());
+                }
             }
         }
     }
@@ -125,47 +132,52 @@ pub fn cmd_apply(
         super::generate::plan_missing_extras(&context, &config, &provider, &additional, &format)?;
 
     let fs = global_fs();
-    let stage = super::generate::staging_path(&plan.path);
-    anyhow::ensure!(
-        !fs.exists(&stage),
-        "Refusing to overwrite staging file {}",
-        stage.display()
-    );
-    fs.write(&stage, &plan.content)
-        .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
-
-    if let Err(error) = fs.rename(&stage, &plan.path) {
-        return Err(anyhow::Error::from(error).context(format!(
-            "Replacement remains staged at {} and the existing primary was left in place",
+    if !no_file {
+        let stage = super::generate::staging_path(&plan.path);
+        anyhow::ensure!(
+            !fs.exists(&stage),
+            "Refusing to overwrite staging file {}",
             stage.display()
-        )));
-    }
+        );
+        fs.write(&stage, &plan.content)
+            .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
 
-    if let Some(existing) = &plan.previous {
-        if existing != &plan.path {
-            if let Err(error) = fs.remove_file(existing) {
-                return Err(anyhow::Error::from(error).context(format!(
-                    "Replacement is at {} and the previous primary {} was left in place",
-                    plan.path.display(),
-                    existing.display()
-                )));
+        if let Err(error) = fs.rename(&stage, &plan.path) {
+            return Err(anyhow::Error::from(error).context(format!(
+                "Replacement remains staged at {} and the existing primary was left in place",
+                stage.display()
+            )));
+        }
+
+        if let Some(existing) = &plan.previous {
+            if existing != &plan.path {
+                if let Err(error) = fs.remove_file(existing) {
+                    return Err(anyhow::Error::from(error).context(format!(
+                        "Replacement is at {} and the previous primary {} was left in place",
+                        plan.path.display(),
+                        existing.display()
+                    )));
+                }
             }
         }
-    }
 
-    if let Some(source) = &plan.promotion_source {
-        if source != &plan.path && fs.exists(source) {
-            if let Err(error) = fs.remove_file(source) {
-                return Err(anyhow::Error::from(error).context(format!(
-                    "Promoted primary is at {} and additional file {} was left in place",
-                    plan.path.display(),
-                    source.display()
-                )));
+        if let Some(source) = &plan.promotion_source {
+            if source != &plan.path && fs.exists(source) {
+                if let Err(error) = fs.remove_file(source) {
+                    return Err(anyhow::Error::from(error).context(format!(
+                        "Promoted primary is at {} and additional file {} was left in place",
+                        plan.path.display(),
+                        source.display()
+                    )));
+                }
             }
         }
-    }
 
-    super::generate::write_missing_extras(&extras.missing)?;
+        super::generate::write_missing_extras(&extras.missing)?;
+    }
+    if update_manifest && no_file && spdx == "proprietary" {
+        project::require_primary_notice(&*fs)?;
+    }
 
     let additional_to_save = if selected.len() > 1 {
         Some(additional.as_slice())
@@ -184,23 +196,33 @@ pub fn cmd_apply(
         )?;
     }
 
-    println!(
-        "✅ Applied {} ({}) as {}",
-        info.name,
-        info.id,
-        plan.path.display()
-    );
-    for extra in &extras.missing {
+    if update_manifest {
+        let files = project::update_manifest(&spdx, &context.author, &context.year, &additional)?;
+        if !files.is_empty() {
+            println!("   Updated: {}", files.join(", "));
+        }
+    }
+    if no_file {
+        println!("   Skipped licence files (--no-file)");
+    } else {
         println!(
-            "   Added additional {} as {}",
-            extra.id,
-            extra.path.display()
+            "✅ Applied {} ({}) as {}",
+            info.name,
+            info.id,
+            plan.path.display()
         );
+        for extra in &extras.missing {
+            println!(
+                "   Added additional {} as {}",
+                extra.id,
+                extra.path.display()
+            );
+        }
+        for path in &extras.skipped {
+            println!("   Skipped existing additional {}", path.display());
+        }
     }
-    for path in &extras.skipped {
-        println!("   Skipped existing additional {}", path.display());
-    }
-    if update_readme {
+    if update_readme && !no_file {
         crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
     Ok(())
