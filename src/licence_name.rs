@@ -7,6 +7,7 @@ use std::path::PathBuf;
 pub enum LicenceName {
     Licence,
     License,
+    Copying,
 }
 
 impl LicenceName {
@@ -32,9 +33,10 @@ impl LicenceName {
     }
 
     /// Resolve from config override, falling back to locale detection.
-    pub fn resolve(config_licence_name: Option<&str>) -> Self {
-        match config_licence_name {
+    pub fn resolve(basename: Option<&str>) -> Self {
+        match basename {
             Some(name) if name.eq_ignore_ascii_case("LICENSE") => Self::License,
+            Some(name) if name.eq_ignore_ascii_case("COPYING") => Self::Copying,
             Some(_) => Self::Licence,
             None => Self::detect(),
         }
@@ -45,6 +47,7 @@ impl LicenceName {
         match self {
             Self::Licence => "LICENCE",
             Self::License => "LICENSE",
+            Self::Copying => "COPYING",
         }
     }
 
@@ -53,10 +56,10 @@ impl LicenceName {
         PathBuf::from(format!("{}.{}", self.as_str(), ext))
     }
 
-    /// Primary filenames across both spellings and every supported format.
+    /// Primary filenames across all supported basenames and formats.
     pub fn primary_variants() -> Vec<PathBuf> {
         let mut paths = Vec::new();
-        for base in ["LICENCE", "LICENSE"] {
+        for base in ["LICENCE", "LICENSE", "COPYING"] {
             paths.push(PathBuf::from(base));
             for ext in ["txt", "html", "md"] {
                 paths.push(PathBuf::from(format!("{base}.{ext}")));
@@ -65,10 +68,10 @@ impl LicenceName {
         paths
     }
 
-    /// Additional-file names for one SPDX id, across basename and format.
+    /// Additional-file names for one SPDX id, across basenames and formats.
     pub fn extra_variants(id: &str) -> Vec<PathBuf> {
         let mut paths = Vec::new();
-        for base in ["LICENCE", "LICENSE"] {
+        for base in ["LICENCE", "LICENSE", "COPYING"] {
             for ext in ["txt", "html", "md"] {
                 paths.push(PathBuf::from(format!("{base}-{id}.{ext}")));
             }
@@ -81,16 +84,19 @@ impl LicenceName {
         &[
             "LICENSE",
             "LICENSE.txt",
+            "LICENSE.html",
             "LICENSE.md",
             "LICENCE",
             "LICENCE.txt",
+            "LICENCE.html",
             "LICENCE.md",
             "COPYING",
             "COPYING.txt",
+            "COPYING.html",
+            "COPYING.md",
         ]
     }
 }
-
 impl std::fmt::Display for LicenceName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -114,6 +120,13 @@ mod tests {
     #[test]
     fn resolve_case_insensitive() {
         assert_eq!(LicenceName::resolve(Some("license")), LicenceName::License);
+    }
+
+    #[test]
+    fn resolve_copying_basename() {
+        let name = LicenceName::resolve(Some("copying"));
+        assert_eq!(name, LicenceName::Copying);
+        assert_eq!(name.file_path("txt"), PathBuf::from("COPYING.txt"));
     }
 
     #[test]

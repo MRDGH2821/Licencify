@@ -99,6 +99,9 @@ pub enum Commands {
     /// Create the shared project config
     Init,
 
+    /// Write licence files from the effective configuration without changing it
+    Apply,
+
     /// List available licenses
     List {
         /// Show only OSI-approved licenses
@@ -185,7 +188,7 @@ pub enum Commands {
     /// Manage the global SPDX detail cache
     Cache {
         #[command(subcommand)]
-        action: CacheAction,
+        action: Option<CacheAction>,
     },
 
     /// Manage configuration
@@ -193,16 +196,9 @@ pub enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
-
-    /// Generate JSON schema for config file
-    Schema {
-        /// Output file path (default: licencify-schema.json)
-        #[arg(short, long, default_value = "licencify-schema.json")]
-        output: String,
-    },
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug, Clone, PartialEq, Eq)]
 pub enum CacheAction {
     /// Clear all cached SPDX details
     Clear,
@@ -210,8 +206,17 @@ pub enum CacheAction {
     /// Show cache directory location and size
     Info,
 
-    /// Pre-fetch and cache all license templates from SPDX
+    /// Pre-fetch and cache all licence templates from SPDX
     FetchAll,
+
+    /// Refresh licenses.json only without downloading licence bodies
+    Update,
+
+    /// Download uncached detail JSON from SPDX
+    Fetch {
+        /// SPDX licence identifier. If omitted, downloads every uncached detail.
+        id: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -219,8 +224,14 @@ pub enum ConfigAction {
     /// Create default config file
     Init,
 
-    /// Show current configuration
-    Show,
+    /// Print one effective configuration value
+    Get { key: String },
+
+    /// Show loaded files and effective values
+    List,
+
+    /// Set one configuration value
+    Set { assignment: String },
 }
 
 #[cfg(test)]
@@ -271,5 +282,47 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    #[test]
+    fn cache_commands_parse_expected_variants() {
+        use super::CacheAction;
+
+        let bare = Cli::try_parse_from(["licencify", "cache"]).unwrap();
+        assert!(matches!(bare.command, Commands::Cache { action: None }));
+
+        let clear = Cli::try_parse_from(["licencify", "cache", "clear"]).unwrap();
+        assert!(matches!(
+            clear.command,
+            Commands::Cache {
+                action: Some(CacheAction::Clear)
+            }
+        ));
+
+        let update = Cli::try_parse_from(["licencify", "cache", "update"]).unwrap();
+        assert!(matches!(
+            update.command,
+            Commands::Cache {
+                action: Some(CacheAction::Update)
+            }
+        ));
+
+        let fetch_all = Cli::try_parse_from(["licencify", "cache", "fetch"]).unwrap();
+        assert!(matches!(
+            fetch_all.command,
+            Commands::Cache {
+                action: Some(CacheAction::Fetch { id: None })
+            }
+        ));
+
+        let fetch_one = Cli::try_parse_from(["licencify", "cache", "fetch", "MIT"]).unwrap();
+        assert!(matches!(
+            fetch_one.command,
+            Commands::Cache {
+                action: Some(CacheAction::Fetch {
+                    id: Some(ref id)
+                })
+            } if id == "MIT"
+        ));
     }
 }

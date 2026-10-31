@@ -324,7 +324,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"MIT\"\nauthor = \"From Config\"\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"MIT\"\nauthor = \"From Config\"\n",
         )
         .unwrap();
         let result = cmd_add(
@@ -423,7 +423,7 @@ mod tests {
             .unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         fs.write(
@@ -464,7 +464,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         fs.write(Path::new("LICENCE-MIT.md"), "KEEP-EXTRA").unwrap();
@@ -528,7 +528,7 @@ mod tests {
         fs.write(Path::new("LICENCE.txt"), "keep").unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"MIT\"\nadditional-licences = [\"ISC\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"MIT\"\nadditional-licences = [\"ISC\"]\n",
         )
         .unwrap();
         let template = config.parent().unwrap().join("templates").join("ISC.tera");
@@ -562,7 +562,7 @@ mod tests {
         inner
             .write(
                 &config,
-                "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+                "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\n",
             )
             .unwrap();
         crate::fs::set_global_fs(Arc::new(FailExtraWrite(inner.clone())));
@@ -596,7 +596,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"MIT\"\nadditional-licences = [\"Apache-2.0\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"MIT\"\nadditional-licences = [\"Apache-2.0\"]\n",
         )
         .unwrap();
         let cargo = "[package]\nname = \"test\"\nversion = \"0.1.0\"\n";

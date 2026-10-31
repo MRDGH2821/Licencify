@@ -22,7 +22,7 @@ pub struct ResolvedContext {
 
 /// Resolve licence name from config (if configured) or locale detection.
 pub fn resolve_licence_name(config: Option<&Config>) -> LicenceName {
-    LicenceName::resolve(config.and_then(|c| c.licence_name_setting()))
+    LicenceName::resolve(config.and_then(|c| c.basename_setting()))
 }
 
 /// Resolve all context needed for add/update: author, year, company, email, licence name, template.

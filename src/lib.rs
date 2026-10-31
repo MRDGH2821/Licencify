@@ -1,7 +1,7 @@
 mod author;
 pub mod cli;
 mod commands;
-mod config;
+pub mod config;
 mod detect;
 pub mod fs;
 mod licence_name;
@@ -80,6 +80,7 @@ pub fn main() -> anyhow::Result<()> {
             osi_only,
             fsf_only,
         } => commands::cmd_search(&query, osi_only, fsf_only),
+        Commands::Apply => commands::cmd_apply(),
         Commands::Detect => commands::cmd_detect(),
         Commands::Scan { id } => commands::cmd_scan(id.as_deref()),
         Commands::Update {
@@ -108,6 +109,5 @@ pub fn main() -> anyhow::Result<()> {
         ),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
-        Commands::Schema { output } => commands::cmd_schema(&output),
     }
 }
