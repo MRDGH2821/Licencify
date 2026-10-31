@@ -108,6 +108,13 @@ pub enum Commands {
         /// Save the selection to shared project defaults
         #[arg(long)]
         root: bool,
+
+        /// Add or refresh the README licence badge and section
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
+        update_readme: bool,
+        /// Leave the README unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_readme")]
+        no_update_readme: bool,
     },
 
     /// List available licenses
