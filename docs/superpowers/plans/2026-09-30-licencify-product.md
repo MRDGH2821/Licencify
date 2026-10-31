@@ -94,7 +94,7 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 - [ ] **Step 4: Fix README updates.** Pass actual output filename to badge/section rendering. Recognize and replace only tool-managed badge/section, preserve handwritten content and warn about stale manual references; accept both `--update-readme` and `--no-update-readme` to override configuration. Keep absent/unchanged README a successful no-op and report write failure distinctly.
 - [ ] **Step 5: Smoke and release checks.** Run real `licencify scan` on a temporary multi-licence project and check its exit code and output; run `cargo test --test scan_cli`, full `cargo test`, `cargo fmt --check`, scoped `hk run pre-commit` after inspecting planned effects, and `git diff --check`. Update CLI help/README, append the dated AI log, and commit.
 
-## Open decisions (do not silently implement)
+## Recorded command names
 
-The spec leaves SPDX index refresh/versioning, a `config set` command, the manifest-update default, a proprietary `remove` command, and remote registries open. Keep the current manifest-update default until the maintainer chooses otherwise; do not add the other commands/protocols in these tasks. If
-a task requires a choice (for example a new manifest-update flag), get that decision before implementing that step.
+Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. `licencify apply` replaces `add` and `update` (ADR 0016). Tasks below that name `add` or `update` mean `apply`. The primary filename key is `basename` (ADR 0017).
+`schema/config.json` is written by a cargo example and checked by `cargo test` (ADR 0015). Do not add a schema subcommand and do not write that file from `build.rs`. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.

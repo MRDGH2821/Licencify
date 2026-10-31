@@ -24,19 +24,24 @@ Licencify is a command-line tool for selecting an open-source licence or a propr
 3. `licencify search <query>` searches identifiers and names and supports the same filters. Discovery works without network access.
 4. Deprecated identifiers are identified to the user rather than treated as ordinary current identifiers.
 
-### Add and update
+### Apply
 
-1. `licencify add [ID]` generates the primary licence in the current directory; an omitted ID uses the effective `licence` setting, and absence of both is an error. `licencify update <ID>` requires an explicit replacement ID. Both commands also generate missing files for effective `additional-licences` IDs without rewriting existing extra files.
-2. Both commands accept explicit author, company, email, year, and `txt`/`html`/`md` format options. An explicitly supplied CLI value overrides every configuration layer.
-   Unset format falls back to `txt`; unset year uses the current year, company defaults to author, email is empty, README updates default to false, and the filename convention defaults to the detected locale. An unresolved author is an actionable error.
+1. `licencify apply [licence]...` writes the project's licence files. Each positional argument is an SPDX id or `proprietary`. No id uses the effective config and does not change the config file. One id sets `licence` and leaves `additional-licences` unchanged, except when promotion removes that id.
+   Two or more ids set `licence` to the first and replace `additional-licences` with every id after the first. A repeated id is an error. `proprietary` cannot be combined with another id. If no id is given and the effective config has no licence, that is an error.
+   Missing files for the effective `additional-licences` ids are generated. Existing extra files are not rewritten. An additional id removed from config leaves its file on disk.
+2. `apply` accepts explicit author, company, email, year, and `txt`/`html`/`md` format options. An explicitly supplied CLI value overrides every configuration layer.
+   Unset format falls back to `txt`; unset year uses the current year, company defaults to author, README updates default to false, and the filename convention defaults to the detected locale.
+   When the command and the config omit `author` or `email`, use `git config user.name` and `git config user.email`, and tell the user which value came from Git. A missing Git name is an error. A missing Git email leaves `email` empty.
 3. Supported template variables are `year`, `author`, `company`, `email`, and `date`. SPDX placeholders used in source text are rendered when recognized; unrecognized placeholders are not silently erased.
-4. Plain-text output uses the template source order specified below. Custom templates use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML. Markdown output converts rendered HTML to Markdown while preserving visible licence wording. If no HTML source exists for requested `md` or `html`, warn and write plain text with a `.txt` extension instead; fail if no plain-text source exists either.
-5. `update` locates the single existing primary licence file across the supported basename and format variants, confirms replacement, and removes or renames the old path only after the replacement is ready. It fails without changing files if multiple primary candidates make the target ambiguous. `--yes` skips confirmation prompts; scripted invocations must not wait for input.
-6. Output naming respects `licence_file_name = "licence"` or `"license"` (case-insensitive), rendered as uppercase `LICENCE` or `LICENSE`, and the actual output format's extension. Each additional licence uses a separate `<BASENAME>-<SPDX-ID>.<actual-format>` file, such as `LICENCE-Apache-2.0.txt`; a warned HTML/Markdown fallback uses `.txt`.
+4. Plain-text output uses the template source order specified below. Custom templates use `<spdx-id>.tera` for text and `<spdx-id>.html.tera` for HTML. Markdown output converts rendered HTML to Markdown while preserving visible licence wording.
+   If no HTML source exists for requested `md` or `html`, warn and write plain text with a `.txt` extension instead; fail if no plain-text source exists either.
+5. When no primary file exists, `apply` writes one without asking. When one primary exists, `apply` locates it across the supported basename and format variants, confirms, and removes or renames the old path only after the replacement is ready. `--yes` skips that prompt. Scripted invocations must not wait for input. When several primary candidates exist, `apply` fails without changing files.
+6. The config key `basename` is `licence`, `license`, or `copying`, matched without case. It is written as `LICENCE`, `LICENSE`, or `COPYING` plus the format extension. Unset, it follows the detected locale, which is `LICENCE` or `LICENSE`. `licence_file_name` and `licence_name` are rejected.
+   Each additional licence uses a separate `<BASENAME>-<SPDX-ID>.<actual-format>` file, such as `LICENCE-Apache-2.0.txt` or `COPYING-MIT.txt`. A warned HTML/Markdown fallback uses `.txt`.
    Existing additional files are never rewritten, including when their extensions differ from the selected format. Validate IDs and output paths and resolve every required template before modifying files; failures in additional generation must not be reported as full command success. `scan` separately reports unidentified or conflicting existing content.
 7. If the requested primary ID is in `additional-licences`, reject the command unless `--permit-promotion` is supplied. Promotion moves exactly one existing matching additional file into the primary position, removes the old primary, removes the promoted ID from the effective additional list, and records it as primary.
    Do not silently relabel a source format, guess among multiple source files, or delete the old primary before the move and config change can succeed. `--permit-promotion` authorizes this transition; `--yes` separately controls prompts.
-8. The commands report every file written, the selected primary and additional licences, and any manifest/readme updates or skipped operations. With `--verbose`, report each resolved setting's source (CLI, config file and matching rule, or fallback) without printing its value.
+8. `apply` reports every file written, the selected primary and additional licences, and any manifest or readme updates or skipped operations. With `--verbose`, report each resolved setting's source (CLI, config file and matching rule, or fallback) without printing its value.
 
 ### Detection
 
@@ -52,21 +57,26 @@ Licencify is a command-line tool for selecting an open-source licence or a propr
 2. Skip Git-ignored directories and project-relative directories listed in project configuration under `[scan] exclude = ["vendor"]`. Exclusion paths cannot escape the project root; do not follow directory symlinks outside it. If an exclusion overlaps a configured `[[subdirs]]` path, warn that the configuration is contradictory and scan that subdir anyway.
 3. For each result, show its path and evidence level: identified from distinctive text, claimed by a filename or README declaration, or unidentified. An unrecognized file is reported as unknown, not assigned a guessed SPDX ID. Report every file in a multi-licence directory and conflicts between confidently identified text and explicit file/README claims.
 4. Discovery works without any configuration. If configuration exists, compare findings against effective `licence` and `additional-licences` at the root, configured subdir paths, and directories with discovered evidence. An optional explicit scan ID overrides the expected primary ID, not the additional list. Traversal does not require every visited directory to have a licence file.
-5. A confirmed conflicting ID or unreadable file causes a nonzero result; unknown identity, missing expected licence file or directory, and contradictory exclusions cause warnings. A missing configured path is not silently reported as matching. The scan is read-only and does not run automatically after `add` or `update`.
+5. A confirmed conflicting ID or unreadable file causes a nonzero result; unknown identity, missing expected licence file or directory, and contradictory exclusions cause warnings. A missing configured path is not silently reported as matching. The scan is read-only and does not run automatically after `apply`.
 
 ### Configuration
 
 1. Select the project root from an absolute `PRJ_ROOT` when set, otherwise the Git worktree root, otherwise the highest ancestor containing a project config, otherwise the current directory. Reject an invocation whose current directory lies outside an explicit `PRJ_ROOT`. `PRJ_CONFIG_HOME`, when set, replaces `$PRJ_ROOT/.config` as the project config directory.
 2. Load global defaults from `$XDG_CONFIG_HOME/licencify/config.toml` (or the platform equivalent), then the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml`, then its optional `config.local.toml`. The local file is intended to remain uncommitted. Legacy root-level config filenames are not loaded.
 3. Only root project config files are loaded. When invoked from a child directory containing a Licencify config file on the path from the root to the current directory, warn that it was ignored and recommend merging it into the root shared config. Do not search the whole project tree for child configs.
-4. `[default]` supports optional `author`, `company`, `email`, `year`, `licence` (one SPDX ID or the literal `proprietary`), `additional-licences` (an array of other SPDX IDs), `format`, `update_readme`, and `licence_file_name`. Project files may additionally contain `[[subdirs]]` entries with a required `path` and optional overrides for any of these fields; global `[[subdirs]]` entries are invalid.
+4. `[default]` supports optional `author`, `company`, `email`, `year`, `licence` (one SPDX ID or the literal `proprietary`), `additional-licences` (an array of other SPDX IDs), `format`, `update-readme`, and `basename` (`licence`, `license`, or `copying`).
+   A key that contains more than one word uses hyphens. An underscore spelling of the same key is rejected. `licence_file_name` and `licence_name` are rejected.
+   Project files may additionally contain `[[subdirs]]` entries with a required `path` and optional overrides for any of these fields; global `[[subdirs]]` entries are invalid.
    Subdir paths are normalized relative to the project root, cannot escape it, and match only complete path components. A later `additional-licences` array replaces an earlier one; `[]` clears inherited additional IDs.
    Reject any effective configuration that mixes `proprietary` with open-source additional IDs, whether proprietary is primary or appears in the additional list.
 5. Resolve fields in this order, lowest to highest: global defaults; shared project defaults; matching shared subdirs from shallowest to deepest; local project defaults; matching local subdirs from shallowest to deepest; explicit CLI options.
    Later sources override only fields they specify. Entries for the same normalized path in shared and local files contribute only their explicit fields at their respective precedence positions. A local default therefore overrides a shared subdir value; a local subdir can override it again.
-6. If a required licence or author remains unresolved after CLI and configuration lookup, report an actionable error. Missing optional fields use the fallbacks specified under Add and update; neither a global config file nor every optional field is mandatory. Invalid TOML and invalid values of known fields are errors. Warn with file and key for unknown config options and ignore those options.
-7. `config init` creates only the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml` without overwriting it; it does not create the global or local file. `config show` identifies loaded files and effective values. `schema` writes a JSON schema for the supported keys to the requested path.
-8. `add` and `update` record the chosen primary ID, author, and actual format in configuration, preserving unrelated values and comments. From the root, write the shared defaults. From a subdirectory, prompt interactively for shared defaults or an exact-path `[[subdirs]]` entry; an explicit config-target CLI option decides without prompting. With `--yes` or no terminal, default to the subdir entry.
+6. If a required licence or author remains unresolved after CLI options, configuration, and the Git fallback, report an actionable error.
+   Missing optional fields use the fallbacks specified under Apply; neither a global config file nor every optional field is mandatory. Invalid TOML and invalid values of known fields are errors. Warn with file and key for unknown config options and ignore those options.
+7. `init` creates only the root shared config at `${PRJ_CONFIG_HOME:-$PRJ_ROOT/.config}/licencify/config.toml` without overwriting it; it does not create the global or local file. The new file starts with `#:schema https://raw.githubusercontent.com/MRDGH2821/Licencify/main/schema/config.json`. `config get` prints one key. `config list` identifies loaded files and effective values.
+   A cargo example writes `schema/config.json`. `cargo test` fails if that file drifts. The binary has no schema command.
+8. When `apply` is given one or more ids, it records the chosen primary id, author, and actual format in configuration, preserving unrelated values and comments. Two or more ids also replace `additional-licences`. No id does not write config.
+   From the project root, write the shared defaults. From a subdirectory, write an exact-path `[[subdirs]]` entry. `--root` writes the shared defaults from either place. There is no destination prompt.
    Create the root shared config if the chosen subdir target needs one and none exists. If a local override masks the fields being saved, alert the user and update the winning local entry so future resolutions see the new values. Do not write child config files.
 
 Config and template locations:
@@ -89,7 +99,8 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 2. All provider and CLI cache commands use one user-level SPDX detail cache at `${XDG_CACHE_HOME:-$HOME/.cache}/licencify/SPDX-Cache/` (or the platform user cache directory elsewhere). No project cache, `PRJ_CACHE_HOME`, or `PRJ_ID` affects it; existing `api/` cache data is not migrated.
 3. On an SPDX detail cache hit, use that detail without a network request; if its HTML field is absent, continue to bundled HTML or the plain-text fallback rather than refetching the same detail. On a cache miss, fetch the detail and cache the successful response. Cached detail remains available until `cache clear`; this specification defines no time-based expiry.
 4. A cache write failure does not discard a successfully fetched response. A network failure may fall back to a built-in template where available; otherwise report an actionable error.
-5. `cache info` reports the resolved SPDX cache directory and size. `cache clear` removes only the Licencify `SPDX-Cache/` directory; clearing the cache must not delete configuration or other user data. `cache fetch-all` uses that same directory.
+5. `licencify cache` with no subcommand reports the resolved SPDX cache directory, the number of cached files, and the size in bytes. `cache clear` removes only the Licencify `SPDX-Cache/` directory; clearing the cache must not delete configuration or other user data.
+   `cache fetch` with no id downloads every uncached detail JSON. `cache fetch <id>` downloads that one id and leaves a cached copy in place. `cache update` refreshes `licenses.json` only and does not download bodies.
 6. Built-in templates provide an offline generation path for the supported common licences.
 7. For each requested format, search project templates, global templates, cached SPDX detail, fetched SPDX detail on a cache miss, then bundled templates, in that order. HTML and Markdown use the SPDX detail's `licenseTextHtml` only when present; plain text uses `licenseText`.
    A custom template wins even when SPDX detail is already cached. A failed fetch may still use a bundled template. Missing HTML follows the warned `.txt` fallback above. A template that exists but cannot be read or rendered fails visibly rather than silently selecting another source.
@@ -115,7 +126,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 
 1. README modification is opt-in by CLI or configuration; the default is no change.
 2. When enabled, Licencify locates a supported Markdown README, adds a licence badge and licence section only when an equivalent one is not already present, and leaves non-Markdown README formats unchanged. On a licence change, replace only recognizable tool-managed badge/section content; leave handwritten content intact and warn about references the user may need to update.
-3. A README update must link to the actual generated licence filename rather than assume a fixed `LICENCE.txt` path. `add` and `update` do not run `scan` automatically.
+3. A README update must link to the actual generated licence filename rather than assume a fixed `LICENCE.txt` path. `apply` does not run `scan` automatically.
 4. A README that is absent or already contains an equivalent licence section is a successful no-op. A write failure is reported distinctly from the licence-file result.
 5. The CLI override must support both enabling and disabling the config default, so configuration can be overridden in either direction.
 
@@ -135,6 +146,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 - Generating compound SPDX expressions such as `MIT OR Apache-2.0`. `additional-licences` generates missing separate files and describes scan expectations, but does not define how the licences combine legally.
 - Adding arbitrary remote/custom registry protocols. Custom local template paths are covered; remote registry configuration appeared only in an early design proposal.
 - Implementing features merely because an old plan lists them. This document defines target behavior; implementation status must be checked against the current code separately.
+- Help that leads with examples, a `help` command, a standard-output and standard-error split, documented exit codes, and `--json`, `--quiet`, and `--dry-run`. The comparison is in [`.agents/research/cli-developer-experience.md`](../../../.agents/research/cli-developer-experience.md).
 
 ## Status and source notes
 
@@ -144,9 +156,12 @@ Project configuration paths follow [PRJ Base Directory Specification v0.1](https
 
 ## Decided
 
-1. **SPDX index:** `update-spdx-index` caches `licenses.json`. That cached file is the validation, list, and search index when it exists. The embedded 3.28.0 list is the fallback. The command does not download licence bodies.
-2. **Licence wording:** Each `{id}.json` from `fetch_detail` or `cache fetch-all` is the template body. A local custom template overrides it. A bundled template is used only when that JSON is missing or the fetch fails.
-3. **Config writes:** `config set <key> <value>` sets any `[default]` field, including the manifest-update switch. It writes shared defaults from the project root, or an exact-path `[[subdirs]]` entry from a subdirectory.
+1. **SPDX index:** `cache update` caches `licenses.json`. That cached file is the validation, list, and search index when it exists. The embedded 3.28.0 list is the fallback. The command does not download licence bodies.
+2. **Licence wording:** Each `{id}.json` from `fetch_detail` or `cache fetch` is the template body. `cache fetch` with no id downloads every uncached detail. `cache fetch <id>` downloads that one id and does not refetch a cached copy. A local custom template overrides the detail JSON. A bundled template is used only when that JSON is missing or the fetch fails.
+3. **Config writes:** `init` is a root command. `config get <key>` prints one field. `config list` prints the effective config. `config set <option>=<value>` sets one `[default]` field. The value is TOML. `additional-licences=[]` clears the list. It writes shared defaults from the project root, or an exact-path `[[subdirs]]` entry from a subdirectory.
+   A cargo example writes `schema/config.json`. `cargo test` fails if that file drifts. The schema URL is <https://raw.githubusercontent.com/MRDGH2821/Licencify/main/schema/config.json>. The binary has no schema command.
+   The verb survey is in [`.agents/research/cli-subcommand-verbs.md`](../../../.agents/research/cli-subcommand-verbs.md). Schema generation is in [`.agents/research/config-schema-generation.md`](../../../.agents/research/config-schema-generation.md).
+   The command split is [ADR 0013](../../adr/0013-config-get-list-set.md), [ADR 0014](../../adr/0014-cache-update-and-fetch.md), and [ADR 0016](../../adr/0016-project-licences-are-applied.md). The schema writer is [ADR 0015](../../adr/0015-config-schema-is-a-cargo-example.md).
 4. **Manifest updates:** Off unless one switch turns them on for Cargo, npm, and Python together.
 5. **Templates:** Custom templates are local files only. Remote registries are out of scope.
 6. **Removal:** Deleting a licence file is out of scope.
@@ -155,7 +170,10 @@ Project configuration paths follow [PRJ Base Directory Specification v0.1](https
 9. **Unlicense spelling:** `unlicence`, `unlicense`, and `Unlicense` select the same licence, in any case. Config and manifests store `Unlicense`.
 10. **Detection labels:** Unlicense text is reported as `Unlicense`. A proprietary notice is reported as `proprietary`.
 11. **`UNLICENSED` input:** `UNLICENSED` is an unknown id. Only `proprietary` selects the proprietary notice. Removing the current code alias is deferred.
-12. **Manifest-update switch:** Config key `update_manifest` defaults off. CLI flags are `--update-manifest` and `--no-update-manifest`, on both `add` and `update`, and they conflict with each other.
+12. **Manifest-update switch:** Config key `update-manifest` defaults off. Underscore spellings of config keys are rejected. CLI flags are `--update-manifest` and `--no-update-manifest`, on `apply`, and they conflict with each other.
+13. **Apply:** `licencify apply` replaces `add` and `update`. No id uses the effective config and does not write config. One id sets `licence` only. Two or more ids set the first as `licence` and replace `additional-licences` with the rest. `--root` writes the shared section. Otherwise the current directory chooses the shared section or an exact-path `[[subdirs]]` entry.
+14. **Primary filename:** Config key `basename` is `licence`, `license`, or `copying`. The written file is `LICENCE`, `LICENSE`, or `COPYING` plus the format extension. [ADR 0017](../../adr/0017-primary-file-basename.md).
+15. **Git name and email:** When `author` or `email` is omitted, use `git config user.name` and `git config user.email`, and tell the user which value came from Git. A missing Git name is an error. A missing Git email leaves `email` empty. [ADR 0018](../../adr/0018-author-and-email-come-from-git.md).
 
 The naming split in items 7–11 is recorded in [ADR 0001](../../adr/0001-unlicense-and-proprietary.md).
 
