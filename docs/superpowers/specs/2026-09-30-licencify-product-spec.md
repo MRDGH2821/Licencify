@@ -146,6 +146,7 @@ The `[scan]` exclusion list belongs in project config; the local list adds to th
 - Generating compound SPDX expressions such as `MIT OR Apache-2.0`. `additional-licences` generates missing separate files and describes scan expectations, but does not define how the licences combine legally.
 - Adding arbitrary remote/custom registry protocols. Custom local template paths are covered; remote registry configuration appeared only in an early design proposal.
 - Implementing features merely because an old plan lists them. This document defines target behavior; implementation status must be checked against the current code separately.
+- Help that leads with examples, a `help` command, a standard-output and standard-error split, documented exit codes, and `--json`, `--quiet`, and `--dry-run`. The comparison is in [`.agents/research/cli-developer-experience.md`](../../../.agents/research/cli-developer-experience.md).
 
 ## Status and source notes
 

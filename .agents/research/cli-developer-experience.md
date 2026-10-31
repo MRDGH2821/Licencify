@@ -591,7 +591,7 @@ does not map those cases to numbers.
 
 ## 5. Improvements
 
-These stay inside the settled verbs, flags, and write rules.
+These items were not adopted. The product spec leaves them out of the current target.
 
 1. Lead `--help` with examples, as the guidelines and the git, gh, cargo,
    npm, kubectl, and REUSE pages do. For `apply`, show no id, one id, two
