@@ -29,6 +29,18 @@ fn readme_override(enable: bool, disable: bool) -> Option<bool> {
     }
 }
 
+/// `--update-manifest` forces an update and `--no-update-manifest` forces a skip.
+/// Neither flag leaves the choice to configuration.
+fn manifest_override(enable: bool, disable: bool) -> Option<bool> {
+    if disable {
+        Some(false)
+    } else if enable {
+        Some(true)
+    } else {
+        None
+    }
+}
+
 pub fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let yes = match &cli.command {
@@ -86,6 +98,9 @@ pub fn main() -> anyhow::Result<()> {
             ids,
             root,
             yes,
+            no_file,
+            update_manifest,
+            no_update_manifest,
             update_readme,
             no_update_readme,
         } => commands::cmd_apply(
@@ -93,6 +108,8 @@ pub fn main() -> anyhow::Result<()> {
             root,
             yes,
             readme_override(update_readme, no_update_readme),
+            manifest_override(update_manifest, no_update_manifest),
+            no_file,
         ),
         Commands::Detect => commands::cmd_detect(),
         Commands::Scan { id } => commands::cmd_scan(id.as_deref()),

@@ -1,4 +1,4 @@
-use crate::{cli::LicenseFormat, fs::global_fs, provider, resolution};
+use crate::{cli::LicenseFormat, fs::global_fs, project, provider, resolution};
 use anyhow::Context;
 use std::io::{IsTerminal, Write};
 
@@ -7,10 +7,13 @@ pub fn cmd_apply(
     root: bool,
     yes: bool,
     update_readme: Option<bool>,
+    update_manifest: Option<bool>,
+    no_file: bool,
 ) -> anyhow::Result<()> {
     let config = crate::config::Config::load_effective(None)?;
     let update_readme =
         crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
+    let update_manifest = update_manifest.unwrap_or(config.default.update_manifest.unwrap_or(false));
     let provider = provider::LicenseProvider::load()?;
     let selected = ids
         .iter()
@@ -75,7 +78,11 @@ pub fn cmd_apply(
     }
 
     let fs = global_fs();
-    let existing_primary = super::generate::detect_primary(&*fs)?;
+    let existing_primary = if no_file {
+        None
+    } else {
+        super::generate::detect_primary(&*fs)?
+    };
 
     if let Some(existing) = &existing_primary {
         if !yes {
@@ -115,35 +122,40 @@ pub fn cmd_apply(
     let extras =
         super::generate::plan_missing_extras(&context, &config, &provider, &additional, &format)?;
 
-    let stage = super::generate::staging_path(&primary.path);
-    anyhow::ensure!(
-        !fs.exists(&stage),
-        "Refusing to overwrite staging file {}",
-        stage.display()
-    );
-    fs.write(&stage, &primary.content)
-        .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
-
-    if let Err(error) = fs.rename(&stage, &primary.path) {
-        return Err(anyhow::Error::from(error).context(format!(
-            "Replacement remains staged at {} and the existing primary was left in place",
+    if !no_file {
+        let stage = super::generate::staging_path(&primary.path);
+        anyhow::ensure!(
+            !fs.exists(&stage),
+            "Refusing to overwrite staging file {}",
             stage.display()
-        )));
-    }
+        );
+        fs.write(&stage, &primary.content)
+            .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
 
-    if let Some(existing) = &existing_primary {
-        if existing != &primary.path {
-            if let Err(error) = fs.remove_file(existing) {
-                return Err(anyhow::Error::from(error).context(format!(
-                    "Replacement is at {} and the previous primary {} was left in place",
-                    primary.path.display(),
-                    existing.display()
-                )));
+        if let Err(error) = fs.rename(&stage, &primary.path) {
+            return Err(anyhow::Error::from(error).context(format!(
+                "Replacement remains staged at {} and the existing primary was left in place",
+                stage.display()
+            )));
+        }
+
+        if let Some(existing) = &existing_primary {
+            if existing != &primary.path {
+                if let Err(error) = fs.remove_file(existing) {
+                    return Err(anyhow::Error::from(error).context(format!(
+                        "Replacement is at {} and the previous primary {} was left in place",
+                        primary.path.display(),
+                        existing.display()
+                    )));
+                }
             }
         }
-    }
 
-    super::generate::write_missing_extras(&extras.missing)?;
+        super::generate::write_missing_extras(&extras.missing)?;
+    }
+    if update_manifest && no_file && spdx == "proprietary" {
+        project::require_primary_notice(&*fs)?;
+    }
     if !selected.is_empty() {
         crate::config::Config::save_applied_selection(
             &spdx,
@@ -154,23 +166,34 @@ pub fn cmd_apply(
         )?;
     }
 
-    println!(
-        "✅ Applied {} ({}) as {}",
-        info.name,
-        info.id,
-        primary.path.display()
-    );
-    for extra in &extras.missing {
+    if update_manifest {
+        let files =
+            project::update_manifest(&spdx, &context.author, &context.year, &additional)?;
+        if !files.is_empty() {
+            println!("   Updated: {}", files.join(", "));
+        }
+    }
+    if no_file {
+        println!("   Skipped licence files (--no-file)");
+    } else {
         println!(
-            "   Added additional {} as {}",
-            extra.id,
-            extra.path.display()
+            "✅ Applied {} ({}) as {}",
+            info.name,
+            info.id,
+            primary.path.display()
         );
+        for extra in &extras.missing {
+            println!(
+                "   Added additional {} as {}",
+                extra.id,
+                extra.path.display()
+            );
+        }
+        for path in &extras.skipped {
+            println!("   Skipped existing additional {}", path.display());
+        }
     }
-    for path in &extras.skipped {
-        println!("   Skipped existing additional {}", path.display());
-    }
-    if update_readme {
+    if update_readme && !no_file {
         crate::readme::report_readme(crate::readme::update_readme(&info.id, &primary.path));
     }
     Ok(())

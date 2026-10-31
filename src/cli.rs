@@ -113,6 +113,15 @@ pub enum Commands {
         #[arg(short = 'Y', long)]
         yes: bool,
 
+        /// Skip writing every licence file, including additional licences
+        #[arg(long)]
+        no_file: bool,
+        /// Update package manifests
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_manifest")]
+        update_manifest: bool,
+        /// Leave package manifests unchanged, even when configuration enables updates
+        #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "update_manifest")]
+        no_update_manifest: bool,
         /// Add or refresh the README licence badge and section
         #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
