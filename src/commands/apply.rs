@@ -6,6 +6,7 @@ pub fn cmd_apply(
     ids: &[String],
     root: bool,
     yes: bool,
+    permit_promotion: bool,
     update_readme: Option<bool>,
 ) -> anyhow::Result<()> {
     let config = crate::config::Config::load_effective(None)?;
@@ -74,10 +75,21 @@ pub fn cmd_apply(
         println!("Using email from git config user.email");
     }
 
-    let fs = global_fs();
-    let existing_primary = super::generate::detect_primary(&*fs)?;
+    let configured_additional = config
+        .default
+        .additional_licences
+        .clone()
+        .unwrap_or_default();
+    let plan = super::generate::plan_primary(
+        &context,
+        &spdx,
+        &info.id,
+        &configured_additional,
+        permit_promotion,
+        false,
+    )?;
 
-    if let Some(existing) = &existing_primary {
+    if let Some(existing) = &plan.previous {
         if !yes {
             if !std::io::stdin().is_terminal() {
                 anyhow::bail!(
@@ -104,52 +116,70 @@ pub fn cmd_apply(
 
     let additional = if selected.len() > 1 {
         selected[1..].to_vec()
+    } else if let Some(ref after) = plan.additional_after {
+        after.clone()
     } else {
-        config
-            .default
-            .additional_licences
-            .clone()
-            .unwrap_or_default()
+        configured_additional
     };
-    let primary = super::generate::render_primary(&context)?;
     let extras =
         super::generate::plan_missing_extras(&context, &config, &provider, &additional, &format)?;
 
-    let stage = super::generate::staging_path(&primary.path);
+    let fs = global_fs();
+    let stage = super::generate::staging_path(&plan.path);
     anyhow::ensure!(
         !fs.exists(&stage),
         "Refusing to overwrite staging file {}",
         stage.display()
     );
-    fs.write(&stage, &primary.content)
+    fs.write(&stage, &plan.content)
         .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
 
-    if let Err(error) = fs.rename(&stage, &primary.path) {
+    if let Err(error) = fs.rename(&stage, &plan.path) {
         return Err(anyhow::Error::from(error).context(format!(
             "Replacement remains staged at {} and the existing primary was left in place",
             stage.display()
         )));
     }
 
-    if let Some(existing) = &existing_primary {
-        if existing != &primary.path {
+    if let Some(existing) = &plan.previous {
+        if existing != &plan.path {
             if let Err(error) = fs.remove_file(existing) {
                 return Err(anyhow::Error::from(error).context(format!(
                     "Replacement is at {} and the previous primary {} was left in place",
-                    primary.path.display(),
+                    plan.path.display(),
                     existing.display()
                 )));
             }
         }
     }
 
+    if let Some(source) = &plan.promotion_source {
+        if source != &plan.path && fs.exists(source) {
+            if let Err(error) = fs.remove_file(source) {
+                return Err(anyhow::Error::from(error).context(format!(
+                    "Promoted primary is at {} and additional file {} was left in place",
+                    plan.path.display(),
+                    source.display()
+                )));
+            }
+        }
+    }
+
     super::generate::write_missing_extras(&extras.missing)?;
-    if !selected.is_empty() {
+
+    let additional_to_save = if selected.len() > 1 {
+        Some(additional.as_slice())
+    } else if let Some(ref after) = plan.additional_after {
+        Some(after.as_slice())
+    } else {
+        None
+    };
+    if !selected.is_empty() || plan.additional_after.is_some() {
         crate::config::Config::save_applied_selection(
             &spdx,
             &context.author,
-            &format.to_string(),
-            (selected.len() > 1).then_some(&additional),
+            &plan.format,
+            additional_to_save,
             root,
         )?;
     }
@@ -158,7 +188,7 @@ pub fn cmd_apply(
         "✅ Applied {} ({}) as {}",
         info.name,
         info.id,
-        primary.path.display()
+        plan.path.display()
     );
     for extra in &extras.missing {
         println!(
@@ -171,7 +201,7 @@ pub fn cmd_apply(
         println!("   Skipped existing additional {}", path.display());
     }
     if update_readme {
-        crate::readme::report_readme(crate::readme::update_readme(&info.id, &primary.path));
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
     Ok(())
 }
