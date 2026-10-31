@@ -96,6 +96,9 @@ pub enum Commands {
         no_update_readme: bool,
     },
 
+    /// Write licence files from the effective configuration without changing it
+    Apply,
+
     /// List available licenses
     List {
         /// Show only OSI-approved licenses
@@ -216,8 +219,14 @@ pub enum ConfigAction {
     /// Create default config file
     Init,
 
-    /// Show current configuration
-    Show,
+    /// Print one effective configuration value
+    Get { key: String },
+
+    /// Show loaded files and effective values
+    List,
+
+    /// Set one configuration value
+    Set { assignment: String },
 }
 
 #[cfg(test)]

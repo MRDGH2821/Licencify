@@ -7,6 +7,19 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::fs::global_fs;
 
+pub(crate) const CONFIG_KEYS: &[&str] = &[
+    "author",
+    "company",
+    "email",
+    "licence",
+    "format",
+    "year",
+    "basename",
+    "update-readme",
+    "update-manifest",
+    "additional-licences",
+];
+
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[schemars(
     title = "Licencify Config",
@@ -51,11 +64,10 @@ pub struct DefaultConfig {
     #[schemars(description = "Contact email for proprietary notices")]
     pub email: Option<String>,
 
-    /// Default SPDX license ID (e.g. MIT, Apache-2.0, proprietary)
-    #[schemars(description = "Default SPDX license identifier")]
-    #[serde(rename = "licence", alias = "license")]
+    /// Default SPDX licence ID (e.g. MIT, Apache-2.0, proprietary)
+    #[schemars(description = "Default SPDX licence identifier")]
+    #[serde(rename = "licence")]
     pub license: Option<String>,
-
     /// Output format: txt or html
     #[schemars(description = "Output format for licence files")]
     pub format: Option<String>,
@@ -64,17 +76,23 @@ pub struct DefaultConfig {
     #[schemars(description = "Override copyright year (YYYY)")]
     pub year: Option<String>,
 
-    /// Licence file base name: "LICENCE" (en-GB) or "LICENSE" (en-US)
-    #[schemars(description = "Licence file base name (LICENCE or LICENSE)")]
-    #[serde(rename = "licence_file_name", alias = "licence_name")]
-    pub licence_name: Option<String>,
+    /// Primary licence filename basename: licence, license, or copying
+    #[schemars(description = "Primary licence filename basename")]
+    pub basename: Option<String>,
 
     /// Automatically update README with license badge on add/update
     #[schemars(description = "Automatically update README with license badge")]
+    #[serde(rename = "update-readme")]
     pub update_readme: Option<bool>,
-    /// Additional SPDX licence identifiers.
+
+    /// Update package manifests
+    #[schemars(description = "Update package manifests")]
+    #[serde(rename = "update-manifest")]
+    pub update_manifest: Option<bool>,
+
+    /// Additional SPDX licence identifiers
     #[schemars(description = "Additional SPDX licence identifiers")]
-    #[serde(rename = "additional-licences", alias = "additional_licences")]
+    #[serde(rename = "additional-licences")]
     pub additional_licences: Option<Vec<String>>,
 }
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -103,9 +121,9 @@ pub struct SubdirConfig {
     #[schemars(description = "Email address override")]
     pub email: Option<String>,
 
-    /// SPDX license ID override
-    #[schemars(description = "SPDX license identifier override")]
-    #[serde(rename = "licence", alias = "license")]
+    /// SPDX licence ID override
+    #[schemars(description = "SPDX licence identifier override")]
+    #[serde(rename = "licence")]
     pub license: Option<String>,
 
     /// Output format override
@@ -116,19 +134,23 @@ pub struct SubdirConfig {
     #[schemars(description = "Copyright year override")]
     pub year: Option<String>,
 
-    /// Licence file base name override
-    #[schemars(description = "Licence file base name override")]
-    #[serde(rename = "licence_file_name", alias = "licence_name")]
-    pub licence_name: Option<String>,
+    /// Primary licence filename basename override
+    #[schemars(description = "Primary licence filename basename override")]
+    pub basename: Option<String>,
 
     /// README update override for this sub-directory
     #[schemars(description = "README update override")]
-    #[serde(default)]
+    #[serde(rename = "update-readme")]
     pub update_readme: Option<bool>,
+
+    /// Manifest update override for this sub-directory
+    #[schemars(description = "Manifest update override")]
+    #[serde(rename = "update-manifest")]
+    pub update_manifest: Option<bool>,
 
     /// Additional SPDX licence identifiers override
     #[schemars(description = "Additional SPDX licence identifiers override")]
-    #[serde(rename = "additional-licences", alias = "additional_licences")]
+    #[serde(rename = "additional-licences")]
     pub additional_licences: Option<Vec<String>>,
 }
 
@@ -170,14 +192,15 @@ fn merge(base: Config, overriding: Config) -> Config {
             license: overriding.default.license.or(base.default.license),
             format: overriding.default.format.or(base.default.format),
             year: overriding.default.year.or(base.default.year),
-            licence_name: overriding
-                .default
-                .licence_name
-                .or(base.default.licence_name),
+            basename: overriding.default.basename.or(base.default.basename),
             update_readme: overriding
                 .default
                 .update_readme
                 .or(base.default.update_readme),
+            update_manifest: overriding
+                .default
+                .update_manifest
+                .or(base.default.update_manifest),
             additional_licences: overriding
                 .default
                 .additional_licences
@@ -246,8 +269,9 @@ pub fn format_setting_sources(sources: &[FieldSource]) -> Vec<String> {
         "licence",
         "format",
         "year",
-        "licence_file_name",
-        "update_readme",
+        "basename",
+        "update-readme",
+        "update-manifest",
         "additional-licences",
     ];
     let mut lines = Vec::new();
@@ -388,16 +412,23 @@ fn overlay_default(
     set_field(&mut base.format, &over.format, "format", origin, sources);
     set_field(&mut base.year, &over.year, "year", origin, sources);
     set_field(
-        &mut base.licence_name,
-        &over.licence_name,
-        "licence_file_name",
+        &mut base.basename,
+        &over.basename,
+        "basename",
         origin,
         sources,
     );
     set_field(
         &mut base.update_readme,
         &over.update_readme,
-        "update_readme",
+        "update-readme",
+        origin,
+        sources,
+    );
+    set_field(
+        &mut base.update_manifest,
+        &over.update_manifest,
+        "update-manifest",
         origin,
         sources,
     );
@@ -435,16 +466,23 @@ fn overlay_subdir(
     set_field(&mut base.format, &entry.format, "format", origin, sources);
     set_field(&mut base.year, &entry.year, "year", origin, sources);
     set_field(
-        &mut base.licence_name,
-        &entry.licence_name,
-        "licence_file_name",
+        &mut base.basename,
+        &entry.basename,
+        "basename",
         origin,
         sources,
     );
     set_field(
         &mut base.update_readme,
         &entry.update_readme,
-        "update_readme",
+        "update-readme",
+        origin,
+        sources,
+    );
+    set_field(
+        &mut base.update_manifest,
+        &entry.update_manifest,
+        "update-manifest",
         origin,
         sources,
     );
@@ -646,26 +684,18 @@ fn set_saved_fields(
     format: &str,
     additional: Option<&[String]>,
 ) {
-    if table.contains_key("license") && !table.contains_key("licence") {
-        set_preserved_string(table, "license", license);
-    } else {
-        set_preserved_string(table, "licence", license);
-    }
+    set_preserved_string(table, "licence", license);
     set_preserved_string(table, "author", author);
     set_preserved_string(table, "format", format);
     if let Some(ids) = additional {
-        let key = if table.contains_key("additional_licences")
-            && !table.contains_key("additional-licences")
-        {
-            "additional_licences"
-        } else {
-            "additional-licences"
-        };
         let mut array = toml_edit::Array::new();
         for id in ids {
             array.push(id.as_str());
         }
-        table.insert(key, toml_edit::Item::Value(toml_edit::Value::Array(array)));
+        table.insert(
+            "additional-licences",
+            toml_edit::Item::Value(toml_edit::Value::Array(array)),
+        );
     }
 }
 
@@ -944,14 +974,12 @@ impl Config {
                         "company",
                         "email",
                         "licence",
-                        "license",
                         "year",
                         "format",
-                        "update_readme",
-                        "licence_file_name",
-                        "licence_name",
+                        "basename",
+                        "update-readme",
+                        "update-manifest",
                         "additional-licences",
-                        "additional_licences",
                     ]
                     .contains(&key.as_str())
                 }) {
@@ -979,14 +1007,12 @@ impl Config {
                                 "company",
                                 "email",
                                 "licence",
-                                "license",
                                 "year",
                                 "format",
-                                "licence_file_name",
-                                "licence_name",
-                                "update_readme",
+                                "basename",
+                                "update-readme",
+                                "update-manifest",
                                 "additional-licences",
-                                "additional_licences",
                             ]
                             .contains(&key.as_str())
                         }) {
@@ -1081,7 +1107,7 @@ impl Config {
             config.default.license.as_deref(),
             config.default.format.as_deref(),
             config.default.year.as_deref(),
-            config.default.licence_name.as_deref(),
+            config.default.basename.as_deref(),
             config.default.additional_licences.as_deref(),
             "[default]",
             path,
@@ -1093,7 +1119,7 @@ impl Config {
                     entry.license.as_deref(),
                     entry.format.as_deref(),
                     entry.year.as_deref(),
-                    entry.licence_name.as_deref(),
+                    entry.basename.as_deref(),
                     entry.additional_licences.as_deref(),
                     &format!("subdirs[{index}]"),
                     path,
@@ -1125,7 +1151,7 @@ impl Config {
         license: Option<&str>,
         format: Option<&str>,
         year: Option<&str>,
-        licence_name: Option<&str>,
+        basename: Option<&str>,
         additional_licences: Option<&[String]>,
         key: &str,
         path: &Path,
@@ -1166,10 +1192,10 @@ impl Config {
                 value
             );
         }
-        if let Some(value) = licence_name {
+        if let Some(value) = basename {
             anyhow::ensure!(
-                value.eq_ignore_ascii_case("LICENCE") || value.eq_ignore_ascii_case("LICENSE"),
-                "Invalid config value: {} {key}.licence_file_name = {:?}",
+                ["licence", "license", "copying"].contains(&value.to_ascii_lowercase().as_str()),
+                "Invalid config value: {} {key}.basename = {:?}",
                 path.display(),
                 value
             );
@@ -1266,6 +1292,151 @@ impl Config {
         fs.write(path, &output)
             .with_context(|| format!("Failed to write config file: {}", path.display()))
     }
+    pub fn set_value(key: &str, raw_value: &str) -> Result<bool> {
+        if !CONFIG_KEYS.contains(&key) {
+            eprintln!("Warning: unknown config key `{key}`; ignored");
+            return Ok(false);
+        }
+
+        let assignment = format!("[default]\n{key} = {raw_value}\n");
+        let candidate: Self = toml::from_str(&assignment)
+            .with_context(|| format!("Invalid value for config key `{key}`"))?;
+        Self::validate(&candidate, Path::new("<config set>"))?;
+        let value_doc: toml_edit::DocumentMut = format!("value = {raw_value}\n")
+            .parse()
+            .context("Invalid TOML value")?;
+        let value = value_doc["value"].clone();
+
+        let root = Self::project_root()?;
+        let cwd = std::env::current_dir().context("Could not determine current directory")?;
+        let relative = relative_within_root(&root, &cwd)?;
+        let shared_path = Self::project_path()?;
+        let local_path = Self::local_path()?;
+        refuse_child_config_write(&root, &shared_path)?;
+        refuse_child_config_write(&root, &local_path)?;
+
+        let fs = global_fs();
+        let mut destination = shared_path.clone();
+        let mut slot = if relative.is_empty() {
+            ConfigWriteTarget::SharedDefaults
+        } else {
+            ConfigWriteTarget::ExactSubdir
+        };
+        let mut subdir_path = (!relative.is_empty()).then(|| relative.clone());
+        let mut masked = false;
+
+        if let Some(text) = fs.read_to_string(&local_path) {
+            let local_doc: toml_edit::DocumentMut =
+                text.parse().context("Failed to parse local config")?;
+            Self::read_config(&local_path, false)?;
+            let mut mask_depth = None;
+            if local_doc
+                .get("default")
+                .and_then(toml_edit::Item::as_table)
+                .is_some_and(|table| table.contains_key(key))
+            {
+                destination = local_path.clone();
+                slot = ConfigWriteTarget::SharedDefaults;
+                subdir_path = None;
+                masked = true;
+                mask_depth = Some(0);
+            }
+            if let Some(tables) = local_doc
+                .get("subdirs")
+                .and_then(toml_edit::Item::as_array_of_tables)
+            {
+                for table in tables.iter() {
+                    let Some(path) = table.get("path").and_then(toml_edit::Item::as_str) else {
+                        continue;
+                    };
+                    let Ok(path) = normalize_subdir_path(path) else {
+                        continue;
+                    };
+                    let depth = path.split('/').count();
+                    if !path_matches(&path, &relative)
+                        || !table.contains_key(key)
+                        || mask_depth.is_some_and(|current| depth < current)
+                    {
+                        continue;
+                    }
+                    destination = local_path.clone();
+                    slot = ConfigWriteTarget::ExactSubdir;
+                    subdir_path = Some(path);
+                    masked = true;
+                    mask_depth = Some(depth);
+                }
+            }
+        }
+        if masked {
+            eprintln!(
+                "Warning: local override masks `{key}`; updated the masking local override in {}",
+                destination.display()
+            );
+        }
+
+        let existing = fs.read_to_string(&destination);
+        let mut doc = match existing.as_deref() {
+            Some(text) => text
+                .parse::<toml_edit::DocumentMut>()
+                .context("Failed to parse project config")?,
+            None => toml_edit::DocumentMut::new(),
+        };
+        match slot {
+            ConfigWriteTarget::SharedDefaults => {
+                if !doc.contains_key("default") {
+                    doc.insert("default", toml_edit::Item::Table(toml_edit::Table::new()));
+                }
+                let table = doc["default"]
+                    .as_table_mut()
+                    .context("`[default]` must be a table")?;
+                table.insert(key, value);
+            }
+            ConfigWriteTarget::ExactSubdir => {
+                let path = subdir_path.as_deref().unwrap_or(&relative);
+                if !doc.contains_key("subdirs") {
+                    doc.insert(
+                        "subdirs",
+                        toml_edit::Item::ArrayOfTables(toml_edit::ArrayOfTables::new()),
+                    );
+                }
+                let tables = doc["subdirs"]
+                    .as_array_of_tables_mut()
+                    .context("`subdirs` must be an array of tables")?;
+                let index = (0..tables.len()).rev().find(|index| {
+                    tables
+                        .get(*index)
+                        .and_then(|table| table.get("path"))
+                        .and_then(toml_edit::Item::as_str)
+                        .and_then(|existing| normalize_subdir_path(existing).ok())
+                        .as_deref()
+                        == Some(path)
+                });
+                if let Some(index) = index {
+                    tables
+                        .get_mut(index)
+                        .context("Missing subdirectory table")?
+                        .insert(key, value);
+                } else {
+                    let mut table = toml_edit::Table::new();
+                    table.insert("path", toml_edit::value(path.to_owned()));
+                    table.insert(key, value);
+                    tables.push(table);
+                }
+            }
+        }
+        let output = if existing.is_none() {
+            format!("#:schema {}\n\n{doc}", Self::schema_path()?.display())
+        } else {
+            doc.to_string()
+        };
+        if let Some(parent) = destination.parent() {
+            fs.create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+        fs.write(&destination, &output)
+            .with_context(|| format!("Failed to write config file: {}", destination.display()))?;
+        Ok(true)
+    }
 
     /// Record the primary selection. `additional`, when set, replaces the additional-licence list.
     pub fn update_saved_selection(
@@ -1298,8 +1469,8 @@ impl Config {
         )
     }
 
-    pub fn licence_name_setting(&self) -> Option<&str> {
-        self.default.licence_name.as_deref()
+    pub fn basename_setting(&self) -> Option<&str> {
+        self.default.basename.as_deref()
     }
 
     pub fn schema_json() -> Result<String> {
@@ -1396,16 +1567,13 @@ mod tests {
     fn invalid_known_config_values_are_reported() {
         let invalid = [
             (
-                "[default]\nlicense = 'not-an-spdx-id'\n",
+                "[default]\nlicence = 'not-an-spdx-id'\n",
                 "default].licence",
             ),
             ("[default]\nformat = 'pdf'\n", "default].format"),
+            ("[default]\nbasename = 'license.txt'\n", "default].basename"),
             (
-                "[default]\nlicence_file_name = 'LICENSE.txt'\n",
-                "default].licence_file_name",
-            ),
-            (
-                "[default]\nadditional_licences = ['not-an-spdx-id']\n",
+                "[default]\nadditional-licences = ['not-an-spdx-id']\n",
                 "default].additional-licences",
             ),
             (
@@ -1420,7 +1588,7 @@ mod tests {
         }
 
         let config: Config = toml::from_str(
-            "[default]\nlicense = 'MIT'\nformat = 'md'\nlicence_file_name = 'license'\nadditional_licences = ['Apache-2.0']\n",
+            "[default]\nlicence = 'MIT'\nformat = 'md'\nbasename = 'license'\nadditional-licences = ['Apache-2.0']\n",
         )
         .unwrap();
         assert!(Config::validate(&config, Path::new("test.toml")).is_ok());
@@ -1479,8 +1647,8 @@ mod tests {
     }
 
     #[test]
-    fn licence_name_setting_returns_none_when_not_configured() {
-        assert!(Config::default().licence_name_setting().is_none());
+    fn basename_setting_returns_none_when_not_configured() {
+        assert!(Config::default().basename_setting().is_none());
     }
 
     #[test]

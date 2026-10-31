@@ -271,18 +271,11 @@ Initialise a default config:
 licencify config init
 ```
 
-```text
-Manage configuration
-
-Usage: licencify config <COMMAND>
-
-Commands:
-  init  Create default config file
-  show  Show current configuration
-  help  Print this message or the help of the given subcommand(s)
-
-Options:
-  -h, --help  Print help
+```bash
+licencify config get licence
+licencify config list
+licencify config set update-manifest=false
+licencify config set additional-licences=[]
 ```
 
 ### Config locations
@@ -294,6 +287,12 @@ Options:
 `PRJ_ROOT` may select an absolute root containing the current directory. Otherwise Licencify uses the Git worktree root, the highest ancestor with a shared config, or the current directory. Root-level `.licencify.toml` and `licencify.toml` are not loaded. `config init` creates only the shared project config without overwriting it.
 
 Global defaults are overridden, field by field, by shared project defaults, matching shared `[[subdirs]]` entries (shallow to deep), local defaults, matching local entries (shallow to deep), then CLI options. An empty `additional-licences` array clears inherited additional IDs.
+
+`config get` prints one effective field; `config list` identifies loaded files and prints effective values.
+
+`config set <option>=<value>` parses one TOML value. Multi-word keys use hyphens, and `basename` accepts `licence`, `license`, or `copying`.
+
+From a subdirectory, `config set` writes an exact-path `[[subdirs]]` entry. A masking local override is updated with a warning. Unknown keys warn and are ignored; invalid values for known keys fail.
 
 ### Subdirectory overrides
 
