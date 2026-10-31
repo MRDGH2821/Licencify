@@ -234,6 +234,28 @@ fn apply_with_readme_updates_enabled_keeps_equivalent_readme_section() {
     assert!(project.root.join("LICENSE.txt").exists());
 }
 
+#[test]
+fn apply_with_readme_updates_enabled_leaves_handwritten_equivalent_section_unchanged() {
+    let project = Project::new();
+    let readme = "# Project\n\n## License\n\nThis project is licensed under the MIT licence.\n";
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\n",
+    );
+    project.write("README.md", readme);
+
+    let output = project.apply_with_args("en_US.UTF-8", &["--update-readme"]);
+
+    assert_success(&output);
+    assert!(text(&output.stdout).contains("Applied"));
+    assert!(!text(&output.stdout).contains("Updated README.md"));
+    assert_eq!(
+        fs::read_to_string(project.root.join("README.md")).unwrap(),
+        readme
+    );
+    assert!(project.root.join("LICENSE.txt").exists());
+}
+
 impl Drop for Project {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.parent);
