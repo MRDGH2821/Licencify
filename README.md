@@ -61,6 +61,12 @@ licencify add MIT
 # Add Apache-2.0 with a custom author, skip all prompts
 licencify add Apache-2.0 --author "Jane Doe" --year 2025 -Y
 
+# Write the configured licence without changing configuration
+licencify apply
+
+# Also add or refresh the README licence section
+licencify apply --update-readme
+
 # List available licences
 licencify list
 
@@ -80,6 +86,7 @@ Usage: licencify <COMMAND>
 
 Commands:
   add     Add a license to the current project
+  apply   Write licence files from the effective configuration
   list    List available licenses
   search  Search available licenses by name or ID
   detect  Detect the current project's license
