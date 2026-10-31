@@ -96,6 +96,9 @@ pub enum Commands {
         no_update_readme: bool,
     },
 
+    /// Write licence files from the effective configuration without changing it
+    Apply,
+
     /// List available licenses
     List {
         /// Show only OSI-approved licenses
