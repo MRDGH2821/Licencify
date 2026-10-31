@@ -20,5 +20,6 @@ Decisions live here. Each file says what was chosen and why. The open task list 
 | [0014](0014-cache-update-and-fetch.md)                     | `cache update` refreshes the index. `cache fetch` downloads bodies.    |
 | [0015](0015-config-schema-is-a-cargo-example.md)           | A cargo example writes `schema/config.json`. `cargo test` checks it.   |
 | [0016](0016-project-licences-are-applied.md)               | `apply` creates or replaces the project's licence. `--root` is shared. |
+| [0017](0017-primary-file-basename.md)                      | `basename` is `licence`, `license`, or `copying`.                      |
 
 0001 records the proprietary plan. 0007 records the first CLI design and the SPDX analysis. 0008 records the remaining-features plan.

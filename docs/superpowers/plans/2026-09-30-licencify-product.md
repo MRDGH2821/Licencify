@@ -96,5 +96,5 @@ primary filename_ rather than conflating `proprietary` with `UNLICENSED`. Do not
 
 ## Recorded command names
 
-Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. `licencify apply` replaces `add` and `update` (ADR 0016). Tasks below that name `add` or `update` mean `apply`.
+Command names for `init`, `config`, and `cache` are recorded in ADR 0013 and ADR 0014. `licencify apply` replaces `add` and `update` (ADR 0016). Tasks below that name `add` or `update` mean `apply`. The primary filename key is `basename` (ADR 0017).
 `schema/config.json` is written by a cargo example and checked by `cargo test` (ADR 0015). Do not add a schema subcommand and do not write that file from `build.rs`. Manifest updates, licence-file removal, and remote registries stay as the spec's Decided list.
