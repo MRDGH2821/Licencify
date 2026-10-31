@@ -69,6 +69,7 @@ pub fn main() -> anyhow::Result<()> {
             readme_override(update_readme, no_update_readme),
             no_file,
         ),
+        Commands::Init => commands::cmd_init(),
         Commands::List {
             osi_only,
             fsf_only,

@@ -7,7 +7,7 @@ use anyhow::Result;
 
 pub fn cmd_config(action: ConfigAction) -> Result<()> {
     match action {
-        ConfigAction::Init => cmd_config_init(),
+        ConfigAction::Init => super::init::cmd_init(),
         ConfigAction::Show => cmd_config_show(),
     }
 }
@@ -17,18 +17,6 @@ pub fn cmd_schema(output: &str) -> Result<()> {
     let fs = global_fs();
     fs.write(std::path::Path::new(output), &json)?;
     println!("✅ Schema written to {}", output);
-    Ok(())
-}
-
-fn cmd_config_init() -> Result<()> {
-    let fs = global_fs();
-    let path = Config::project_path()?;
-    if fs.exists(&path) {
-        println!("Project config already exists: {}", path.display());
-        return Ok(());
-    }
-    Config::default().save_to_path(&path)?;
-    println!("Created project config: {}", path.display());
     Ok(())
 }
 

@@ -96,6 +96,9 @@ pub enum Commands {
         no_update_readme: bool,
     },
 
+    /// Create the shared project config
+    Init,
+
     /// List available licenses
     List {
         /// Show only OSI-approved licenses
