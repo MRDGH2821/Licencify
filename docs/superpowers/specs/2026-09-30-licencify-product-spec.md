@@ -169,7 +169,7 @@ Project configuration paths follow [PRJ Base Directory Specification v0.1](https
 8. **Mixing:** `proprietary` cannot be combined with `Unlicense` or any other open licence. `Unlicense` may be primary or additional, like any other SPDX id.
 9. **Unlicense spelling:** `unlicence`, `unlicense`, and `Unlicense` select the same licence, in any case. Config and manifests store `Unlicense`.
 10. **Detection labels:** Unlicense text is reported as `Unlicense`. A proprietary notice is reported as `proprietary`.
-11. **`UNLICENSED` input:** `UNLICENSED` is an unknown id. Only `proprietary` selects the proprietary notice. Removing the current code alias is deferred.
+11. **`UNLICENSED` input:** `UNLICENSED` is an unknown id. Only `proprietary` selects the proprietary notice.
 12. **Manifest-update switch:** Config key `update-manifest` defaults off. Underscore spellings of config keys are rejected. CLI flags are `--update-manifest` and `--no-update-manifest`, on `apply`, and they conflict with each other.
 13. **Apply:** `licencify apply` replaces `add` and `update`. No id uses the effective config and does not write config. One id sets `licence` only. Two or more ids set the first as `licence` and replace `additional-licences` with the rest. `--root` writes the shared section. Otherwise the current directory chooses the shared section or an exact-path `[[subdirs]]` entry.
 14. **Primary filename:** Config key `basename` is `licence`, `license`, or `copying`. The written file is `LICENCE`, `LICENSE`, or `COPYING` plus the format extension. [ADR 0017](../../adr/0017-primary-file-basename.md).

@@ -791,6 +791,7 @@ fn write_project_selection(
         author,
         format,
         None,
+        false,
     )
 }
 
@@ -804,12 +805,17 @@ fn write_saved_selection(
     author: &str,
     format: &str,
     additional: Option<&[String]>,
+    apply_selection: bool,
 ) -> Result<bool> {
     refuse_child_config_write(root, shared_path)?;
     refuse_child_config_write(root, local_path)?;
     let fs = global_fs();
     let local_config = Config::read_config(local_path, false)?.unwrap_or_default();
-    let mask = local_mask_target(&local_config, relative);
+    let mask = if apply_selection {
+        None
+    } else {
+        local_mask_target(&local_config, relative)
+    };
     let (destination, slot, subdir_path, masked) = if let Some(mask_target) = mask {
         let subdir_path = local_mask_path(&local_config, relative);
         (local_path, mask_target, subdir_path, true)
@@ -825,7 +831,7 @@ fn write_saved_selection(
         );
     }
     refuse_child_config_write(root, destination)?;
-    if slot == ConfigWriteTarget::SharedDefaults && !fs.exists(destination) {
+    if slot == ConfigWriteTarget::SharedDefaults && !apply_selection && !fs.exists(destination) {
         return Ok(false);
     }
     let existing = fs.read_to_string(destination);
@@ -1469,6 +1475,36 @@ impl Config {
             author,
             format,
             additional,
+            false,
+        )
+    }
+
+    pub(crate) fn save_applied_selection(
+        license: &str,
+        author: &str,
+        format: &str,
+        additional: Option<&[String]>,
+        root: bool,
+    ) -> Result<bool> {
+        let project_root = Self::project_root()?;
+        let cwd = std::env::current_dir().context("Could not determine current directory")?;
+        let relative = relative_within_root(&project_root, &cwd)?;
+        let target = if root || relative.is_empty() {
+            ConfigWriteTarget::SharedDefaults
+        } else {
+            ConfigWriteTarget::ExactSubdir
+        };
+        write_saved_selection(
+            &Self::project_path()?,
+            &Self::local_path()?,
+            &project_root,
+            &relative,
+            target,
+            license,
+            author,
+            format,
+            additional,
+            true,
         )
     }
 
