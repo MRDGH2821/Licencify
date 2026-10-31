@@ -246,7 +246,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nlicence_file_name = \"licence\"\nformat = \"txt\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nformat = \"txt\"\n",
         )
         .unwrap();
         let result = update("MIT", "Test Author", LicenseFormat::Html, false);
@@ -270,7 +270,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         let result = update("MIT", "Test Author", LicenseFormat::Txt, false);
@@ -302,7 +302,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         let result = update("MIT", "Test Author", LicenseFormat::Txt, true);
@@ -334,7 +334,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         let result = update("MIT", "Test Author", LicenseFormat::Txt, true);
@@ -367,7 +367,7 @@ mod tests {
         inner
             .write(
                 &config,
-                "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+                "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\n",
             )
             .unwrap();
         crate::fs::set_global_fs(Arc::new(FailConfigWrite(inner.clone())));
@@ -404,7 +404,7 @@ mod tests {
         let config = crate::config::Config::project_path().unwrap();
         fs.write(
             &config,
-            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\nlicence_file_name = \"licence\"\n",
+            "[default]\nlicence = \"Apache-2.0\"\nauthor = \"Test Author\"\nadditional-licences = [\"MIT\"]\n",
         )
         .unwrap();
         fs.write(

@@ -216,8 +216,14 @@ pub enum ConfigAction {
     /// Create default config file
     Init,
 
-    /// Show current configuration
-    Show,
+    /// Print one effective configuration value
+    Get { key: String },
+
+    /// Show loaded files and effective values
+    List,
+
+    /// Set one configuration value
+    Set { assignment: String },
 }
 
 #[cfg(test)]
