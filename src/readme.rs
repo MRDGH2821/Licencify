@@ -98,8 +98,8 @@ pub fn report_readme(result: Result<ReadmeUpdate>) {
     }
 }
 
-/// Replace the badge and section this tool generated. Append them only when
-/// the README has no equivalent badge or licence heading.
+/// Replace the badge and section this tool generated. Append a managed section
+/// only when the README has no equivalent licence heading.
 fn apply_managed(content: &str, badge: &str, section: &str) -> (String, bool) {
     let had_managed_badge = managed_badge().is_match(content);
     let had_managed_section = managed_section().is_match(content);
@@ -118,11 +118,11 @@ fn apply_managed(content: &str, badge: &str, section: &str) -> (String, bool) {
     let visible = without_fences(content);
     let has_badge = had_managed_badge || other_badge().is_match(&visible);
     let has_section = had_managed_section || licence_heading().is_match(&visible);
-    if !has_badge || !has_section {
+    if !has_section {
         next = append_missing(
             next,
             if has_badge { None } else { Some(badge) },
-            if has_section { None } else { Some(section) },
+            Some(section),
         );
     }
     let changed = next != content;
@@ -359,18 +359,13 @@ mod tests {
     }
 
     #[test]
-    fn handwritten_section_survives_and_stale_link_warns() {
+    fn handwritten_section_is_unchanged_and_stale_link_warns() {
         let (_guard, fs) = install_fs();
-        fs.write(
-            Path::new("README.md"),
-            "# Project\n\n## License\n\nKept by hand. See [the old file](LICENCE.txt).\n",
-        )
-        .unwrap();
+        let body = "# Project\n\n## License\n\nKept by hand. See [the old file](LICENCE.txt).\n";
+        fs.write(Path::new("README.md"), body).unwrap();
         let result = update_readme("MIT", Path::new("LICENSE.md")).unwrap();
         let content = fs.read_to_string(Path::new("README.md")).unwrap();
-        assert!(content.contains("Kept by hand. See [the old file](LICENCE.txt)."));
-        assert_eq!(content.matches("## License").count(), 1);
-        assert!(content.contains("](LICENSE.md)"));
+        assert_eq!(content, body);
         assert!(
             result.warnings.iter().any(
                 |warning| warning.contains("`LICENCE.txt`") && warning.contains("`LICENSE.md`")

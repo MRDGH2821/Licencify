@@ -1,8 +1,10 @@
 use crate::{cli::LicenseFormat, fs::global_fs, provider, resolution};
 use anyhow::Context;
 
-pub fn cmd_apply() -> anyhow::Result<()> {
+pub fn cmd_apply(update_readme: Option<bool>) -> anyhow::Result<()> {
     let config = crate::config::Config::load_effective(None)?;
+    let update_readme =
+        crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
     let spdx =
         super::generate::selected_licence_id(None, config.default.license.as_deref(), false)?;
     let provider = provider::LicenseProvider::load()?;
@@ -74,6 +76,9 @@ pub fn cmd_apply() -> anyhow::Result<()> {
     }
     for path in &extras.skipped {
         println!("   Skipped existing additional {}", path.display());
+    }
+    if update_readme {
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &primary.path));
     }
     Ok(())
 }
