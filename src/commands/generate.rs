@@ -162,17 +162,8 @@ pub fn selected_licence_id(
         .context("No licence specified. Pass an SPDX ID or set `licence` in configuration.")
 }
 
-/// Resolve the file transition. Returns before any licence file is created or removed.
-pub fn plan_primary(
-    ctx: &ResolvedContext,
-    requested_id: &str,
-    canonical_id: &str,
-    additional: &[String],
-    permit_promotion: bool,
-    require_existing: bool,
-) -> anyhow::Result<PlannedPrimary> {
-    let rendered = render_primary(ctx)?;
-    let fs = global_fs();
+/// Locate existing primary licence files. Fails if multiple candidate files exist.
+pub fn detect_primary(fs: &dyn crate::fs::Fs) -> anyhow::Result<Option<PathBuf>> {
     let primaries: Vec<PathBuf> = LicenceName::primary_variants()
         .into_iter()
         .filter(|path| fs.exists(path))
@@ -187,7 +178,22 @@ pub fn plan_primary(
                 .join(", ")
         );
     }
-    if require_existing && primaries.is_empty() {
+    Ok(primaries.into_iter().next())
+}
+
+/// Resolve the file transition. Returns before any licence file is created or removed.
+pub fn plan_primary(
+    ctx: &ResolvedContext,
+    requested_id: &str,
+    canonical_id: &str,
+    additional: &[String],
+    permit_promotion: bool,
+    require_existing: bool,
+) -> anyhow::Result<PlannedPrimary> {
+    let rendered = render_primary(ctx)?;
+    let fs = global_fs();
+    let primary = detect_primary(&*fs)?;
+    if require_existing && primary.is_none() {
         anyhow::bail!("No primary licence file found. Use `licencify add` to create one first.");
     }
 
@@ -243,7 +249,7 @@ pub fn plan_primary(
         content,
         format,
         template_source: ctx.resolved.source.clone(),
-        previous: primaries.into_iter().next(),
+        previous: primary,
         promotion_source,
         additional_after,
     })
@@ -342,7 +348,7 @@ fn ensure_output_path(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn staging_path(dest: &Path) -> PathBuf {
+pub(crate) fn staging_path(dest: &Path) -> PathBuf {
     let mut name = dest.as_os_str().to_os_string();
     name.push(".licencify-new");
     PathBuf::from(name)

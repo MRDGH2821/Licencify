@@ -109,6 +109,10 @@ pub enum Commands {
         #[arg(long)]
         root: bool,
 
+        /// Skip confirmation prompts
+        #[arg(short = 'Y', long)]
+        yes: bool,
+
         /// Add or refresh the README licence badge and section
         #[arg(long, action = clap::ArgAction::SetTrue, conflicts_with = "no_update_readme")]
         update_readme: bool,
