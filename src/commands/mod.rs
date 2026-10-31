@@ -12,7 +12,7 @@ mod update;
 pub use add::cmd_add;
 pub use apply::cmd_apply;
 pub use cache_cmd::cmd_cache;
-pub use config_cmd::{cmd_config, cmd_schema};
+pub use config_cmd::cmd_config;
 pub use detect_cmd::cmd_detect;
 pub use list::cmd_list;
 pub use scan::cmd_scan;

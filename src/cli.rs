@@ -193,13 +193,6 @@ pub enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
-
-    /// Generate JSON schema for config file
-    Schema {
-        /// Output file path (default: licencify-schema.json)
-        #[arg(short, long, default_value = "licencify-schema.json")]
-        output: String,
-    },
 }
 
 #[derive(Subcommand, Debug, Clone, PartialEq, Eq)]

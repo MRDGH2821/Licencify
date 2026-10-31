@@ -1474,8 +1474,10 @@ impl Config {
     }
 
     pub fn schema_json() -> Result<String> {
-        serde_json::to_string_pretty(&schemars::schema_for!(Config))
-            .context("Failed to serialize JSON schema")
+        let mut json = serde_json::to_string_pretty(&schemars::schema_for!(Config))
+            .context("Failed to serialize JSON schema")?;
+        json.push('\n');
+        Ok(json)
     }
 
     pub fn schema_path() -> Result<PathBuf> {
