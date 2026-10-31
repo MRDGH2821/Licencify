@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "DefaultConfig": {
+      "properties": {
+        "additional-licences": {
+          "description": "Additional SPDX licence identifiers",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "author": {
+          "description": "Copyright holder name for licence files",
+          "type": ["string", "null"]
+        },
+        "basename": {
+          "description": "Primary licence filename basename",
+          "type": ["string", "null"]
+        },
+        "company": {
+          "description": "Company name for proprietary notices",
+          "type": ["string", "null"]
+        },
+        "email": {
+          "description": "Contact email for proprietary notices",
+          "type": ["string", "null"]
+        },
+        "format": {
+          "description": "Output format for licence files",
+          "type": ["string", "null"]
+        },
+        "licence": {
+          "description": "Default SPDX licence identifier",
+          "type": ["string", "null"]
+        },
+        "update-manifest": {
+          "description": "Update package manifests",
+          "type": ["boolean", "null"]
+        },
+        "update-readme": {
+          "description": "Automatically update README with license badge",
+          "type": ["boolean", "null"]
+        },
+        "year": {
+          "description": "Override copyright year (YYYY)",
+          "type": ["string", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "ScanConfig": {
+      "description": "Directories `scan` skips. Configured subdirectory paths still win on overlap.",
+      "properties": {
+        "exclude": {
+          "default": null,
+          "description": "Project-relative directories to skip while scanning",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    },
+    "SubdirConfig": {
+      "description": "Sub-directory licence override.",
+      "properties": {
+        "additional-licences": {
+          "description": "Additional SPDX licence identifiers override",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        },
+        "author": {
+          "description": "Copyright holder override",
+          "type": ["string", "null"]
+        },
+        "basename": {
+          "description": "Primary licence filename basename override",
+          "type": ["string", "null"]
+        },
+        "company": {
+          "description": "Company name override",
+          "type": ["string", "null"]
+        },
+        "email": {
+          "description": "Email address override",
+          "type": ["string", "null"]
+        },
+        "format": {
+          "description": "Output format override",
+          "type": ["string", "null"]
+        },
+        "licence": {
+          "description": "SPDX licence identifier override",
+          "type": ["string", "null"]
+        },
+        "path": {
+          "description": "Relative path to the sub-directory",
+          "type": "string"
+        },
+        "update-manifest": {
+          "description": "Manifest update override",
+          "type": ["boolean", "null"]
+        },
+        "update-readme": {
+          "description": "README update override",
+          "type": ["boolean", "null"]
+        },
+        "year": {
+          "description": "Copyright year override",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["path"],
+      "type": "object"
+    },
+    "TemplateConfig": {
+      "properties": {
+        "paths": {
+          "description": "Custom template search paths",
+          "items": {
+            "type": "string"
+          },
+          "type": ["array", "null"]
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Configuration file for licencify",
+  "properties": {
+    "default": {
+      "$ref": "#/$defs/DefaultConfig",
+      "default": {
+        "additional-licences": null,
+        "author": null,
+        "basename": null,
+        "company": null,
+        "email": null,
+        "format": null,
+        "licence": null,
+        "update-manifest": null,
+        "update-readme": null,
+        "year": null
+      },
+      "description": "Default values for licence creation"
+    },
+    "scan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScanConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Scan exclusions"
+    },
+    "subdirs": {
+      "default": null,
+      "description": "Sub-directory licence overrides",
+      "items": {
+        "$ref": "#/$defs/SubdirConfig"
+      },
+      "type": ["array", "null"]
+    },
+    "template": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TemplateConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Template configuration"
+    }
+  },
+  "title": "Licencify Config",
+  "type": "object"
+}

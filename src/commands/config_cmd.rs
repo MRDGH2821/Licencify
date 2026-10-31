@@ -14,14 +14,6 @@ pub fn cmd_config(action: ConfigAction) -> Result<()> {
     }
 }
 
-pub fn cmd_schema(output: &str) -> Result<()> {
-    let json = Config::schema_json()?;
-    let fs = global_fs();
-    fs.write(std::path::Path::new(output), &json)?;
-    println!("✅ Schema written to {}", output);
-    Ok(())
-}
-
 fn cmd_config_init() -> Result<()> {
     let fs = global_fs();
     let path = Config::project_path()?;
@@ -122,15 +114,5 @@ mod tests {
         crate::fs::set_global_fs(fs.clone());
         let result = cmd_config(ConfigAction::List);
         assert!(result.is_ok());
-    }
-
-    #[test]
-    fn cmd_schema_writes_file() {
-        let _guard = FsGuard::new();
-        let fs = Arc::new(MemFs::new()) as Arc<dyn crate::fs::Fs>;
-        crate::fs::set_global_fs(fs.clone());
-        let result = cmd_schema("test-schema.json");
-        assert!(result.is_ok());
-        assert!(fs.exists(std::path::Path::new("test-schema.json")));
     }
 }

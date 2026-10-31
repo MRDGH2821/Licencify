@@ -159,3 +159,23 @@ fn config_commands_read_write_typed_fields_and_resolve_targets() {
         "{local}"
     );
 }
+
+#[test]
+fn licencify_has_no_schema_command() {
+    let project = Project::new();
+    let help = project.run(".", &["--help"]);
+    assert!(help.status.success(), "{}", text(&help.stderr));
+    assert!(
+        !text(&help.stdout).contains("schema"),
+        "licencify --help should not offer schema command"
+    );
+
+    let schema = project.run(".", &["schema"]);
+    assert!(!schema.status.success(), "licencify schema command should fail");
+
+    let config_schema = project.run(".", &["config", "schema"]);
+    assert!(
+        !config_schema.status.success(),
+        "licencify config schema command should fail"
+    );
+}

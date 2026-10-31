@@ -1,7 +1,7 @@
 mod author;
 pub mod cli;
 mod commands;
-mod config;
+pub mod config;
 mod detect;
 pub mod fs;
 mod licence_name;
@@ -107,6 +107,5 @@ pub fn main() -> anyhow::Result<()> {
         ),
         Commands::Cache { action } => commands::cmd_cache(action),
         Commands::Config { action } => commands::cmd_config(action),
-        Commands::Schema { output } => commands::cmd_schema(&output),
     }
 }
