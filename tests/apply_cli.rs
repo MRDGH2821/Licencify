@@ -813,6 +813,7 @@ fn apply_creates_shared_config_when_selecting_id_without_config_file() {
     assert!(saved.contains("licence = \"MIT\""), "{saved}");
     assert!(saved.contains("author = \"Git Author\""), "{saved}");
 }
+
 fn write_manifests(project: &Project) {
     project.write(
         "Cargo.toml",
@@ -1050,4 +1051,244 @@ fn apply_spdx_switch_keeps_private_flags_and_warns() {
     let npm = fs::read_to_string(project.root.join("package.json")).unwrap();
     assert!(npm.contains("\"private\": true"), "{npm}");
     assert!(npm.contains("\"license\": \"MIT\""), "{npm}");
+}
+
+
+#[test]
+fn apply_refuses_when_requested_primary_is_currently_additional_without_permit_promotion() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "Apache-2.0 additional\n");
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "Apache-2.0", "--yes"]);
+
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains("Apache-2.0 is listed in additional-licences. Pass --permit-promotion to promote it. --yes does not authorize promotion."),
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "MIT primary\n"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE-Apache-2.0.txt")).unwrap(),
+        "Apache-2.0 additional\n"
+    );
+}
+
+#[test]
+fn apply_refuses_when_other_ids_are_passed_and_requested_primary_is_currently_additional() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "Apache-2.0 additional\n");
+
+    let output = project.apply_from(".", "en_US.UTF-8", &["apply", "Apache-2.0", "ISC", "--yes"]);
+
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains("Apache-2.0 is listed in additional-licences. Pass --permit-promotion to promote it. --yes does not authorize promotion."),
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "MIT primary\n"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE-Apache-2.0.txt")).unwrap(),
+        "Apache-2.0 additional\n"
+    );
+    assert!(!project.root.join("LICENSE-ISC.txt").exists());
+}
+
+#[test]
+fn apply_with_permit_promotion_promotes_additional_file_and_updates_config() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "Custom Apache-2.0 text\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "--permit-promotion", "--yes"],
+    );
+
+    assert_success(&output);
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "Custom Apache-2.0 text\n"
+    );
+    assert!(!project.root.join("LICENSE-Apache-2.0.txt").exists());
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"Apache-2.0\""), "{saved}");
+    assert!(saved.contains("additional-licences = []"), "{saved}");
+}
+
+#[test]
+fn apply_with_permit_promotion_preserves_remaining_additional_licences() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\", \"BSD-3-Clause\"]\n",
+    );
+    project.write("LICENSE.txt", "MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "Custom Apache-2.0 text\n");
+    project.write("LICENSE-BSD-3-Clause.txt", "BSD-3-Clause extra\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "--permit-promotion", "--yes"],
+    );
+
+    assert_success(&output);
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "Custom Apache-2.0 text\n"
+    );
+    assert!(!project.root.join("LICENSE-Apache-2.0.txt").exists());
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE-BSD-3-Clause.txt")).unwrap(),
+        "BSD-3-Clause extra\n"
+    );
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"Apache-2.0\""), "{saved}");
+    assert!(
+        saved.contains("additional-licences = [\"BSD-3-Clause\"]"),
+        "{saved}"
+    );
+}
+
+#[test]
+fn apply_with_permit_promotion_and_new_additional_ids_updates_config() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "Custom Apache-2.0 text\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "ISC", "--permit-promotion", "--yes"],
+    );
+
+    assert_success(&output);
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "Custom Apache-2.0 text\n"
+    );
+    assert!(!project.root.join("LICENSE-Apache-2.0.txt").exists());
+    assert!(project.root.join("LICENSE-ISC.txt").exists());
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"Apache-2.0\""), "{saved}");
+    assert!(saved.contains("additional-licences = [\"ISC\"]"), "{saved}");
+}
+
+#[test]
+fn apply_failed_promotion_leaves_old_primary_and_additional_files_in_place() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "Untouched MIT primary\n");
+    project.write("LICENSE-Apache-2.0.txt", "First Apache-2.0 extra\n");
+    project.write("LICENCE-Apache-2.0.txt", "Second Apache-2.0 extra\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "--permit-promotion", "--yes"],
+    );
+
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains("Promotion of Apache-2.0 needs exactly one matching additional file; found 2. Not changing any files"),
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "Untouched MIT primary\n"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE-Apache-2.0.txt")).unwrap(),
+        "First Apache-2.0 extra\n"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENCE-Apache-2.0.txt")).unwrap(),
+        "Second Apache-2.0 extra\n"
+    );
+}
+
+#[test]
+fn apply_failed_promotion_without_matching_additional_file_leaves_old_primary_in_place() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "Untouched MIT primary\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "--permit-promotion", "--yes"],
+    );
+
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains("Promotion of Apache-2.0 needs exactly one matching additional file; found 0. Not changing any files"),
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.txt")).unwrap(),
+        "Untouched MIT primary\n"
+    );
+}
+
+#[test]
+fn apply_promotion_replaces_old_primary_when_format_differs() {
+    let project = Project::new();
+    project.write(
+        ".config/licencify/config.toml",
+        "[default]\nlicence = \"MIT\"\nauthor = \"Author\"\nyear = \"2024\"\nformat = \"html\"\nadditional-licences = [\"Apache-2.0\"]\n",
+    );
+    project.write("LICENSE.txt", "Old primary txt\n");
+    project.write("LICENSE-Apache-2.0.html", "<p>Apache-2.0 HTML</p>\n");
+
+    let output = project.apply_from(
+        ".",
+        "en_US.UTF-8",
+        &["apply", "Apache-2.0", "--permit-promotion", "--yes"],
+    );
+
+    assert_success(&output);
+    assert!(!project.root.join("LICENSE.txt").exists());
+    assert!(!project.root.join("LICENSE-Apache-2.0.html").exists());
+    assert_eq!(
+        fs::read_to_string(project.root.join("LICENSE.html")).unwrap(),
+        "<p>Apache-2.0 HTML</p>\n"
+    );
+    let saved = fs::read_to_string(project.config_path()).unwrap();
+    assert!(saved.contains("licence = \"Apache-2.0\""), "{saved}");
+    assert!(saved.contains("format = \"html\""), "{saved}");
 }

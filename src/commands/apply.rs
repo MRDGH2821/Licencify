@@ -6,6 +6,7 @@ pub fn cmd_apply(
     ids: &[String],
     root: bool,
     yes: bool,
+    permit_promotion: bool,
     update_readme: Option<bool>,
     update_manifest: Option<bool>,
     no_file: bool,
@@ -13,7 +14,8 @@ pub fn cmd_apply(
     let config = crate::config::Config::load_effective(None)?;
     let update_readme =
         crate::readme::readme_updates_enabled(update_readme, config.default.update_readme);
-    let update_manifest = update_manifest.unwrap_or(config.default.update_manifest.unwrap_or(false));
+    let update_manifest =
+        update_manifest.unwrap_or(config.default.update_manifest.unwrap_or(false));
     let provider = provider::LicenseProvider::load()?;
     let selected = ids
         .iter()
@@ -77,75 +79,95 @@ pub fn cmd_apply(
         println!("Using email from git config user.email");
     }
 
-    let fs = global_fs();
-    let existing_primary = if no_file {
-        None
-    } else {
-        super::generate::detect_primary(&*fs)?
-    };
+    let configured_additional = config
+        .default
+        .additional_licences
+        .clone()
+        .unwrap_or_default();
+    let plan = super::generate::plan_primary(
+        &context,
+        &spdx,
+        &info.id,
+        &configured_additional,
+        permit_promotion,
+        false,
+    )?;
 
-    if let Some(existing) = &existing_primary {
-        if !yes {
-            if !std::io::stdin().is_terminal() {
-                anyhow::bail!(
-                    "Refusing to replace existing primary licence file {}: run interactively or pass --yes",
-                    existing.display()
+    if !no_file {
+        if let Some(existing) = &plan.previous {
+            if !yes {
+                if !std::io::stdin().is_terminal() {
+                    anyhow::bail!(
+                        "Refusing to replace existing primary licence file {}: run interactively or pass --yes",
+                        existing.display()
+                    );
+                }
+                let prompt = format!(
+                    "About to replace the primary licence with {} ({}). Continue? [y/N] ",
+                    info.name, info.id
                 );
-            }
-            let prompt = format!(
-                "About to replace the primary licence with {} ({}). Continue? [y/N] ",
-                info.name, info.id
-            );
-            print!("{prompt}");
-            std::io::stdout().flush()?;
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            let answer = input.trim();
-            let confirmed = answer.eq_ignore_ascii_case("y") || answer.eq_ignore_ascii_case("yes");
-            if !confirmed {
-                println!("Aborted.");
-                return Ok(());
+                print!("{prompt}");
+                std::io::stdout().flush()?;
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                let answer = input.trim();
+                let confirmed =
+                    answer.eq_ignore_ascii_case("y") || answer.eq_ignore_ascii_case("yes");
+                if !confirmed {
+                    println!("Aborted.");
+                    return Ok(());
+                }
             }
         }
     }
 
     let additional = if selected.len() > 1 {
         selected[1..].to_vec()
+    } else if let Some(ref after) = plan.additional_after {
+        after.clone()
     } else {
-        config
-            .default
-            .additional_licences
-            .clone()
-            .unwrap_or_default()
+        configured_additional
     };
-    let primary = super::generate::render_primary(&context)?;
     let extras =
         super::generate::plan_missing_extras(&context, &config, &provider, &additional, &format)?;
 
+    let fs = global_fs();
     if !no_file {
-        let stage = super::generate::staging_path(&primary.path);
+        let stage = super::generate::staging_path(&plan.path);
         anyhow::ensure!(
             !fs.exists(&stage),
             "Refusing to overwrite staging file {}",
             stage.display()
         );
-        fs.write(&stage, &primary.content)
+        fs.write(&stage, &plan.content)
             .with_context(|| format!("Failed to stage replacement {}", stage.display()))?;
 
-        if let Err(error) = fs.rename(&stage, &primary.path) {
+        if let Err(error) = fs.rename(&stage, &plan.path) {
             return Err(anyhow::Error::from(error).context(format!(
                 "Replacement remains staged at {} and the existing primary was left in place",
                 stage.display()
             )));
         }
 
-        if let Some(existing) = &existing_primary {
-            if existing != &primary.path {
+        if let Some(existing) = &plan.previous {
+            if existing != &plan.path {
                 if let Err(error) = fs.remove_file(existing) {
                     return Err(anyhow::Error::from(error).context(format!(
                         "Replacement is at {} and the previous primary {} was left in place",
-                        primary.path.display(),
+                        plan.path.display(),
                         existing.display()
+                    )));
+                }
+            }
+        }
+
+        if let Some(source) = &plan.promotion_source {
+            if source != &plan.path && fs.exists(source) {
+                if let Err(error) = fs.remove_file(source) {
+                    return Err(anyhow::Error::from(error).context(format!(
+                        "Promoted primary is at {} and additional file {} was left in place",
+                        plan.path.display(),
+                        source.display()
                     )));
                 }
             }
@@ -156,19 +178,26 @@ pub fn cmd_apply(
     if update_manifest && no_file && spdx == "proprietary" {
         project::require_primary_notice(&*fs)?;
     }
-    if !selected.is_empty() {
+
+    let additional_to_save = if selected.len() > 1 {
+        Some(additional.as_slice())
+    } else if let Some(ref after) = plan.additional_after {
+        Some(after.as_slice())
+    } else {
+        None
+    };
+    if !selected.is_empty() || plan.additional_after.is_some() {
         crate::config::Config::save_applied_selection(
             &spdx,
             &context.author,
-            &format.to_string(),
-            (selected.len() > 1).then_some(&additional),
+            &plan.format,
+            additional_to_save,
             root,
         )?;
     }
 
     if update_manifest {
-        let files =
-            project::update_manifest(&spdx, &context.author, &context.year, &additional)?;
+        let files = project::update_manifest(&spdx, &context.author, &context.year, &additional)?;
         if !files.is_empty() {
             println!("   Updated: {}", files.join(", "));
         }
@@ -180,7 +209,7 @@ pub fn cmd_apply(
             "✅ Applied {} ({}) as {}",
             info.name,
             info.id,
-            primary.path.display()
+            plan.path.display()
         );
         for extra in &extras.missing {
             println!(
@@ -194,7 +223,7 @@ pub fn cmd_apply(
         }
     }
     if update_readme && !no_file {
-        crate::readme::report_readme(crate::readme::update_readme(&info.id, &primary.path));
+        crate::readme::report_readme(crate::readme::update_readme(&info.id, &plan.path));
     }
     Ok(())
 }

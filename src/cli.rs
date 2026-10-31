@@ -113,6 +113,10 @@ pub enum Commands {
         #[arg(short = 'Y', long)]
         yes: bool,
 
+        /// Promote one matching additional licence to primary
+        #[arg(long)]
+        permit_promotion: bool,
+
         /// Skip writing every licence file, including additional licences
         #[arg(long)]
         no_file: bool,
