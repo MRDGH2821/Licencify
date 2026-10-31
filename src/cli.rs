@@ -96,6 +96,9 @@ pub enum Commands {
         no_update_readme: bool,
     },
 
+    /// Create the shared project config
+    Init,
+
     /// Write licence files from the effective configuration without changing it
     Apply,
 

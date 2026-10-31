@@ -841,7 +841,7 @@ fn write_saved_selection(
         additional,
     )?;
     let output = if created {
-        format!("#:schema {}\n\n{edited}", Config::schema_path()?.display())
+        format!("#:schema {}\n\n{edited}", Config::SCHEMA_URL)
     } else {
         edited
     };
@@ -866,6 +866,9 @@ impl Default for Config {
 }
 
 impl Config {
+    pub const SCHEMA_URL: &'static str =
+        "https://raw.githubusercontent.com/MRDGH2821/Licencify/main/schema/config.json";
+
     pub fn global_path() -> Result<PathBuf> {
         let dir = std::env::var_os("XDG_CONFIG_HOME")
             .map(PathBuf::from)
@@ -1287,7 +1290,7 @@ impl Config {
         let doc: toml_edit::DocumentMut = toml::to_string_pretty(self)?
             .parse()
             .context("Failed to parse serialized config")?;
-        let mut output = format!("#:schema {}\n\n", Self::schema_path()?.display());
+        let mut output = format!("#:schema {}\n\n", Self::SCHEMA_URL);
         output.push_str(&doc.to_string());
         fs.write(path, &output)
             .with_context(|| format!("Failed to write config file: {}", path.display()))
@@ -1425,7 +1428,7 @@ impl Config {
             }
         }
         let output = if existing.is_none() {
-            format!("#:schema {}\n\n{doc}", Self::schema_path()?.display())
+            format!("#:schema {}\n\n{doc}", Self::SCHEMA_URL)
         } else {
             doc.to_string()
         };
@@ -1478,10 +1481,6 @@ impl Config {
             .context("Failed to serialize JSON schema")?;
         json.push('\n');
         Ok(json)
-    }
-
-    pub fn schema_path() -> Result<PathBuf> {
-        Ok(Self::global_path()?.with_file_name("licencify-schema.json"))
     }
 }
 
