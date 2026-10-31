@@ -44,11 +44,11 @@ writes `schema/config.json`, and `cargo test` fails if that file drifts.
 - No `remove` command. Deleting a licence file is out of scope.
 
 Sources:
-[product spec](https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md),
-[ADR 0013](https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0013-config-get-list-set.md),
-[ADR 0014](https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0014-cache-update-and-fetch.md),
-[ADR 0015](https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0015-config-schema-is-a-cargo-example.md),
-[ADR 0016](https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0016-project-licences-are-applied.md).
+[product spec](https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md),
+[ADR 0013](https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0013-config-get-list-set.md),
+[ADR 0014](https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0014-cache-update-and-fetch.md),
+[ADR 0015](https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0015-config-schema-is-a-cargo-example.md),
+[ADR 0016](https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0016-project-licences-are-applied.md).
 
 ## Command forms
 
@@ -380,7 +380,7 @@ Licencify already discovers one project root (an absolute `PRJ_ROOT`, else
 the Git worktree root, else the highest ancestor with a project config,
 else the current directory). That discovery matches git's walk to `.git`,
 npm's walk to `package.json`, and REUSE's walk to the VCS root.
-<https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
+<https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
 
 The unusual part is the write target. From a subdirectory, `apply` and
 `config set` write an exact-path `[[subdirs]]` entry in the root file.
@@ -512,7 +512,7 @@ Licencify already matches the prompt-on-replace plus `--yes` pattern used
 by `gh repo delete` and `npm init`, and the "scripted invocations must not
 wait" rule in the product spec matches the guideline that a non-interactive
 stdin must not block on a prompt.
-<https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
+<https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
 
 ### stdout and stderr
 
@@ -550,7 +550,7 @@ The Licencify spec already says `apply` reports files written, `config
 list` identifies loaded files and effective values, and `--verbose` reports
 each setting's source without printing the value. It does not assign those
 reports to stdout or stderr.
-<https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
+<https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
 
 ### Exit codes
 
@@ -587,7 +587,7 @@ table. This note does not invent one for them.
 The Licencify spec already requires a nonzero result for a confirmed `scan`
 conflict, and it says failures must not be reported as full success. It
 does not map those cases to numbers.
-<https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
+<https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
 
 ## 5. Improvements
 
@@ -649,22 +649,22 @@ Do not do these. They undo an ADR or a decided spec item.
 
 - Split `apply` back into `add` and `update`, or rename `apply` to `add` or
   `set`.
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0016-project-licences-are-applied.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0016-project-licences-are-applied.md>
 - Add `config show`, `config init`, or a `schema` subcommand.
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0013-config-get-list-set.md>
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0015-config-schema-is-a-cargo-example.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0013-config-get-list-set.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0015-config-schema-is-a-cargo-example.md>
 - Add `cache info`, or `--update` / `--fetch` flags on `cache`.
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0014-cache-update-and-fetch.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0014-cache-update-and-fetch.md>
 - Make bare `cache` print help instead of the directory, count, and size.
 - Make `cache fetch <id>` refetch a file that is already cached.
 - Add `remove` or `delete`. The spec says deleting a licence file is out of
   scope. `git-rm` shows that git has the verb. It does not require a
   licence tool to delete files.
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/superpowers/specs/2026-09-30-licencify-product-spec.md>
   <https://git-scm.com/docs/git>
 - Prompt for shared versus subdirectory, or always write the shared section
   from a subdirectory. Both were considered and rejected.
-  <https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0016-project-licences-are-applied.md>
+  <https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0016-project-licences-are-applied.md>
 - Rename `--root` or `--yes`.
 - Rename `detect` and `scan` to `lint` and `lint-file`.
 
@@ -682,7 +682,7 @@ will "Set the root of the project to `PATH`." Licencify's settled `--root`
 takes no
 path and writes the shared config section.
 <https://reuse.readthedocs.io/en/stable/man/reuse.html>
-<https://github.com/MRDGH2821/Licencify/blob/MRDGH2821/docs/cli-commands/docs/adr/0016-project-licences-are-applied.md>
+<https://github.com/MRDGH2821/Licencify/blob/main/docs/adr/0016-project-licences-are-applied.md>
 REUSE does not specify Licencify's flags. Renaming `--root` would reopen
 ADR 0016. The compatible fix is the help sentence in improvement 6: define
 `--root` before any example uses it.
