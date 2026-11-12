@@ -2,26 +2,34 @@
 auto = true
 
 [deps.capabilities]
+auto = true
 description = "Install Agent plugins"
+# tombi: format.rules.array-values-order = "ascending"
 outputs = [
-  "capabilities.lock",
   ".agents/skills/",
-  ".codex/skills/",
-  ".claude/skills/",
-  ".cursor/skills/",
+  ".claude/",
+  ".codex/",
+  ".cursor/",
+  ".kiro/",
   ".mcp.json",
-  "opencode.json"
+  "capabilities.lock"
 ]
 run = "capa install --yes"
 # tombi: format.rules.array-values-order = "ascending"
-sources = [".config/capabilities/", "capabilities.yaml"]
+sources = [
+  ".config/capabilities/",
+  "capabilities.yaml",
+  "template/.config/capabilities/"
+]
 
 [env]
 HK_MISE = 1
 
 [hooks]
-# Automatically install/update hooks when tools are installed
-postinstall = ["hk install --mise"]
+# Automatically install/update git hooks when tools are installed.
+# Then reconcile agent capabilities — capa is installed as a mise tool, so it
+# is guaranteed present by the time postinstall runs.
+postinstall = ["hk install --mise", { task = "ai-setup" }]
 
 [settings]
 experimental = true
@@ -49,29 +57,29 @@ run = ["bun install", { task = "ai-setup" }]
 
 [tools]
 "aqua:google/keep-sorted" = "0.10.0"
-"aqua:owenlamont/ryl" = "0.26.1"
-betterleaks = "1.9.0"
+"aqua:owenlamont/ryl" = "0.29.0"
+betterleaks = "1.10.0"
 bun = "1.4.4"
 "cargo:cargo-audit" = "0.22.2"
 "cargo:cargo-bump" = "1.1.0"
 cocogitto = "7.0.0"
-cspell = "10.4.0"
+cspell = "10.4.1"
 editorconfig-checker = "4.0.2"
 gh = "2.103.3"
 git-cliff = "2.14.2"
 "github:MRDGH2821/Sort-Markdown-Tables" = "0.6.0"
 "github:infragate/capa" = "2.4.0"
-hk = { version = "2.9.0", workflow = "release.yml" }
+hk = { version = "2.12.0", workflow = "release.yml" }
 ls-lint = "2.3.2"
 mr-boxington = { version = "1.28.0", workflow = "release.yml@refs/heads/main" }
-oxfmt = "0.75.0"
-"pipx:lorenzwalthert/gitignore-tidy" = "latest"
-"pipx:toml-sort" = "0.25.0"
-pkl = "0.32.2"
-ruff = "0.17.3"
+oxfmt = "0.78.0"
+pkl = "0.33.0"
+"pypi:lorenzwalthert/gitignore-tidy" = "latest"
+"pypi:toml-sort" = "0.25.0"
+python = "latest"
 rumdl = "0.3.2"
 rust = { mr_boxington = true, version = "1.99.1" }
-tombi = "1.9.7"
-typos = "1.51.1"
-uv = "0.13.6"
-yq = "4.54.1"
+tombi = "1.11.2"
+typos = "1.52.1"
+uv = "0.13.7"
+yq = "4.54.3"

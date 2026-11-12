@@ -2,30 +2,32 @@
 
 This file provides guidance for AI coding assistants working with this project.
 
-If none of the skills or tools specified in `.config/mise/config.toml` are available, run the following commands and alert the user to reload the agent.
+## Check task dependencies
 
-```sh
-mise trust
-mise install
-mise run prepare
-```
+Identify the skills, mise tools, and MCP tools this task needs. Check only those
+dependencies. Missing unrelated tools must not block the task.
 
-Refuse to do anything until `mise run prepare` has run atleast once and the agent is reloaded with the skills & MCP servers as specified in `capabilities.yaml`.
-MCP servers should be accessible via Capa MCP.
+### Check Capa MCP
 
-## Agent skills
+This project uses `toolExposure: search`. Capa exposes `search` and `call_tool`;
+upstream tools are discovered on demand and may not appear by their own names.
 
-### Issue tracker
+1. Call Capa `search` with the task, server, or tool name.
+2. If search returns a matching tool, Capa MCP is reachable and the tool is
+   registered. Use `call_tool` to run the task's operation.
+3. If search responds but finds no match, Capa MCP is reachable, but the tool
+   was not found. Search by its configured name or description before reporting
+   it unavailable.
+4. If `search` is missing or fails before returning results, report that Capa
+   MCP is unavailable in this agent session. This does not prove the Capa
+   service is stopped.
+5. If `call_tool` fails, report the tool and exact error. Do not claim the
+   server is down unless the error confirms that.
 
-Issues live as GitHub issues on MRDGH2821/Licencify. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Five canonical roles, each label string equal to its name (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Do not probe the local Capa URL with shell `curl`; the shell may not share the
+agent's network. Continue work that does not need the unavailable capability.
+Recommend `mise trust`, `mise install`, or `mise run prepare` only when setup is
+the confirmed cause of a required dependency being unavailable.
 
 <!-- capa:start:rule:karpathy-guidelines -->
 ---
@@ -119,6 +121,30 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 Before creating a branch, follow the branch naming strategy in the project-root
 `CONTRIBUTING.md` (`#branch-naming-strategy`).
 
+Before committing, treat the repository's default branch, `main`, `master`,
+`dev`, `develop`, `release`, and branches under `release/` as shared branches.
+If the current branch is shared, create a new branch using the naming strategy
+and commit there, preserving existing working-tree changes.
+
+Before creating a pull or merge request, check whether the branch has an open
+request and whether its name follows the branch-naming strategy.
+
+- If an open request already exists, leave the branch name unchanged and notify
+  the user if it does not comply.
+- Use the existing working branch for the request. Do not query remote branch
+  protection solely to check compliance with the naming strategy.
+- For a non-compliant branch without an open request, propose a
+  compliant name and wait for approval. If declined, stop unless the user
+  explicitly authorizes an exception.
+- For a pushed branch, explain that a native remote rename removes the old
+  remote name and ask for approval before using it. After approval, use a native
+  rename when available and update the local branch and upstream.
+- If native remote rename is unavailable, propose pushing the new name while
+  retaining the old remote branch. Obtain separate approval before deleting the
+  old remote branch.
+- If a push is rejected because the branch is protected, create a new working
+  branch and push it instead.
+
 ### Commit Messages
 
 Every commit MUST be atomic (one logical change), and every commit message MUST use Conventional Commits format: `<type>(<scope>): <description>`.
@@ -151,7 +177,7 @@ editable sources outside `.agents/rules/`; Capa prunes that generated directory.
 
 Read the relevant rule before acting:
 
-- Branching or committing: `.config/capabilities/rules/commits.md`.
+- Branching, committing, or creating a pull request: `.config/capabilities/rules/commits.md`.
 - For an AI-assisted commit, also read `.config/capabilities/rules/ai-co-author.md`.
 - Recording AI-assisted work: `.config/capabilities/rules/ai-logs.md`.
 - Reviewing on behalf of a human: `.config/capabilities/rules/ai-reviews.md`.

@@ -2,8 +2,11 @@
   "name": "licencify",
   "version": "0.2.0",
   "license": "MIT",
+  "scripts": {
+    "fmt": "oxfmt"
+  },
   "devDependencies": {
-    "@types/bun": "1.4.4",
-    "oxfmt": "0.75.0"
+    "@types/bun": "^1.4.4",
+    "oxfmt": "0.77.0"
   }
 }

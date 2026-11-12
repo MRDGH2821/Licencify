@@ -1,6 +1,6 @@
 version: 1
 generator: capa@2.4.0
-generatedAt: '2026-10-29T22:32:16.687Z'
+generatedAt: '2026-11-12T12:07:31.371Z'
 skills:
   - id: atomic-commits
     source: github
@@ -43,6 +43,17 @@ skills:
     resolvedRef: 997e95a6e42869c350f8ca6ec4c066287697c9f0
     resolvedVersion: null
 plugins:
+  - id: caveman
+    source: github
+    repo: JuliusBrussee/caveman
+    subpath: null
+    requestedSearchName: null
+    requestedVersion: null
+    requestedRef: null
+    resolvedRef: 1e91f1306d602d4ca23618701b1185575ae1869b
+    resolvedVersion: v4.1.0
+    manifestName: caveman
+    manifestVersion: 4.1.0
   - id: mattpocock-skills
     source: github
     repo: mattpocock/skills
@@ -76,15 +87,15 @@ plugins:
     resolvedVersion: null
     manifestName: paad
     manifestVersion: 1.31.0
-  - id: superpowers
+  - id: ponytail
     source: github
-    repo: obra/superpowers
+    repo: DietrichGebert/ponytail
     subpath: null
     requestedSearchName: null
     requestedVersion: null
     requestedRef: null
-    resolvedRef: 8ca22dba9a94f28898bbce59f2537ff4d87c747d
-    resolvedVersion: v6.4.2
-    manifestName: superpowers
-    manifestVersion: 6.4.2
+    resolvedRef: 7801d061243d7b753bad0e0b3c057cd250b11755
+    resolvedVersion: v5.3.3
+    manifestName: ponytail
+    manifestVersion: 5.3.3
 hooks: []
